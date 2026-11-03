@@ -1,5 +1,5 @@
-"""|Z| versus frequency, log-log, for every probe of an AC solve, with a cursor that tracks
-one probe's curve: plot-wide crosshair lines, its values in the Info pane."""
+"""|Z| versus frequency, log-log (or |Z| linear), for every probe of an AC solve, with a
+cursor that tracks one probe's curve: plot-wide crosshair lines, its values in the Info pane."""
 
 from __future__ import annotations
 
@@ -9,7 +9,9 @@ from typing import Optional, Tuple
 
 import numpy as np
 from qtpy.QtCore import Qt, Signal
-from qtpy.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+
+from kipi.ac.board_map import nets_text
 
 COLORS = ("#4fa3ff", "#ffa040", "#60d060", "#ff6080", "#c080ff", "#40d0d0", "#e0e060")
 CURSOR_COLOR = "#e8e8e8"
@@ -25,6 +27,14 @@ def _eng_ohms(z: float, _pos=None) -> str:
         if z >= scale * 0.999:
             return f"{z / scale:g} {unit}"
     return f"{z * 1e6:g} µΩ"
+
+
+def _minor_ohms(z: float, _pos=None) -> str:
+    """Minor |Z| ticks on a log axis: only 2, 3 and 5 times a decade, so they do not crowd."""
+    if z <= 0:
+        return ""
+    m = round(z / 10 ** math.floor(math.log10(z) + 1e-9))
+    return _eng_ohms(z) if m in (2, 3, 5) else ""
 
 
 def _eng_hz(f: float, _pos=None) -> str:
@@ -59,10 +69,15 @@ class ImpedancePlot(QWidget):
         self.lbl = QLabel(EMPTY, self)
         self.lbl.setStyleSheet("color: #999;")
         self.lbl.setWordWrap(True)          # else its text sets the window's minimum width
+        self.chk_log = QCheckBox("Log |Z|", self)
+        self.chk_log.setChecked(True)
+        self.chk_log.setToolTip("Plot |Z| on a log axis; untick for a linear one")
+        self.chk_log.toggled.connect(self._set_yscale)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(4, 4, 4, 4)
         top = QHBoxLayout()
         top.addWidget(self.lbl, 1)
+        top.addWidget(self.chk_log, 0, Qt.AlignTop)
         lay.addLayout(top)
         lay.addWidget(self.canvas, 1)
         self.canvas.mpl_connect("motion_notify_event", self._hover)
@@ -105,29 +120,61 @@ class ImpedancePlot(QWidget):
         f = result.freqs
         for i, c in enumerate(result.probes):
             color = COLORS[i % len(COLORS)]
-            ax.loglog(f, c.mag, color=color, lw=1.6, label=c.name)
+            ax.plot(f, c.mag, color=color, lw=1.6, label=c.name)
             t = c.target_at(f)
             if t is not None:                 # NaN where no target applies: not drawn
-                ax.loglog(f, t, color=color, lw=1.2, ls="--", alpha=0.8,
+                ax.plot(f, t, color=color, lw=1.2, ls="--", alpha=0.8,
                           label=f"{c.name} target")
         bw = getattr(result, "bandwidth_hz", None)
         if bw and f[0] < bw < f[-1]:
             ax.axvline(bw, color="#888", lw=1.0, ls=":",
                        label=f"VRM bandwidth {_eng_hz(bw)}")
+        ax.set_xscale("log")
         ax.set_xlim(f[0], f[-1])
         ax.set_xlabel("Frequency")
         ax.set_ylabel("|Z|")
         ax.xaxis.set_major_formatter(FuncFormatter(_eng_hz))
-        ax.yaxis.set_major_formatter(FuncFormatter(_eng_ohms))
         ax.grid(True, which="major", color="#555", lw=0.6)
         ax.grid(True, which="minor", color="#333", lw=0.4)
-        ax.set_title(f"{result.rail}: {' + '.join(result.rail_nets)} against {result.ground}",
+        ax.set_title(f"{result.rail}: {nets_text(result.rail_nets)} against {result.ground}",
                      fontsize=10)
+        self._set_yscale(draw=False)
         leg = ax.legend(loc="best", fontsize=8, facecolor="#2a2a2a", edgecolor="#555")
         for t in leg.get_texts():
             t.set_color("#ddd")
         self.lbl.setText(HINT)
         self.canvas.draw_idle()
+
+    def _set_yscale(self, *_args, draw: bool = True):
+        """|Z| on a log axis, or a linear one from 0, as the Log |Z| box says."""
+        from matplotlib.ticker import AutoMinorLocator, FuncFormatter, LogLocator, NullFormatter
+        ax = self.ax
+        if self.result is None:
+            return
+        if self.chk_log.isChecked():
+            ax.set_yscale("log")
+            ax.yaxis.set_minor_locator(LogLocator(subs="auto"))
+            # Under a decade or two of |Z|, matplotlib labels the minor ticks too: in Ω, not
+            # as 6×10⁻¹.
+            ax.yaxis.set_minor_formatter(FuncFormatter(_minor_ohms)
+                                         if self._decades() < 2 else NullFormatter())
+            ax.autoscale(axis="y")
+        else:
+            ax.set_yscale("linear")
+            ax.yaxis.set_minor_locator(AutoMinorLocator())
+            ax.yaxis.set_minor_formatter(NullFormatter())
+            ax.relim()
+            ax.autoscale(axis="y")
+            ax.set_ylim(bottom=0)
+        ax.yaxis.set_major_formatter(FuncFormatter(_eng_ohms))
+        if draw:
+            self.canvas.draw_idle()
+
+    def _decades(self) -> float:
+        mags = np.concatenate([c.mag for c in self.result.probes]) if self.result.probes \
+            else np.array([1.0])
+        mags = mags[mags > 0]
+        return float(np.log10(mags.max() / mags.min())) if len(mags) else 0.0
 
     def _nearest_freq(self, x: float) -> int:
         f = self.result.freqs
@@ -156,10 +203,10 @@ class ImpedancePlot(QWidget):
         if event.button != 1 or event.xdata is None or event.ydata is None:
             return
         k = self._nearest_freq(event.xdata)
-        # The curve nearest the click on the log |Z| axis.
-        y = math.log(max(event.ydata, 1e-30))
-        i = int(np.argmin([abs(math.log(max(float(c.mag[k]), 1e-30)) - y)
-                           for c in self.result.probes]))
+        # The curve nearest the click on the |Z| axis, as drawn (log or linear).
+        g = (lambda v: math.log(max(v, 1e-30))) if self.chk_log.isChecked() else float
+        y = g(event.ydata)
+        i = int(np.argmin([abs(g(float(c.mag[k])) - y) for c in self.result.probes]))
         self.set_cursor(i, k)
         self._dragging = True
 

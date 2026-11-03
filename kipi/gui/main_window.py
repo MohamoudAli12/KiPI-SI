@@ -21,7 +21,7 @@ from qtpy.QtWidgets import (
     QAbstractItemView, QButtonGroup, QCheckBox, QComboBox, QDockWidget, QDoubleSpinBox,
     QFileDialog, QFormLayout,
     QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMenu,
-    QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QRadioButton, QSizePolicy, QSlider,
+    QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QRadioButton, QSlider,
     QScrollArea, QSplitter, QStackedWidget, QStyle, QTabWidget, QTextBrowser, QToolBar,
     QToolButton,
     QVBoxLayout, QWidget,
@@ -45,7 +45,7 @@ from kipi.sources.base import BoardSource, InstalledTool
 log = logging.getLogger("kipi")
 
 _KIND_TAG = {"power": "PWR", "ground": "GND", "signal": ""}
-_KIND_COLOR = {"power": "#e07050", "ground": "#70a0e0", "signal": "#a0a0a0"}
+_KIND_COLOR = {"power": "#a0a0a0", "ground": "#70a0e0", "signal": "#a0a0a0"}
 # The SI Nets list's sections, each under a header row that folds it.
 _NET_SECTIONS = (("pairs", "Differential pairs"), ("single", "Single-ended"),
                  ("planes", "Ground and power"))
@@ -154,6 +154,9 @@ def fit_to_screen(window: QMainWindow) -> None:
     window.move(max(x, area.left()), max(y, area.top()))
 
 
+REPORTS_DIR = "kipi_reports"    # the project's subfolder reports are written to
+
+
 def write_report_file(write, path, progress):
     """``write(path)`` a solve's report; where a PDF cannot be made, the HTML report next to
     where it would have been (#119). The path written is returned."""
@@ -216,7 +219,6 @@ class MainWindow(QMainWindow):
         self._source = source
         self._tool = tool or InstalledTool()
         self.snapshot: Optional[BoardSnapshot] = None
-        self.power_tree_window = None
         self._copper_cache: Dict[str, Dict[int, object]] = {}
         self._task: Optional[Task] = None
         self._resync_pending = False   # net checkboxes changed while a task was running
@@ -279,9 +281,17 @@ class MainWindow(QMainWindow):
         self._ac_panel = self._noise_panel = self._si_panel = None
         self._plot = self._board_map = self._transient_plot = self._noise_plot = None
         self._si_plot = None
+        self._pi_plot = None                   # the DC solve's plots, with its first result
         self._dc_for_ac = None                 # the AC panel's DC result, until it is built
         self._viewer_stand_in = _LoadingView("Loading the 3D view…", self.views)
         self.views.addTab(self._viewer_stand_in, "3D view")
+        # The power tree (#58), beside the 3D view in the power integrity modes.
+        from kipi.gui.power_tree import PowerTreeView
+        self.power_tree = PowerTreeView(self.views)
+        self.views.addTab(self.power_tree, "Power tree")
+        self.views.setTabToolTip(1, "Block diagram of the setup: VRMs, rails, series links, "
+                                    "loads and capacitors, in the direction power flows")
+        self.views.currentChanged.connect(lambda _: self._refresh_power_tree())
         self.setCentralWidget(self.views)
         # Just after the window is on screen. Qt draws it while show() runs, before the
         # window system puts it up; building the view then would keep it off screen until
@@ -387,6 +397,7 @@ class MainWindow(QMainWindow):
         self._si_plot = SIPlot(self.views)
         self.views.addTab(self._si_plot, "SI plots")
         self._plot.cursor_moved.connect(self._show_cursor)
+        self._transient_plot.window_source = self._probe_window
         self._set_plot_tabs(self.mode)
 
         ac = self._ac_panel = ACPanel(self)
@@ -667,6 +678,7 @@ class MainWindow(QMainWindow):
         self.solve_dock.setWindowTitle(next(t for k, _, t in MODES if k == mode))
         self._set_open_results_tip()
         self._set_plot_tabs(mode)
+        self._show_power_tree_tab(mode)
         self._sync_pi_markers()
         self._show_coupling(front=False)      # Coupled Noise's overlay, that mode only
         self._update_focus()
@@ -703,13 +715,21 @@ class MainWindow(QMainWindow):
                 self._transient_plot: mode == "ac", self._noise_plot: mode == "noise",
                 self._si_plot: mode == "si"}
         for w, shown in tabs.items():
-            i = self.views.indexOf(w)
-            if hasattr(self.views, "setTabVisible"):
-                self.views.setTabVisible(i, shown)
-            else:
-                self.views.setTabEnabled(i, shown)
-            if not shown and self.views.currentIndex() == i:
-                self.views.setCurrentWidget(self.viewer)
+            self._set_tab_shown(w, shown)
+
+    def _set_tab_shown(self, w, shown: bool):
+        """Show or hide ``w``'s tab; hiding the tab in front brings the 3D view forward
+        (Qt would bring the next tab, as the power tree)."""
+        i = self.views.indexOf(w)
+        if i < 0:
+            return
+        front = self.views.currentIndex() == i
+        if hasattr(self.views, "setTabVisible"):
+            self.views.setTabVisible(i, shown)
+        else:
+            self.views.setTabEnabled(i, shown)
+        if not shown and front:
+            self.views.setCurrentWidget(self.viewer)
 
     def _show_3d(self, then=None):
         """Bring the 3D view to the front (from the impedance tab), then run ``then``."""
@@ -737,15 +757,22 @@ class MainWindow(QMainWindow):
         self.stackup_window.activateWindow()
 
     def show_power_tree(self):
-        from kipi.gui.power_tree import PowerTreeWindow
-        if self.power_tree_window is None:
-            self.power_tree_window = PowerTreeWindow(self)
-        self.power_tree_window.show_tree(self.solve_panel.setup, self.snapshot)
+        """Bring the Power tree tab to the front (power integrity modes only)."""
+        if self.mode != "si":
+            self.views.setCurrentWidget(self.power_tree)
 
     def _refresh_power_tree(self):
-        w = self.power_tree_window
-        if w is not None and w.isVisible():
-            w.set_source(self.solve_panel.setup, self.snapshot)
+        """Redraw the power tree from the setup, while its tab is the one shown."""
+        if self.views.currentWidget() is self.power_tree:
+            self.power_tree.set_source(self.solve_panel.setup, self.snapshot)
+
+    def _show_power_tree_tab(self, mode: str):
+        """The Power tree tab and button in the power integrity modes, not in SI; the PI
+        plots tab, once built, in DC mode only (they plot the DC solve)."""
+        self.act_power_tree.setVisible(mode != "si")
+        self._set_tab_shown(self.power_tree, mode != "si")
+        if self._pi_plot is not None:
+            self._set_tab_shown(self._pi_plot, mode == "dc")
 
     def show_help(self):
         from kipi.gui.help import open_help
@@ -1010,6 +1037,7 @@ class MainWindow(QMainWindow):
         self.setup_bar = SetupFileBar(self)
         self.setup_bar.import_requested.connect(self.import_pdn)
         self.setup_bar.autofill_requested.connect(self.autofill_rail)
+        self.setup_bar.tree_requested.connect(self.autofill_tree)
         self.setup_bar.save_requested.connect(self._save_setup)
         self.setup_bar.setEnabled(False)                       # until a board is read
         self.setup_stack = _PageStack(self)
@@ -1733,6 +1761,10 @@ class MainWindow(QMainWindow):
         if self._closed:
             return
         nets = [it.data(Qt.UserRole) for it in self.net_list.selectedItems()]
+        # The PI and AC panels' Add puts a new VRM, load or link on the selected net.
+        for panel in (getattr(self, "solve_panel", None), self._ac_panel):
+            if panel is not None:
+                panel.picked_nets = list(nets)
         si = self.mode == "si" and self._si_panel is not None
         if not nets and si:
             nets = self._si_panel.focus_nets()
@@ -2107,9 +2139,8 @@ class MainWindow(QMainWindow):
             return
         from qtpy.QtWidgets import QDialog
         from kipi.dc.gui.rail_autofill_dialog import RailAutofillDialog
-        from kipi.dc.pi.importers.import_summary import counts, group_notes, setup_changes
         from kipi.dc.pi.importers.rail_autofill import (
-            LIB_NAME, AutofillError, PartsLibrary, autofill_rail, library_paths, write_stubs,
+            AutofillError, PartsLibrary, autofill_rail, library_paths,
         )
         snap, current = self.snapshot, self.solve_panel.setup
         try:
@@ -2136,10 +2167,68 @@ class MainWindow(QMainWindow):
                               "VRM(s), load(s) or DC connection(s). Replace them?\n\nOther "
                               "rails and every setting stay as they are.") != QMessageBox.Yes:
             return
+        self._apply_autofill(result, current, rail, f"from {source}")
+
+    def autofill_tree(self):
+        """Find every regulator and source on the board, let the user check them in a
+        preview, and fill each one's rail (kipi.dc.pi.importers.tree_autofill)."""
+        if self.snapshot is None:
+            QMessageBox.information(self, "KiPI", "Load or open the board first.")
+            return
+        from qtpy.QtWidgets import QDialog
+        from kipi.dc.gui.tree_autofill_dialog import TreeAutofillDialog
+        from kipi.dc.pi.importers.rail_autofill import (
+            AutofillError, PartsLibrary, library_paths,
+        )
+        from kipi.dc.pi.importers.tree_autofill import autofill_tree, find_tree
+        snap, current = self.snapshot, self.solve_panel.setup
+        try:
+            library = PartsLibrary.load(library_paths(snap.project_dir))
+        except AutofillError as e:
+            QMessageBox.critical(self, "KiPI", f"Could not read the parts library:\n\n{e}")
+            return
+        found = find_tree(snap, library)
+        if not found:
+            QMessageBox.information(
+                self, "KiPI", "No regulators found on the board: no inductor between a "
+                              "switch node and a rail, nor an IC between two rails.\n\nSet "
+                              "PI_VRM on the regulators (switcher, ldo or source), or use "
+                              "Auto-fill rail.")
+            return
+        dlg = TreeAutofillDialog(snap, library, found, self)
+        if dlg.exec() != QDialog.Accepted:
+            return
+        rows, ground, max_ohm = dlg.choice()
+        try:
+            result = autofill_tree(snap, rows, current, library, ground, max_ohm)
+        except AutofillError as e:
+            QMessageBox.critical(self, "KiPI", f"Could not fill the power tree:\n\n{e}")
+            return
+        group = set(result.nets)
+        had = (sum(v.output.net in group for v in current.vrms)
+               + sum(l.supply.net in group for l in current.loads)
+               + sum(k.side_a.net in group or k.side_b.net in group for k in current.links))
+        if had and QMessageBox.question(
+                self, "KiPI", f"The rails being filled already have {had} VRM(s), load(s) or "
+                              "DC connection(s). Replace them?\n\nOther rails and every "
+                              "setting stay as they are.") != QMessageBox.Yes:
+            return
+        n = sum(f.use and f.kind != "switch" for f in rows)
+        self._apply_autofill(result, current, "the power tree", f"({n} VRM(s))")
+
+    def _apply_autofill(self, result, current, what: str, how: str):
+        """Show an Auto-fill's setup: tick its nets, log its notes, and offer stubs in
+        the parts library for the parts with no data."""
+        from kipi.dc.pi.importers.import_summary import counts, group_notes, setup_changes
+        from kipi.dc.pi.importers.rail_autofill import (
+            LIB_NAME, AutofillError, library_paths, write_stubs,
+        )
+        snap = self.snapshot
+        group = set(result.nets)
         setup = result.setup
         notes = group_notes(result.notes)
         if notes:
-            self.log(f"Notes on {rail}:")
+            self.log(f"Notes on {what}:")
         for note in notes:
             self.log(f"  {note}", logging.WARNING)
         used = setup.pin_nets() | set(setup.nets or [])
@@ -2147,10 +2236,13 @@ class MainWindow(QMainWindow):
                           or it.data(Qt.UserRole) in used)
         self._set_panels_board(snap, setup)
         self._refresh_power_tree()
-        self.setup_bar.set_label(f"Auto-filled {rail} - not saved")
+        self.setup_bar.set_label(f"Auto-filled {what} - not saved")
         amps = sum(l.total_current() for l in setup.loads if l.supply.net in group)
-        self.log(f"== Auto-filled {rail} from {source}: {counts(setup)} in the setup, "
-                 f"{amps:.4g} A on the rail - {setup_changes(current, setup)}"
+        had_caps = {r for m in current.caps for r in m.refs}
+        new_caps = sum(r not in had_caps for m in setup.caps for r in m.refs)
+        self.log(f"== Auto-filled {what} {how}: {counts(setup)} in the setup, "
+                 f"{amps:.4g} A of loads - {setup_changes(current, setup)}"
+                 + (f"; {new_caps} capacitor(s) given AC models" if new_caps else "")
                  + (f"; {len(notes)} note(s) above" if notes else "")
                  + ". Not saved: Save keeps it")
         self.log_dock.show()
@@ -2161,14 +2253,15 @@ class MainWindow(QMainWindow):
             names = ", ".join(m.key for m in result.missing[:8])
             more = f" and {len(result.missing) - 8} more" if len(result.missing) > 8 else ""
             if QMessageBox.question(
-                    self, "KiPI", f"{len(result.missing)} part number(s) have no current or "
-                                  f"resistance: {names}{more}.\n\nAdd them to {path} with "
-                                  "empty values, to fill in once for every copy of the part?"
+                    self, "KiPI", f"{len(result.missing)} part number(s) have no current, "
+                                  f"resistance or capacitor values: {names}{more}.\n\nAdd "
+                                  f"them to {path} with empty values, to fill in once for "
+                                  "every copy of the part?"
             ) == QMessageBox.Yes:
                 try:
                     written, n = write_stubs(path, result.missing)
                     self.log(f"Added {n} part(s) to fill in to {written}; run Auto-fill "
-                             f"rail again after filling them")
+                             f"again after filling them")
                 except (OSError, AutofillError) as e:
                     QMessageBox.critical(self, "KiPI", f"Could not write {LIB_NAME}:\n\n{e}")
 
@@ -2194,6 +2287,28 @@ class MainWindow(QMainWindow):
         self._dc_for_ac = tree
         if self._ac_panel is not None:
             self._ac_panel.set_dc_result(tree)
+        if self._transient_plot is not None:
+            self._transient_plot.refresh()        # its loads' DC voltages, at the load
+        self._show_pi_plots(tree)
+
+    def _show_pi_plots(self, tree):
+        """The PI plots tab (DC mode, beside the power tree) for ``tree``: built with the
+        first result, so matplotlib waits until a plot is wanted."""
+        if not hasattr(tree, "groups"):          # None: cleared
+            if self._pi_plot is not None:
+                self._pi_plot.clear()
+            return
+        if self._pi_plot is None:
+            from kipi.dc.gui.pi_plot import PIPlot
+            self._pi_plot = PIPlot(self.views)
+            self.views.insertTab(self.views.indexOf(self.power_tree) + 1, self._pi_plot,
+                                 "PI plots")
+            self.views.setTabToolTip(
+                self.views.indexOf(self._pi_plot),
+                "The DC solve's plots: loads against their tolerance, drop budget")
+            self._show_power_tree_tab(self.mode)
+        setup = getattr(tree, "solved_setup", None) or self.solve_panel.setup
+        self._pi_plot.set_result(tree, setup)
 
     def run_solve(self, setup):
         snap = self.snapshot
@@ -2232,16 +2347,25 @@ class MainWindow(QMainWindow):
             if tree is None:
                 self.solve_panel.show_error(scenes)
                 return
+            # The rails solved before and not solved again stay in the results.
+            from kipi.dc.pi.results import merge
+            solved = tree
+            tree = merge(self._tree, solved)
+            if tree is not solved:
+                scenes = {**{k: v for k, v in self._scenes.items() if k in tree.groups},
+                          **scenes}
+                kept = [g for g in tree.groups if g not in solved.groups]
+                self.log(f"Results kept from the last solve: {', '.join(kept)}")
             self._set_tree(tree, scenes)
             self.solve_panel.set_report(None)
-            first = tree.loads[0].group if tree.loads else next(iter(tree.groups))
+            first = solved.loads[0].group if solved.loads else next(iter(solved.groups))
             self.solve_panel.show_results(tree, first)
             self._show_group(first)
             from kipi.dc.pi.tree import fmt_drop
-            for l in tree.loads:
+            for l in solved.loads:
                 self.log(f"  {l.name}: {fmt_drop(l.drop)} ({abs(l.drop_pct):.3f} %), worst pin "
                          f"{fmt_drop(l.drop_worst)} at {l.current:g} A {l.verdict}".rstrip())
-            self._log_ratings(tree, snap, frozen)
+            self._log_ratings(solved, snap, frozen)
 
         if self._run(work, done, "Solving power tree") is not None:
             self.solve_panel.set_busy(True)
@@ -2268,12 +2392,20 @@ class MainWindow(QMainWindow):
         return getattr(result, "solved_setup", None) or copy.deepcopy(panel.setup)
 
     def _report_path(self, name: str) -> Path:
-        """Where a report goes: next to the setup, else the board."""
+        """Where a report goes: a kipi_reports folder next to the setup, else the board, so
+        reports don't clutter the project folder (made here if it isn't there yet)."""
         if self._setup_path is not None:
-            return self._setup_path.parent / name
-        snap = self.snapshot
-        folder = snap.project_dir or (str(Path(snap.file).parent) if snap.file else "")
-        return Path(folder or ".") / name
+            folder = self._setup_path.parent
+        else:
+            snap = self.snapshot
+            folder = Path(snap.project_dir or (str(Path(snap.file).parent) if snap.file
+                                               else "") or ".")
+        reports = folder / REPORTS_DIR
+        try:
+            reports.mkdir(exist_ok=True)
+        except OSError:
+            return folder / name       # e.g. a read-only folder: writing will say why
+        return reports / name
 
     def _write_report(self, what: str, write, path: Path, on_written):
         """In the background, ``write(path, progress)`` a report of the shown results
@@ -2387,6 +2519,17 @@ class MainWindow(QMainWindow):
 
         if self._run(work, done, "AC impedance solve", on_partial=partial) is not None:
             self.ac_panel.set_busy(True)
+
+    def _probe_window(self, name: str):
+        """The DC voltage and tolerance window of the load on AC probe ``name``, for the
+        transient at the load; None without a DC solve or a load with a tolerance."""
+        from kipi.ac.target import load_window
+        panel = self._ac_panel
+        probe = next((p for p in getattr(panel and panel.setup, "probes", [])
+                      if p.name == name), None)
+        if probe is None or self._dc_for_ac is None:
+            return None
+        return load_window(panel.setup, probe, self._dc_for_ac)
 
     def _show_ac_result(self, result):
         """The AC panel's shown result: a new solve, or another rail's earlier one (None:

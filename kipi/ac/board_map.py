@@ -27,6 +27,15 @@ def si(x: float, unit: str) -> str:
     return f"{x / 10 ** e:.4g} {prefix}{unit}"
 
 
+def nets_text(nets, most: int = 2) -> str:
+    """A rail's nets for a plot title or legend: a rail can join many nets (eight on one
+    board), and their full list made the GUI's plots wider than the window."""
+    nets = list(nets)
+    if len(nets) <= most:
+        return " + ".join(nets)
+    return f"{' + '.join(nets[:most])} + {len(nets) - most} more"
+
+
 @dataclass
 class MapMesh:
     """The AC solve's mesh, flattened to 2D: each triangle's layer, and whether it is

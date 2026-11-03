@@ -1450,11 +1450,18 @@ class ItemList(QWidget):
                  describe: Callable[[object], str], parent=None, noun: str = "item"):
         super().__init__(parent)
         self.items, self.editor, self.make_new, self.describe = items, editor, make_new, describe
+        #: Called with the item about to be removed: False keeps it (the user cancelled).
+        self.on_remove: Optional[Callable[[object], bool]] = None
+        #: Set both to give every row a tick box: ``ticked(item)`` is its state,
+        #: ``on_tick(item, on)`` is called when the user ticks or unticks it.
+        self.ticked: Optional[Callable[[object], bool]] = None
+        self.on_tick: Optional[Callable[[object, bool], None]] = None
         lay = QVBoxLayout(self)
         lay.setContentsMargins(2, 2, 2, 2)
         self.lst = QListWidget(self)
         self.lst.currentRowChanged.connect(self._select)
         self.lst.itemClicked.connect(lambda _: self.selected.emit(self.current(), True))
+        self.lst.itemChanged.connect(self._tick_changed)
         self.lst.setToolTip(f"Select a {noun} to edit it below")
         #: The Add / Duplicate / Remove row, for panels that add buttons of their own.
         self.buttons = row = QHBoxLayout()
@@ -1491,9 +1498,30 @@ class ItemList(QWidget):
         for obj in self.items():
             self.lst.addItem(self.describe(obj))
         self.lst.blockSignals(False)
+        self.refresh_ticks()
         n = self.lst.count()
         self.lst.setCurrentRow(min(max(row, 0), n - 1) if n else -1)
         self._select(self.lst.currentRow())
+
+    def refresh_ticks(self):
+        """Show each item's tick from ``ticked`` (when the list has tick boxes)."""
+        if self.ticked is None:
+            return
+        self.lst.blockSignals(True)
+        for obj, i in zip(self.items(), range(self.lst.count())):
+            it = self.lst.item(i)
+            it.setFlags(it.flags() | Qt.ItemIsUserCheckable)
+            it.setCheckState(Qt.Checked if self.ticked(obj) else Qt.Unchecked)
+        self.lst.blockSignals(False)
+
+    def _tick_changed(self, item):
+        row, items = self.lst.row(item), self.items()
+        if self.on_tick is None or not 0 <= row < len(items):
+            return
+        on = item.checkState() == Qt.Checked
+        if self.ticked(items[row]) != on:
+            self.on_tick(items[row], on)
+            self.changed.emit()
 
     def current(self):
         """The selected item, or None."""
@@ -1552,6 +1580,8 @@ class ItemList(QWidget):
     def _remove(self):
         row = self.lst.currentRow()
         if row < 0:
+            return
+        if self.on_remove is not None and not self.on_remove(self.items()[row]):
             return
         del self.items()[row]
         self.reload()
@@ -1659,6 +1689,8 @@ class PIPanel(QWidget, PartSelection):
         self.snapshot: Optional[BoardSnapshot] = None
         self.setup = PISetup()
         self._nets: List[str] = []
+        #: The nets selected in the Board panel's Nets list: Add puts a new item there.
+        self.picked_nets: List[str] = []
         lay = QVBoxLayout(self)
         lay.setContentsMargins(4, 4, 4, 4)
 
@@ -1699,11 +1731,18 @@ class PIPanel(QWidget, PartSelection):
             self.tabs.setTabToolTip(i, text)
         for il in (self.vrm_list, self.load_list, self.link_list):
             il.changed.connect(self._on_changed)
+        self.vrm_list.on_remove = self._remove_rail_parts
+        # A VRM's tick is its rail's tick in the Solve tab: untick VRMs to solve the rest.
+        self.vrm_list.ticked = self._vrm_solved
+        self.vrm_list.on_tick = self._tick_vrm
+        self.vrm_list.lst.setToolTip("Select a VRM to edit it below; untick a VRM to leave "
+                                     "its rail out of the solve (the Solve tab's net groups)")
         self._watch_part_lists()
         lay.addWidget(self.tabs, 3)
 
         self.lbl_errors = QLabel(self)
         self.lbl_errors.setWordWrap(True)
+        self.lbl_errors.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
         self.lbl_errors.setStyleSheet("color: #ff8080;")
         lay.addWidget(self.lbl_errors)
         row = QHBoxLayout()
@@ -2338,17 +2377,69 @@ class PIPanel(QWidget, PartSelection):
         for il in (self.vrm_list, self.load_list, self.link_list):
             il.editor.refresh_nets(self._nets)
 
+    def _remove_rail_parts(self, vrm: Vrm) -> bool:
+        """Before ``vrm`` is removed: offer to remove the loads, series links and capacitor
+        models on its rail too (what Auto-fill rail added with it). False: the user
+        cancelled."""
+        from kipi.dc.pi.importers.rail_autofill import rail_caps, rail_parts
+        loads, links = rail_parts(self.setup, vrm)
+        caps = rail_caps(self.snapshot, self.setup, vrm) if self.snapshot is not None else []
+        if not loads and not links and not caps:
+            return True
+        what = ", ".join(t for t in (f"{len(loads)} load(s)" if loads else "",
+                                     f"{len(links)} series link(s)" if links else "",
+                                     f"{len(caps)} capacitor(s) with AC models" if caps else "")
+                         if t)
+        answer = QMessageBox.question(
+            self, "Remove VRM",
+            f"{vrm.name}'s rail, {vrm.output.net} and the nets beyond its series links, has "
+            f"{what}. Remove them with it?\n\nNo removes the VRM alone.",
+            QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel, QMessageBox.Yes)
+        if answer == QMessageBox.Cancel:
+            return False
+        if answer == QMessageBox.Yes:
+            drop = {id(x) for x in [*loads, *links]}
+            self.setup.loads[:] = [l for l in self.setup.loads if id(l) not in drop]
+            self.setup.links[:] = [k for k in self.setup.links if id(k) not in drop]
+            # A model left with no parts goes too; one shared with another rail stays.
+            gone, emptied = set(caps), set()
+            for m in self.setup.caps:
+                if any(r in gone for r in m.refs):
+                    m.refs = [r for r in m.refs if r not in gone]
+                    if not m.refs:
+                        emptied.add(id(m))
+            self.setup.caps[:] = [m for m in self.setup.caps if id(m) not in emptied]
+            self.load_list.reload()
+            self.link_list.reload()
+        return True
+
     def _part_lists(self):
         return {"vrm": self.vrm_list, "load": self.load_list, "link": self.link_list}
 
+    def _vrm_solved(self, v: Vrm) -> bool:
+        """Whether the VRM's rail is solved: its output's net group is not excluded."""
+        if not (v.output and v.output.net):
+            return True
+        group = net_groups(self.setup).get(v.output.net, frozenset([v.output.net]))
+        return not group & set(self.setup.excluded_nets)
+
+    def _tick_vrm(self, v: Vrm, on: bool):
+        """Tick or untick the VRM's rail: its output's net group, as in the Solve tab."""
+        if not (v.output and v.output.net):
+            return
+        group = net_groups(self.setup).get(v.output.net, frozenset([v.output.net]))
+        off = set(self.setup.excluded_nets)
+        self.setup.excluded_nets = sorted(off - group if on else off | group)
+
     def _on_changed(self):
         self._fill_groups()
+        self.vrm_list.refresh_ticks()
         active, _ = active_setup(self.setup)
         errors = validate(active) if (active.vrms or active.loads) else []
         if not self.setup.vrms:
             errors.insert(0, "Add a VRM (the source of a net) to start")
         elif not active.vrms:
-            errors.insert(0, "Tick a net group driven by a VRM in the Solve tab")
+            errors.insert(0, "Tick a VRM, or a net group driven by one in the Solve tab")
         self.lbl_errors.setText("\n".join(f"• {e}" for e in errors))
         self.btn_solve.setEnabled(not errors)
         self.btn_solve.setText(self._solve_label())
@@ -2356,9 +2447,16 @@ class PIPanel(QWidget, PartSelection):
 
     # ------------------------------------------------------------------ new items
     def _first_net(self) -> Optional[str]:
+        """The net a new item goes on: the one selected in the Nets list, else the first
+        ticked."""
         if not self._nets:
             self.lbl_errors.setText("• Tick nets in the Board panel first")
             return None
+        if self.picked_nets:
+            net = next((n for n in self.picked_nets if n in self._nets), None)
+            if net is None:
+                self.lbl_errors.setText(f"• Tick {self.picked_nets[0]} in the Board panel first")
+            return net
         return self._nets[0]
 
     def _first_part(self, net) -> str:

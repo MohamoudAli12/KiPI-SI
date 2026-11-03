@@ -221,6 +221,35 @@ def part_esl(snap: Optional[BoardSnapshot], ref: str) -> Optional[Tuple[float, s
     return None
 
 
+# A ceramic chip capacitor's ESR, its least (at its self-resonance), from its capacitance: a
+# line on log scales through typical X7R/X5R parts' values in Murata's and TDK's data, about
+# 30 mΩ at 100 nF, 12 mΩ at 1 µF and 5 mΩ at 10 µF. Parts differ by 2x either way; the
+# datasheet's value is better.
+MLCC_ESR_AT_1UF_OHM = 0.012
+MLCC_ESR_SLOPE = 0.39                  # ESR falls by 10^0.39 for each decade of capacitance
+MLCC_ESR_RANGE_OHM = (1e-3, 1.0)
+MLCC_MAX_F = 220e-6                    # above this, a chip capacitor is not taken as an MLCC
+# Not a ceramic chip: polarised, electrolytic, tantalum or polymer parts, by footprint or
+# value.
+_NOT_MLCC_RE = re.compile(r"(?i)(CP_|Elec|Tantal|Polymer|POSCAP|OS-?CON|SP-?Cap|Radial|"
+                          r"Axial|THT)")
+
+
+def is_mlcc(footprint: str, value: str, farads: Optional[float]) -> bool:
+    """Whether a capacitor looks like a ceramic chip (MLCC): a chip size in its footprint's
+    name, nothing naming another kind, and at most :data:`MLCC_MAX_F`."""
+    if chip_length_mm(footprint) is None or _NOT_MLCC_RE.search(f"{footprint} {value}"):
+        return False
+    return farads is None or farads <= MLCC_MAX_F
+
+
+def mlcc_esr_ohm(farads: float) -> float:
+    """A typical ceramic chip capacitor's ESR at ``farads`` (see :data:`MLCC_ESR_AT_1UF_OHM`)."""
+    esr = MLCC_ESR_AT_1UF_OHM * (farads / 1e-6) ** -MLCC_ESR_SLOPE
+    lo, hi = MLCC_ESR_RANGE_OHM
+    return min(max(esr, lo), hi)
+
+
 def bead_esl_h(z_ohm: float, f_hz: float, dcr_ohm: float = 0.0) -> Optional[float]:
     """A ferrite bead's inductance from its impedance |Z| at ``f_hz``, a point on its
     inductive slope below its peak: |Z|² = DCR² + (2πf·L)². None if |Z| ≤ DCR."""

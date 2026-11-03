@@ -43,7 +43,9 @@ def _until(app, done, timeout=10.0):
 def test_the_slow_parts_wait(window):
     assert window._viewer is None and window._ac_panel is None and window._plot is None
     assert window.views.tabText(0) == "3D view"
-    assert window.views.count() == 1                  # the plots' tabs come with the plots
+    # The power tree is light and comes at once; the plots' tabs come with the plots.
+    assert [window.views.tabText(i) for i in range(window.views.count())] == [
+        "3D view", "Power tree"]
     assert set(window._panels()) == {"dc"}
 
 

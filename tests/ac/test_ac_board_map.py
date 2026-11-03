@@ -118,3 +118,22 @@ def test_main_window_tab(app, no_3d, solved):
     w._show_ac_result(None)
     assert w.board_map.board_map is None
     w.close()
+
+
+def test_mesh_edges_toggle_without_rebuilding_the_map(app, solved):
+    _snap, _setup, result, _ = solved
+    w = BoardMap()
+    w.resize(900, 600)
+    w.set_map(result.board_map)
+    w.canvas.draw()
+    pcs = list(w._mesh_pcs)
+    assert pcs and all(pc.get_linewidth()[0] > 0 for pc in pcs)
+    w.chk_mesh.setChecked(False)
+    w.canvas.draw()
+    assert w._mesh_pcs == pcs                          # the same triangles, restyled
+    assert all(pc.get_linewidth()[0] == 0 for pc in pcs)
+    assert len(w._backgrounds) == 2                    # both drawings kept
+    redraws = []
+    w.canvas.draw_idle = lambda: redraws.append(1)
+    w.chk_mesh.setChecked(True)                        # drawn before: shown again
+    assert not redraws and pcs[0].get_linewidth()[0] > 0

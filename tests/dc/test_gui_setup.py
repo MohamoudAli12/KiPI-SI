@@ -108,6 +108,21 @@ def test_dc_connection_takes_a_resistors_value(app):
     panel.close()
 
 
+def test_add_puts_a_vrm_on_the_net_selected_in_the_nets_list(app):
+    from kipi.dc.pi.model import PISetup
+    setup = PISetup()
+    panel = PIPanel()
+    panel.set_board(_board_with_bridges(), setup)
+    panel.set_nets(["+3V3", "VSNS"])
+    panel.vrm_list._add()                            # none selected: the first ticked
+    panel.picked_nets = ["VSNS"]
+    panel.vrm_list._add()
+    assert [v.output.net for v in setup.vrms] == ["+3V3", "VSNS"]
+    panel.picked_nets = ["GND"]                      # selected but not ticked: nothing
+    panel.vrm_list._add()
+    assert len(setup.vrms) == 2 and "Tick GND" in panel.lbl_errors.text()
+
+
 def test_solve_tab_excludes_unticked_groups(app):
     from qtpy.QtCore import Qt
 
@@ -169,3 +184,69 @@ def test_an_isolated_converter_edits_its_input_ground(app):
     ed._store()                                            # none picked: U1's are guessed
     assert setup.vrms[1].input_ground == PinRef("U1", "PGND")
     panel.close()
+
+
+@pytest.mark.parametrize("answer,vrms,loads", [("Yes", 1, 0), ("No", 1, 1), ("Cancel", 2, 1)])
+def test_removing_a_vrm_offers_to_remove_its_rails_loads(app, monkeypatch, answer, vrms,
+                                                           loads):
+    from qtpy.QtWidgets import QMessageBox
+    setup = two_phase()
+    assert len(setup.vrms) == 2 and len(setup.loads) == 1   # the load is on VOUT
+    asked = []
+    monkeypatch.setattr(QMessageBox, "question",
+                        lambda *a, **k: asked.append(a[2]) or getattr(QMessageBox, answer))
+    panel = PIPanel()
+    panel.set_board(board(), setup)
+    row = next(i for i, v in enumerate(setup.vrms) if v.output.net == "VOUT")
+    panel.vrm_list.lst.setCurrentRow(row)
+    panel.vrm_list._remove()
+    assert asked and "1 load(s)" in asked[0]
+    assert (len(setup.vrms), len(setup.loads)) == (vrms, loads)
+    assert panel.load_list.lst.count() == loads
+
+
+def test_removing_a_vrm_offers_to_remove_its_rails_capacitor_models(app, monkeypatch):
+    from qtpy.QtWidgets import QMessageBox
+    from kipi.ac.model import CapModel
+    from test_rail_autofill import CAP_PACKAGES, CAP_PARTS, CAP_PINS, board as cap_board, \
+        cap_fill
+    setup = cap_fill().setup
+    setup.caps.append(CapModel("empty, set by hand"))
+    setup.caps.append(CapModel("shared", 1e-6, 1e-9, 0.01, ["C2", "C7"]))
+    for m in setup.caps:
+        if m.name.startswith("100nF 16V"):
+            m.refs.remove("C2")                # C2 is in "shared" instead
+    asked = []
+    monkeypatch.setattr(QMessageBox, "question",
+                        lambda *a, **k: asked.append(a[2]) or QMessageBox.Yes)
+    panel = PIPanel()
+    panel.set_board(cap_board(CAP_PARTS, CAP_PINS, CAP_PACKAGES), setup)
+    panel.vrm_list.lst.setCurrentRow(0)
+    panel.vrm_list._remove()
+    assert "6 capacitor(s) with AC models" in asked[0]
+    assert {m.name: m.refs for m in setup.caps} == {"empty, set by hand": [],
+                                                    "shared": ["C7"]}
+
+
+def test_vrm_ticks_choose_the_rails_to_solve(app):
+    from qtpy.QtCore import Qt
+
+    from tree_boards import board as tree_board, setup as tree_setup
+    setup = tree_setup("ldo", ground=True)          # J1 drives VIN, U1 makes +3V3 from it
+    panel = PIPanel()
+    panel.set_board(tree_board(), setup)
+    lst = panel.vrm_list.lst
+    names = [v.name for v in setup.vrms]
+    assert all(lst.item(i).checkState() == Qt.Checked for i in range(lst.count()))
+    lst.item(names.index("J1")).setCheckState(Qt.Unchecked)     # solve U1's rail alone
+    assert setup.excluded_nets == ["VIN"]
+    assert panel.btn_solve.isEnabled(), panel.lbl_errors.text()
+    groups = panel.lst_groups                                    # the Solve tab agrees
+    vin = next(i for i in range(groups.count()) if groups.item(i).text().startswith("VIN"))
+    assert groups.item(vin).checkState() == Qt.Unchecked
+    groups.item(vin).setCheckState(Qt.Checked)                   # and ticks back the VRM
+    assert setup.excluded_nets == []
+    assert lst.item(names.index("J1")).checkState() == Qt.Checked
+    for i in range(lst.count()):
+        lst.item(i).setCheckState(Qt.Unchecked)
+    assert not panel.btn_solve.isEnabled() and "Tick a VRM" in panel.lbl_errors.text()

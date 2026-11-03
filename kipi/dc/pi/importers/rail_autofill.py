@@ -9,7 +9,10 @@ every footprint with pads on it:
 * a two-pad part to another net that is not a ground and passes DC (a ferrite, an
   inductor, a resistor at or below ``max_link_ohm``, or a part the library or its fields
   call a link) -> a DC connection, and the walk goes on into the net beyond it;
-* capacitors, test points and higher-value resistors (pull-ups, dividers) -> skipped;
+* a capacitor from the net to a ground -> an AC capacitor model, one per value and
+  package (see "Capacitors" below), unless a model has it already;
+* test points, higher-value resistors (pull-ups, dividers) and parts not fitted (KiCad's
+  DNP, unless a ``PI_ROLE`` says otherwise) -> skipped;
 * anything else -> a load on its pads on the net.
 
 Where the numbers come from, the first found wins:
@@ -22,6 +25,13 @@ Where the numbers come from, the first found wins:
 
 Nothing is guessed: a load with no current is added at 0 A, a series part with no
 resistance as a short, and both are named in the notes, to be filled in.
+
+Capacitors: the capacitance is the value field's (or the library's). The ESL is the
+``PI_ESL`` field's, else the library's, else the part's own from its package
+(:func:`~kipi.core.model.parts.part_esl`; the solve adds the board's mounting). The ESR is
+the ``PI_ESR`` field's, else the library's, else, for a ceramic chip, a typical MLCC's at
+its capacitance (:func:`~kipi.core.model.parts.mlcc_esr_ohm`), named an estimate in the
+notes. Anything still unknown is left 0 ("values needed") and named in the notes.
 
 Library file:
 
@@ -39,6 +49,10 @@ Library file:
         link: {power_max_w: 0.0625}     # its resistance from its value field
       TPS7A9101DSKR:
         vrm: {out_pins: ['1', '2'], current_limit_a: 1.0}
+      SIC431AED-T1-GE3:
+        vrm: {kind: smps, fsw_hz: 600e3}  # smps, ldo or source, for Auto-fill power tree
+      GRM155R71C104KA88D:
+        cap: {capacitance_f: 100e-9, esl_h: 0.4e-9, esr_ohm: 0.03}
       TP-5000:
         role: ignore                    # load, link, vrm or ignore
 """
@@ -56,8 +70,11 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 from kipi.core.model.board import BoardSnapshot, Footprint
 from kipi.core.model.nets import voltage_from_name
+from kipi.ac.model import AGING_PCT_PER_DECADE, CapModel
 from kipi.core.model.parts import (
-    is_capacitor_ref, is_inductor_ref, parse_resistance, part_value,
+    chip_length_mm, is_capacitor_ref, is_class2, is_inductor_ref, is_mlcc, mlcc_esr_ohm,
+    parse_capacitance, parse_dielectric, parse_resistance, parse_voltage_rating, part_esl,
+    part_value,
 )
 from kipi.dc.pi.autofill import guess_ground_pins, looks_like_ground, part_nets, pins_on
 from kipi.dc.pi.load_model import (
@@ -78,6 +95,11 @@ FIELDS = {
     "PI_PMAX": "power rating of a series part: '63mW'",
     "PI_TOL": "supply tolerance: '±5%', '-3/+5%', '±0.1V'",
     "PI_ROLE": "load, link, vrm or ignore",
+    "PI_VRM": "a regulator's type, for Auto-fill power tree: 'switcher', 'ldo' or 'source'",
+    "PI_V": "a source's or regulator's output voltage: '12V'",
+    "PI_FSW": "a switcher's switching frequency, for Coupled Noise: '600kHz'",
+    "PI_ESL": "capacitor's ESL: '0.4nH'",
+    "PI_ESR": "capacitor's ESR: '30m'",
 }
 ROLES = ("load", "link", "vrm", "ignore")
 DEFAULT_MAX_LINK_OHM = 1.0
@@ -169,6 +191,15 @@ class PartVrm:
     out_pins: List[str] = field(default_factory=list)
     voltage: Optional[float] = None
     current_limit_a: Optional[float] = None
+    kind: str = ""                  # "smps", "ldo", "source" or "" (found from the board)
+    fsw_hz: Optional[float] = None
+
+
+@dataclass
+class PartCap:
+    capacitance_f: Optional[float] = None
+    esl_h: Optional[float] = None
+    esr_ohm: Optional[float] = None
 
 
 @dataclass
@@ -176,7 +207,18 @@ class PartEntry:
     supplies: List[SupplyModel] = field(default_factory=list)
     link: Optional[PartLink] = None
     vrm: Optional[PartVrm] = None
+    cap: Optional[PartCap] = None
     role: str = ""
+
+
+_KIND_WORDS = {"smps": "smps", "switcher": "smps", "buck": "smps", "boost": "smps",
+               "ldo": "ldo", "linear": "ldo", "source": "source"}
+
+
+def vrm_kind(text) -> str:
+    """A VRM type from a ``PI_VRM`` field or a library entry ('switcher', 'smps', 'ldo',
+    'source'...), or '' if it is not one."""
+    return _KIND_WORDS.get(str(text or "").strip().lower(), "")
 
 
 def _float(d: dict, key: str, where: str) -> Optional[float]:
@@ -206,7 +248,14 @@ def _entry(key: str, d) -> PartEntry:
     if isinstance(d.get("vrm"), dict):
         v = d["vrm"]
         e.vrm = PartVrm([str(p) for p in v.get("out_pins") or []], _float(v, "voltage", where),
-                        _float(v, "current_limit_a", where))
+                        _float(v, "current_limit_a", where), vrm_kind(v.get("kind")),
+                        _float(v, "fsw_hz", where))
+        if v.get("kind") and not e.vrm.kind:
+            raise AutofillError(f"{where}: vrm kind must be smps, ldo or source")
+    if isinstance(d.get("cap"), dict):
+        c = d["cap"]
+        e.cap = PartCap(_float(c, "capacitance_f", where), _float(c, "esl_h", where),
+                        _float(c, "esr_ohm", where))
     return e
 
 
@@ -276,6 +325,19 @@ def library_paths(project_dir: str) -> List[Path]:
     return paths
 
 
+def part_voltage(fp: Footprint, entry: Optional[PartEntry], net: str
+                 ) -> Tuple[Optional[float], str]:
+    """A source's or regulator's output voltage on ``net`` and where it came from: its
+    ``PI_V`` field, the library, the net's name, else (None, "")."""
+    v = parse_quantity(fp.fields.get("PI_V", ""), "V")
+    if v is not None:
+        return v, "PI_V"
+    if entry and entry.vrm and entry.vrm.voltage is not None:
+        return entry.vrm.voltage, "library"
+    v = voltage_from_name(net)
+    return (v, "net name") if v is not None else (None, "")
+
+
 # ---------------------------------------------------------------------------
 # The walk
 # ---------------------------------------------------------------------------
@@ -284,7 +346,7 @@ def library_paths(project_dir: str) -> List[Path]:
 class MissingPart:
     """A part the library and fields say nothing needed about: one stub per part number."""
     key: str
-    kind: str                       # "load" or "link"
+    kind: str                       # "load", "link" or "cap"
     refs: List[str] = field(default_factory=list)
     pins: List[str] = field(default_factory=list)
     net: str = ""
@@ -299,17 +361,30 @@ class AutofillResult:
 
 
 class _Walker:
+    """``vrm``: the rail's VRM, already made (by Auto-fill power tree), instead of a source
+    on ``source_ref``. ``taken``: parts the walk passes over (the VRM's own, other
+    switchers' inductors). ``feeds``: (part, net) of each VRM's input pins, not loads on
+    the net, as the VRM draws its input current itself. ``stop``: nets another VRM drives
+    or switches, which the walk does not follow a series part into. ``switches``: part ->
+    (net in, net out) of the transistors that switch a rail on to another, followed as DC
+    connections through them."""
+
     def __init__(self, snap: BoardSnapshot, rail: str, source_ref: str,
-                 library: PartsLibrary, include_ground: bool, max_link_ohm: float):
+                 library: PartsLibrary, include_ground: bool, max_link_ohm: float,
+                 vrm: Optional[Vrm] = None, taken=(), feeds=(), stop=(), switches=None):
         self.snap, self.rail, self.source_ref = snap, rail, source_ref
         self.lib, self.include_ground, self.max_link_ohm = library, include_ground, max_link_ohm
+        self.vrm, self.taken, self.feeds, self.stop = vrm, set(taken), set(feeds), set(stop)
+        self.switches: Dict[str, Tuple[str, str]] = dict(switches or {})
         self.fps = {f.reference: f for f in snap.footprints}
         self.notes: List[str] = []
         self.missing: Dict[str, MissingPart] = {}
         self.not_followed: List[str] = []
+        self.dnp: List[str] = []
         self.vrms: List[Vrm] = []
         self.loads: List[Load] = []
         self.links: List[DcLink] = []
+        self.caps: List[str] = []           # capacitors from the rail's nets to a ground
         self.names: set = set()
         self.grounds: set = set()
 
@@ -366,9 +441,8 @@ class _Walker:
         e = self._entry(self.source_ref)
         pins = pins_on(self.snap, self.source_ref, self.rail, e.vrm.out_pins) \
             if e and e.vrm else []
-        voltage = e.vrm.voltage if e and e.vrm and e.vrm.voltage is not None else None
+        voltage = part_voltage(self._fp(self.source_ref), e, self.rail)[0]
         if voltage is None:
-            voltage = voltage_from_name(self.rail)
             if voltage is None:
                 voltage = 1.0
                 self.notes.append(f"{self.source_ref}: voltage not known, set to 1 V; set it "
@@ -416,6 +490,21 @@ class _Walker:
                                  PinRef(ref, far, list(nets[far])), r))
         return far
 
+    def try_switch(self, ref: str, net: str, nets: Dict[str, List[str]]) -> Optional[str]:
+        """The far net of a switch transistor out of ``net`` (added as a link), or None."""
+        a, b = self.switches[ref]
+        if net not in (a, b) or a not in nets or b not in nets:
+            return None
+        far = b if net == a else a
+        r = self.link_resistance(ref)
+        if r is None:
+            r = 0.0
+            self.notes.append(f"{ref}: a switch from {a} to {b}, its on-resistance not known "
+                              "(PI_R), taken as a short")
+        self.links.append(DcLink(self._name(ref), PinRef(ref, net, list(nets[net])),
+                                 PinRef(ref, far, list(nets[far])), r))
+        return far
+
     def load(self, ref: str, net: str, pins: List[str], regulator: bool = False):
         supply = PinRef(ref, net, list(pins))
         load = Load(self._name(ref), supply, 0.0, ground=self._ground(supply))
@@ -451,14 +540,18 @@ class _Walker:
 
     # -------------------------------------------------------------- walk
     def run(self) -> List[str]:
-        self.source()
+        if self.vrm is None:
+            self.source()
+        else:
+            self.vrms.append(self.vrm)
+            self.names.add(self.vrm.name)
         refs_on: Dict[str, List[str]] = {}
         for p in self.snap.pads:
             if p.net and p.footprint:
                 refs_on.setdefault(p.net, [])
                 if p.footprint not in refs_on[p.net]:
                     refs_on[p.net].append(p.footprint)
-        done = {self.source_ref}
+        done = {self.source_ref} | self.taken
         seen, todo = [self.rail], deque([self.rail])
         while todo:
             net = todo.popleft()
@@ -469,14 +562,29 @@ class _Walker:
                 role = self._role(ref)
                 if role == "ignore" or (_TP_REF_RE.match(ref) and not role):
                     continue
+                if self._fp(ref).dnp and not role:
+                    self.dnp.append(ref)
+                    continue
+                if (ref, net) in self.feeds:
+                    self.notes.append(f"{ref} on {net}: a VRM's input, its current from the "
+                                      "VRM's load, not a load of its own")
+                    continue
                 nets = part_nets(self.snap, ref)
-                far = self.try_link(ref, net, nets, role)
+                far = self.try_switch(ref, net, nets) if ref in self.switches else None
+                far = far or self.try_link(ref, net, nets, role)
+                if far and far in self.stop:
+                    self.notes.append(f"{ref}: joins {net} to {far}, another VRM's; not followed")
+                    continue
                 if far:
                     if far not in seen:
                         seen.append(far)
                         todo.append(far)
                     continue
-                if far is False or (is_capacitor_ref(ref) and not role):
+                if far is False:
+                    continue
+                if is_capacitor_ref(ref) and not role:
+                    if len(nets) == 2 and any(self._is_ground(n) for n in nets if n != net):
+                        self.caps.append(ref)
                     continue
                 if ref[:1] == "R" and len(nets) == 2 and not role:
                     continue                # a resistor to ground or a signal: no load
@@ -485,7 +593,76 @@ class _Walker:
         if self.not_followed:
             self.notes.append(f"Not followed, over {self.max_link_ohm:g} Ω: "
                               + ", ".join(sorted(self.not_followed)))
+        if self.dnp:
+            self.notes.append("Left out, not fitted (DNP): "
+                              + ", ".join(sorted(self.dnp, key=_ref_key)))
         return seen
+
+
+def _cap_models(w: _Walker, taken: Dict[str, CapModel]) -> List[CapModel]:
+    """AC models for the walk's capacitors not in a model of ``taken`` (model name -> it):
+    one per value and package, filled from the fields, the library and the package (see
+    the module's docstring). Parts joining a model of ``taken`` with the same name and
+    values are added to it instead."""
+    groups: Dict[tuple, Tuple[str, List[str]]] = {}
+    estimated = set()                   # groups whose ESR is a typical MLCC's
+    for ref in w.caps:
+        fp = w._fp(ref)
+        e = w._entry(ref)
+        lib = e.cap if e and e.cap else PartCap()
+        value = part_value(fp, parse_capacitance)
+        farads = parse_capacitance(value) or lib.capacitance_f
+        esl = parse_quantity(w._field(ref, "PI_ESL"), "H")
+        if esl is None:
+            esl = lib.esl_h
+        if esl is None:
+            got = part_esl(w.snap, ref)
+            esl = got[0] if got else None
+        esr = parse_ohms(w._field(ref, "PI_ESR"))
+        src_r = "PI_ESR"
+        if esr is None and lib.esr_ohm is not None:
+            esr, src_r = lib.esr_ohm, "library"
+        if esr is None and farads and is_mlcc(fp.footprint, value, farads):
+            esr, src_r = mlcc_esr_ohm(farads), "MLCC estimate"
+        if esr is None or esl is None or not farads:
+            w._miss(ref, "cap", "", [])
+        size = fp.footprint.split(":")[-1]
+        code = re.search(r"\d{4}(?=_\d{4}Metric)", size) or re.search(r"(?<!\d)\d{4}(?!\d)", size)
+        size = code.group(0) if code and chip_length_mm(fp.footprint) else ""
+        key = (value or "?", size, farads or 0.0, esl or 0.0, esr or 0.0)
+        name = f"{value or ref} {size}".strip()
+        groups.setdefault(key, (name, []))[1].append(ref)
+        if src_r == "MLCC estimate":
+            estimated.add(key)
+    out: List[CapModel] = []
+    names = set(taken)
+    for key, (name, refs) in sorted(groups.items(), key=lambda kv: kv[1][0]):
+        value, _size, farads, esl, esr = key
+        refs = sorted(refs, key=_ref_key)
+        same = taken.get(name)
+        if same is not None and (same.capacitance_f, same.esl_h, same.esr_ohm) == \
+                (farads, esl, esr):
+            same.refs += refs
+            continue
+        n, base = 2, name
+        while name in names:
+            name, n = f"{base} ({n})", n + 1
+        names.add(name)
+        diel = parse_dielectric(value)
+        rated = parse_voltage_rating(value)
+        out.append(CapModel(name, farads, esl, esr, refs,
+                            rated_v=rated if is_class2(value) else None, dielectric=diel,
+                            aging_pct_per_decade=AGING_PCT_PER_DECADE.get(diel, 0.0)))
+        unknown = [what for what, v in (("capacitance", farads), ("ESL", esl), ("ESR", esr))
+                   if not v]
+        refs_text = ", ".join(refs[:6]) + (" ..." if len(refs) > 6 else "")
+        if unknown:
+            w.notes.append(f"Capacitors {refs_text} ({name}): no {', '.join(unknown)} (PI_ESL, "
+                           "PI_ESR or the library); fill it in on the AC Capacitors tab")
+        if key in estimated:
+            w.notes.append(f"Capacitors {refs_text} ({name}): ESR {esr * 1e3:.3g} mΩ is a "
+                           "typical MLCC's, not the part's; set PI_ESR or the library for it")
+    return out
 
 
 def _ref_key(ref: str):
@@ -498,43 +675,113 @@ def _merge(base: Optional[PISetup], w: _Walker, nets: List[str]) -> PISetup:
     rails, settings, thermal, AC and the stackup kept."""
     setup = copy.deepcopy(base) if base is not None else PISetup()
     group = set(nets)
-    setup.vrms = [v for v in setup.vrms if v.output.net not in group] + w.vrms
-    setup.loads = [l for l in setup.loads if l.supply.net not in group] + sorted(
-        w.loads, key=lambda l: _ref_key(l.supply.ref))
-    setup.links = [k for k in setup.links
-                   if k.side_a.net not in group and k.side_b.net not in group] + sorted(
-        w.links, key=lambda k: _ref_key(k.side_a.ref))
+    vrms = [v for v in setup.vrms if v.output.net not in group]
+    loads = [l for l in setup.loads if l.supply.net not in group]
+    links = [k for k in setup.links if k.side_a.net not in group and k.side_b.net not in group]
+    # A part on two rails (a level shifter on 1V8 and 3V3) is named the same by each walk:
+    # this walk's item takes its net in its name.
+    kept = {x.name for x in [*vrms, *loads, *links]}
+    for x, net in [*((v, v.output.net) for v in w.vrms), *((l, l.supply.net) for l in w.loads),
+                   *((k, k.side_a.net) for k in w.links)]:
+        if x.name in kept:
+            name, n = f"{x.name} ({net})", 2
+            while name in kept:
+                name, n = f"{x.name} ({net}) ({n})", n + 1
+            x.name = name
+        kept.add(x.name)
+    # Capacitors a model has already keep it: it may hold datasheet values set by hand.
+    have = {r for m in setup.caps for r in m.refs}
+    w.caps = [r for r in w.caps if r not in have]
+    setup.caps = setup.caps + _cap_models(w, {m.name: m for m in setup.caps})
+    setup.vrms = vrms + w.vrms
+    setup.loads = loads + sorted(w.loads, key=lambda l: _ref_key(l.supply.ref))
+    setup.links = links + sorted(w.links, key=lambda k: _ref_key(k.side_a.ref))
     ticked = list(setup.nets or [])
     setup.nets = ticked + [n for n in [*nets, *sorted(w.grounds)] if n not in ticked]
     return setup
 
 
+def _rail_group(setup: PISetup, vrm: Vrm) -> set:
+    """``vrm``'s rail: its output net and the nets beyond its series links, the group
+    :func:`autofill_rail` fills. The walk stops at a net another VRM drives; empty if
+    another drives ``vrm``'s own."""
+    others = {v.output.net for v in setup.vrms if v is not vrm}
+    start = vrm.output.net
+    if start in others:
+        return set()
+    group, todo = {start}, deque([start])
+    while todo:
+        net = todo.popleft()
+        for k in setup.links:
+            for a, b in ((k.side_a.net, k.side_b.net), (k.side_b.net, k.side_a.net)):
+                if a == net and b not in group and b not in others:
+                    group.add(b)
+                    todo.append(b)
+    return group
+
+
+def rail_parts(setup: PISetup, vrm: Vrm) -> Tuple[List[Load], List[DcLink]]:
+    """The loads and series links on ``vrm``'s rail (:func:`_rail_group`), for removing
+    them with the VRM."""
+    group = _rail_group(setup, vrm)
+    loads = [l for l in setup.loads if l.supply.net in group]
+    links = [k for k in setup.links if k.side_a.net in group and k.side_b.net in group]
+    return loads, links
+
+
+def rail_caps(snap: BoardSnapshot, setup: PISetup, vrm: Vrm) -> List[str]:
+    """The capacitors with an AC model from ``vrm``'s rail (:func:`_rail_group`) to a
+    ground, as :func:`autofill_rail` adds them, for removing them with the VRM."""
+    group = _rail_group(setup, vrm)
+    if not group:
+        return []
+    out = []
+    for m in setup.caps:
+        for ref in m.refs:
+            nets = list(part_nets(snap, ref))
+            if len(nets) == 2 and any(n in group for n in nets) and \
+                    any(looks_like_ground(snap, n) for n in nets if n not in group):
+                out.append(ref)
+    return sorted(out, key=_ref_key)
+
+
 def source_candidates(snap: BoardSnapshot, rail: str,
                       library: Optional[PartsLibrary] = None) -> List[str]:
-    """The parts on ``rail`` that could drive it, likeliest first: one the library calls a
-    regulator, then a regulator-looking part (U, VR, PS) with pads on another power net,
-    then a connector (J, P, CN), then the rest. Capacitors, resistors, beads, inductors and
-    test points are left out."""
+    """The parts that could drive ``rail``, likeliest first: a regulator Auto-fill power
+    tree finds driving it (a switcher's device need not be on the rail itself), then one
+    the library calls a regulator, then a regulator-looking part (U, VR, PS) with pads on
+    another power net, then a connector (J, P, CN), then the rest. A part with signals to
+    other parts on two rails (a level translator) is a load, not a source, and goes last,
+    after only a regulator fed from the rail.
+    Capacitors, resistors, beads, inductors and test points are left out."""
+    from kipi.dc.pi.importers.tree_autofill import _Board, find_tree
     library = library or PartsLibrary()
-    fps = {f.reference: f for f in snap.footprints}
+    tree = find_tree(snap, library)
+    found = [f.ref for f in tree if f.rail == rail and f.kind in ("ldo", "smps")]
+    fed = {f.ref for f in tree if f.kind in ("ldo", "smps") and (f.ref, rail) in f.feeds()}
+    b = _Board(snap, library)
     refs = sorted({p.footprint for p in snap.items_on_net(rail)[2] if p.footprint},
                   key=_ref_key)
 
     def score(ref: str) -> int:
-        fp = fps.get(ref)
+        if ref in fed:
+            return 4
+        fp = b.fps.get(ref)
         e = library.lookup(fp) if fp else None
         if e and (e.vrm or e.role == "vrm"):
             return 0
         nets = part_nets(snap, ref)
         others = [n for n in nets if n != rail and not looks_like_ground(snap, n)]
         if re.match(r"^(U|VR|PS|IC)\d", ref) and others:
-            return 1
+            rails = [n for n in nets if b.is_rail(n, ref)]
+            return 3 if len(b.signals(ref, rails)) > 1 else 1
         if re.match(r"^(J|P|CN|X)\d", ref):
             return 2
         return 3
 
     skip = re.compile(r"^(C|R|L|FB|FL|TP|D)\d")
-    return sorted((r for r in refs if not skip.match(r)), key=score)
+    rest = sorted((r for r in refs if not skip.match(r) and r not in found), key=score)
+    return list(dict.fromkeys(found)) + rest
 
 
 def autofill_rail(snap: BoardSnapshot, rail: str, source_ref: str,
@@ -547,7 +794,21 @@ def autofill_rail(snap: BoardSnapshot, rail: str, source_ref: str,
         raise AutofillError(f"the board has no net {rail}")
     if library is None:
         library = PartsLibrary.load(library_paths(snap.project_dir))
-    w = _Walker(snap, rail, source_ref, library, include_ground, max_link_ohm)
+    # A regulator Auto-fill power tree recognises is made as one (a switcher with its
+    # input, its inductor's pins on the rail), not as a source.
+    from kipi.dc.pi.importers.tree_autofill import regulator_for, to_vrm
+    reg = regulator_for(snap, rail, source_ref, library)
+    # A part that is another VRM's input draws its current through that VRM.
+    feeds = {(ph.input.ref, ph.input.net) for v in (base.vrms if base else [])
+             if v.output.net != rail for ph in v.all_phases() if ph.input is not None}
+    w = _Walker(snap, rail, source_ref, library, include_ground, max_link_ohm,
+                taken=(reg.refs() | set(reg.inductors)) if reg else (), feeds=feeds)
+    if reg is not None:
+        if reg.voltage is None:
+            w.notes.append(f"{source_ref}: voltage not known, set to 1 V; set it on the "
+                           "VRMs tab, as PI_V or as vrm: voltage in the library")
+        w.vrm = to_vrm(reg, w._name(source_ref), include_ground)
+        w.notes.append(f"{source_ref}: {reg.why}")
     nets = w.run()
     return AutofillResult(_merge(base, w, nets), w.notes, nets, list(w.missing.values()))
 
@@ -616,6 +877,8 @@ def _stub_lines(m: MissingPart) -> List[str]:
     lines = [f"  {q(m.key)}:    # {', '.join(m.refs[:6])}{' ...' if len(m.refs) > 6 else ''}"]
     if m.kind == "link":
         lines.append("    link: {resistance_ohm: null, current_max_a: null, power_max_w: null}")
+    elif m.kind == "cap":
+        lines.append("    cap: {capacitance_f: null, esl_h: null, esr_ohm: null}")
     else:
         pins = ", ".join(q(p) for p in m.pins)
         lines.append(f"    supplies:\n      - {{name: {q(m.net)}, pins: [{pins}], current_a: null}}")

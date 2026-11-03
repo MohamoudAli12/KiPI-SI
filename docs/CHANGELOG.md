@@ -7,6 +7,34 @@ milestones rather than versions that were ever set.
 ## 0.9.3 (in development)
 
 ### Added
+- **Auto-fill power tree.** A new button on the setup bar finds every regulator on the
+  board and fills every rail at once. Switchers are found by their inductor between a switch
+  node and a rail (buck or boost by their feedback divider, several inductors as phases),
+  LDOs as an IC between two rails (a level translator with signals on both is a load), a
+  P-FET switching one rail on to another as a DC connection, and a source on each input rail
+  nothing feeds (its connector, else the transistor or diode the power comes in through). A
+  preview lists them for checking: untick, change a type or a source's part, and give any
+  voltage the part and rail name don't (a red cell holds OK back). New fields: `PI_VRM`
+  (`switcher`, `ldo`, `source`), `PI_V` (output voltage) and `PI_FSW` (switching
+  frequency); the library's `vrm:` takes `kind` and `fsw_hz`.
+- **PI: tick the VRMs to solve.** Each VRM in the VRMs list has a tick box: untick a VRM to
+  leave its rail out of the solve, so one VRM can be solved alone. It is the same choice as
+  the rail's net group in the Solve tab, and the two stay in step.
+- **Auto-fill rail adds the rail's capacitors for AC.** Each capacitor from the rail (or a
+  net beyond its series links) to ground gets an AC model, one per value and package, unless
+  a model has it already. ESL from a new `PI_ESL` field, the library's new `cap:` entry, or
+  the package; ESR from `PI_ESR`, the library, or, for a ceramic chip, a typical MLCC's at
+  its capacitance (named an estimate in the notes). Polymer, tantalum and electrolytic parts
+  get no ESR estimate: they are named in the notes and offered as library stubs. Removing a
+  VRM also offers to remove its rail's capacitor models. Probes are still placed by hand.
+- **AC impedance plot: Log |Z| box.** Untick it to plot |Z| on a linear axis from 0; ticked
+  (the default) keeps the log axis, now labelled in Ω at 2, 3 and 5 between decades when
+  |Z| spans less than two decades, instead of as 6×10⁻¹.
+- **User guide: Auto-fill rail and part fields.** A new section documents the `PI_I`,
+  `PI_R`, `PI_IMAX`, `PI_PMAX`, `PI_TOL` and `PI_ROLE` fields and the syntax of their values
+  (SI prefixes, currents by pin group), where each number comes from and in what order,
+  when `PI_R` is needed (beads, inductors, fuses, not resistors), and the `pi_parts.yml`
+  parts library: where it is read from, how parts are looked up, and its entries.
 - **User guide: reading SI results.** A new section explains every Signal Integrity
   result in plain terms (the basics, TDR, S-parameters, crosstalk, pulse response, the eye,
   BER and bathtubs, equalisation, COM, skew and waveforms) with KiPI's own plots of a good
@@ -184,6 +212,19 @@ milestones rather than versions that were ever set.
   vias, zone copper, outline and DC solve match the board file's.
 
 ### Changed
+- **Reports go in a `kipi_reports` folder.** DC, AC, Coupled Noise and Signal Integrity
+  reports are written to a `kipi_reports` folder next to the setup (made when the first
+  report is written) instead of the project folder itself; Export Touchstone and Export
+  SPICE model start there too.
+- **AC board map: Mesh edges toggles at once.** The box restyles the drawn mesh instead
+  of building the map again, the map without edges draws in about a quarter of the time it
+  took, and each drawing is kept: switching back, and hovering a part, no longer redraw a
+  large mesh (seconds for 360 000 triangles, now milliseconds).
+- **Removing a VRM offers to remove its rail's loads and series links.** Remove on a VRM
+  now finds the loads and series links on its rail (its output net and the nets beyond its
+  series links, what Auto-fill rail adds with it) and asks whether to remove them too: Yes
+  removes them, No the VRM alone, Cancel nothing. A rail another VRM also drives is left
+  alone.
 - **SI Channels: Add makes channels from the nets ticked in Board.** It used to add the
   first signal net without a channel, which looked random. It now makes a channel for
   each signal net ticked in Board's Nets list, a pair's two legs as one channel (positive
@@ -223,6 +264,23 @@ milestones rather than versions that were ever set.
   first time one is shown.
 
 ### Fixed
+- **Auto-fill rail: wrong sources, switchers as sources, regulators counted twice.** The
+  Driven by list put any IC on two rails first, so a level translator could become a rail's
+  source; real regulators now come first and translators last. Picking a switcher made it a
+  plain source: it is now a Switcher with its input set and its inductor's pins as output.
+  A regulator was added as a load on its input rail as well as drawing its input current
+  as a VRM; it is no longer a load there. Parts not fitted (DNP) are skipped, so a 0 Ω strap
+  option no longer joins two rails.
+- **A switcher's input pins not guessed.** Setting a VRM to Switcher left its input empty
+  when its feedback, enable or boot nets were named like rails (`3V3_FB` beside `VCC`): nets
+  only the part and passives are on are no longer taken for its input, and of several, the
+  one it has the most pins on wins.
+- **Coupled Noise: Add with no VRM ground pins.** A switcher whose VRM has no ground pins
+  got no low-side pins and no capacitors; its device's own ground pins are now used.
+- **AC board map and impedance plot of a rail of many nets.** The title and the map's
+  legend listed every net of the rail (eight on one board), wider than the window: the map
+  was squeezed and its layout broke. They now name two nets and how many more, the map's
+  title takes two lines, and its legend sits below the board, as in the report.
 - **A color theme from KiCad's Plugin and Content Manager was not used** ("theme …
   not found", KiCad's default colors instead). KiCad names such a theme by its file's
   path, under `3rdparty/colors`, not by a name in its settings' `colors/` folder. That

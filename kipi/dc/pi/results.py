@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import math
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
@@ -188,3 +189,22 @@ class TreeResult:
         s = g.result.fields.summary
         drop, ref = s["max_drop"], s["v_ref"]
         return drop, (100.0 * drop / abs(ref) if ref else None)
+
+
+def merge(old: Optional[TreeResult], new: TreeResult) -> TreeResult:
+    """``new`` with the net groups of ``old`` it did not solve again, so a solve of some
+    rails keeps the results of the rails solved before. A group sharing a net with one of
+    ``new``'s (the ground, say) is replaced. An electro-thermal result is never merged: its
+    temperatures come from one solve's losses over the whole board."""
+    if old is None or old.thermal is not None or new.thermal is not None:
+        return new
+    solved = {n for g in new.groups.values() for n in g.nets}
+    kept = {k: g for k, g in old.groups.items()
+            if k not in new.groups and not solved & set(g.nets)}
+    if not kept:
+        return new
+    out = copy.copy(new)
+    out.groups = {**kept, **new.groups}
+    out.loads = [l for l in old.loads if l.group in kept] + new.loads
+    out.vrms = [v for v in old.vrms if v.group in kept] + new.vrms
+    return out

@@ -42,7 +42,7 @@ def test_scan_solve_and_report(app, no_3d, tmp_path, opened_in_browser):
         assert w.si_plot.result is r
         assert w.views.currentWidget() is w.si_plot
         panel.report_option.btn.click()
-        written, = tmp_path.glob("*_si_report_*.html")
+        written, = (tmp_path / "kipi_reports").glob("*_si_report_*.html")
         assert r.report_path == written or Path(r.report_path) == written
         assert [Path(p) for p in opened_in_browser] == [written]
     finally:

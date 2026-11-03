@@ -41,7 +41,8 @@ from kipi.gui.theme import SOLVE_BUTTON_STYLE
 from kipi.gui.tooltip_art import art_tip
 from kipi.gui.sortable import make_sortable, reset_sort, set_row
 from kipi.noise.checks import (
-    NoiseError, guess_ends, operating_point, seed_phases, smps_vrms, validate_noise,
+    NoiseError, guess_ends, operating_point, seed_phases, smps_vrms, switching_frequency,
+    validate_noise,
 )
 from kipi.noise.model import (
     CUSTOM, DEFAULT_COSS_F, DEFAULT_QRR_C, DEFAULT_RDS_ON_OHM, INDUCTOR_AXES, LOGIC_LEVELS,
@@ -853,6 +854,7 @@ class NoisePanel(QWidget, PartSelection):
 
         self.lbl_errors = QLabel(self)
         self.lbl_errors.setWordWrap(True)
+        self.lbl_errors.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
         self.lbl_errors.setStyleSheet("color: #ff8080;")
         lay.addWidget(self.lbl_errors)
 
@@ -1386,7 +1388,8 @@ class NoisePanel(QWidget, PartSelection):
     def _new_aggressor(self) -> Optional[Aggressor]:
         vrms = smps_vrms(self.setup)
         if not vrms:
-            self.lbl_errors.setText("• Add a VRM of type Switcher (in DC or AC mode) first")
+            self.lbl_errors.setText("• Add a VRM of type Switcher first: Auto-fill power tree… "
+                                    "finds them on the board, or add one in DC or AC mode")
             return None
         taken = {a.vrm for a in self.setup.aggressors}
         vrm = next((v for v in vrms if v.name not in taken), vrms[0])
@@ -1394,6 +1397,7 @@ class NoisePanel(QWidget, PartSelection):
         if self.snapshot is not None:
             a.phases = seed_phases(self.snapshot, self.setup, vrm,
                                    _topology_or_buck(self.setup, a))
+            a.fsw_hz = switching_frequency(self.snapshot, vrm) or a.fsw_hz
         return a
 
     def _describe_aggressor(self, a: Aggressor) -> str:

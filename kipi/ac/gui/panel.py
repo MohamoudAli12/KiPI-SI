@@ -688,6 +688,7 @@ class ACPanel(QWidget, PartSelection):
         self.snapshot: Optional[BoardSnapshot] = None
         self.setup = PISetup()
         self._nets: List[str] = []
+        self.picked_nets: List[str] = []        # as in PIPanel
         self.result = None
         self._results: Dict[str, object] = {}     # the last ACResult of each rail (VRM name)
         # The last DC solve, for the target calculator's DC drop (None until one is run).
@@ -759,6 +760,7 @@ class ACPanel(QWidget, PartSelection):
 
         self.lbl_errors = QLabel(self)
         self.lbl_errors.setWordWrap(True)
+        self.lbl_errors.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
         self.lbl_errors.setStyleSheet("color: #ff8080;")
         lay.addWidget(self.lbl_errors)
 
@@ -1177,11 +1179,7 @@ class ACPanel(QWidget, PartSelection):
         self.btn_solve.setText(("Queued…" if queued else "Solving…") if busy else "Solve rail")
 
     # ------------------------------------------------------------------ new items
-    def _first_net(self) -> Optional[str]:
-        if not self._nets:
-            self.lbl_errors.setText("• Tick nets in the Board panel first")
-            return None
-        return self._nets[0]
+    _first_net = PIPanel._first_net
 
     def _first_part(self, net) -> str:
         parts = parts_on_net(self.snapshot, net)

@@ -63,15 +63,62 @@ def test_empty_setup():
     assert d.blocks == {} and d.arrows == [] and d.columns() == []
 
 
-def test_window_draws_and_saves(tmp_path, qapp_offscreen):
-    from kipi.gui.power_tree import PowerTreeWindow
-    w = PowerTreeWindow()
+def test_view_draws_and_saves(tmp_path, qapp_offscreen):
+    from kipi.gui.power_tree import PowerTreeView
+    w = PowerTreeView()
     w.show_tree(_tree(), board())
     assert len(w.diagram.blocks) == 9
     out = tmp_path / "tree.png"
     w.save_png(str(out))
     assert out.stat().st_size > 0
     w.close()
+
+
+def test_view_follows_the_theme(qapp_offscreen):
+    from qtpy.QtGui import QColor, QPalette
+    from qtpy.QtWidgets import QGraphicsSimpleTextItem
+    from kipi.gui import theme
+    from kipi.gui.power_tree import DARK, LIGHT, PowerTreeView
+    before = QPalette(qapp_offscreen.palette())
+    w = PowerTreeView()
+    w.show_tree(_tree(), board())
+    try:
+        for name, colors in ((theme.DARK, DARK), (theme.LIGHT, LIGHT)):
+            theme.apply(name, qapp_offscreen)
+            w.refresh()
+            if name == theme.LIGHT and colors is not w.colors:
+                continue                     # the desktop's own palette is dark
+            assert w.colors is colors
+            assert w.view.backgroundBrush().color() == QColor(colors["background"])
+            texts = [i for i in w.scene.items() if isinstance(i, QGraphicsSimpleTextItem)]
+            assert texts and any(t.brush().color() == QColor(colors["text"]) for t in texts)
+    finally:                             # as it was, for the theme tests after this one
+        qapp_offscreen.setPalette(before)
+        theme._startup = None
+        w.close()
+
+
+def _contrast(a: str, b: str) -> float:
+    """WCAG contrast ratio of two #rrggbb colours."""
+    def lum(h):
+        c = [int(h[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+        c = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in c]
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    hi, lo = sorted((lum(a), lum(b)), reverse=True)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def test_dark_colours_read_well():
+    from kipi.gui.power_tree import DARK, LIGHT
+    for colors in (DARK, LIGHT):
+        fills = [*colors["fill"].values(), *colors["vrm_fill"].values()]
+        # Text on every block at least WCAG AA (4.5:1); outlines and arrows on the canvas
+        # at least 3:1, as for graphics.
+        assert min(_contrast(colors["text"], f) for f in fills) >= 4.5
+        assert min(_contrast(e, colors["background"]) for e in colors["edge"].values()) >= 3
+        # The VRM type tag is drawn in the VRM outline colour on each VRM fill.
+        assert min(_contrast(colors["edge"]["vrm"], f)
+                   for f in colors["vrm_fill"].values()) >= 3
 
 
 @pytest.fixture(scope="module")

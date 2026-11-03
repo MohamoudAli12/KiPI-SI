@@ -1,10 +1,11 @@
 """The estimated transient response of an AC solve (#166): each probe's load step, up and
-back down, and the rail's deviation from its DC value while it steps."""
+back down, and the rail's deviation from its DC value while it steps; or, at the load, its
+DC voltage from the power-tree solve plus that deviation, against the load's tolerance."""
 
 from __future__ import annotations
 
 import html
-from typing import Optional
+from typing import Callable, Optional
 
 import numpy as np
 from qtpy.QtCore import Qt
@@ -20,6 +21,10 @@ NOTE = ("An estimate, each probe's load step on its own: the open-loop PDN imped
         "the VRM's loop closed at its control loop bandwidth (a typical compensation, not "
         "the converter's own). Dashed: ± target |Z| × ΔI, the AC tolerance a flat target "
         "stands for. Zoom in with the toolbar to see fast edges.")
+NOTE_AT_LOAD = ("The voltage at each probe's load: its DC voltage from the last DC solve "
+                "(dotted) plus the estimated step response, against the load's tolerance "
+                "(dashed). Margin: the closest the voltage comes to either end, negative "
+                "when it leaves the window.")
 BW_LIMIT_HZ = 20e6              # the bandwidth limit, as an oscilloscope's
 
 
@@ -54,10 +59,20 @@ class TransientPlot(QWidget):
             "and overshoot in the legend. The results table and report are unchanged.",
             "bw_limit", "bw"))
         self.chk_bw.toggled.connect(lambda _on: self._draw())
+        self.chk_load = QCheckBox("At the load (DC + step)", self)
+        self.chk_load.setToolTip(
+            "The voltage the load sees: its DC voltage from the last DC solve (with the "
+            "copper's drop) plus the step's deviation, against the load's tolerance "
+            "window. Needs a DC solve and a load with a tolerance on the probe's pins.")
+        self.chk_load.toggled.connect(lambda _on: self._draw())
+        #: probe name -> its load's DC voltage and tolerance window
+        #: (:class:`kipi.ac.target.LoadWindow`), or None; set by the window.
+        self.window_source: Callable[[str], object] = lambda _name: None
         lay = QVBoxLayout(self)
         lay.setContentsMargins(4, 4, 4, 4)
         top = QHBoxLayout()
         top.addWidget(self.chk_bw)
+        top.addWidget(self.chk_load)
         top.addStretch(1)
         # Zoom and pan: a load step's fast edges last nanoseconds, the loop's recovery
         # tens of microseconds. Without matplotlib's toolbar the plot works unzoomed.
@@ -73,6 +88,7 @@ class TransientPlot(QWidget):
         self.canvas.mpl_connect("motion_notify_event", self._hover)
         self.result = None
         self.transients = {}
+        self.windows = {}           # probe name -> its load's window, at the load
         self._full = {}             # the transients at full bandwidth
         self._scale = (1e6, "µs")
         self._style()
@@ -106,6 +122,11 @@ class TransientPlot(QWidget):
         self._full = transients(result)
         self._draw()
 
+    def refresh(self):
+        """Redraw, as for a new DC result while the plot is shown at the load."""
+        if self.chk_load.isChecked():
+            self._draw()
+
     def _draw(self):
         """Plot the result's transients, through the bandwidth limit when it is ticked."""
         result = self.result
@@ -123,9 +144,14 @@ class TransientPlot(QWidget):
         names = [c.name for c in result.probes]
         t_end = max(tr.t[-1] for tr in self.transients.values())
         k, unit = self._scale = time_scale(t_end)
+        at_load = self.chk_load.isChecked()
+        self.windows = {n: self.window_source(n) for n in self.transients} if at_load else {}
         for name, tr in self.transients.items():
             color = COLORS[names.index(name) % len(COLORS)]
             self.ax_i.plot(tr.t * k, tr.i, color=color, lw=1.4)
+            if at_load:
+                self._draw_at_load(name, tr, k, color)
+                continue
             self.ax_v.plot(tr.t * k, tr.v * 1e3, color=color, lw=1.6,
                            label=f"{name}: −{tr.undershoot_v * 1e3:.3g} / "
                                  f"+{tr.overshoot_v * 1e3:.3g} mV")
@@ -137,9 +163,10 @@ class TransientPlot(QWidget):
             if allowed:
                 for y in (allowed, -allowed):
                     self.ax_v.axhline(y * 1e3, color=color, lw=1.0, ls="--", alpha=0.8)
-        self.ax_v.axhline(0, color="#666", lw=0.8)
+        if not at_load:
+            self.ax_v.axhline(0, color="#666", lw=0.8)
         self.ax_i.set_ylabel("Load step (A)")
-        self.ax_v.set_ylabel("Rail deviation (mV)")
+        self.ax_v.set_ylabel("Voltage at the load (V)" if at_load else "Rail deviation (mV)")
         self.ax_v.set_xlabel(f"Time ({unit})")
         self.ax_v.set_xlim(0, t_end * k)
         for ax in (self.ax_i, self.ax_v):
@@ -149,11 +176,33 @@ class TransientPlot(QWidget):
         leg = self.ax_v.legend(loc="best", fontsize=8, facecolor="#2a2a2a", edgecolor="#555")
         for t in leg.get_texts():
             t.set_color("#ddd")
-        self.lbl.setText(NOTE + self._notes())
+        self.lbl.setText((NOTE_AT_LOAD if at_load else NOTE) + self._notes())
         self.canvas.draw_idle()
+
+    def _draw_at_load(self, name: str, tr, k: float, color: str):
+        """The probe's load voltage: its DC voltage plus the deviation, in volts, with its
+        tolerance's ends dashed and its least margin to them in the legend."""
+        w = self.windows.get(name)
+        if w is None:
+            return
+        v = w.v_dc + tr.v
+        margin = min(float(np.min(v)) - w.low, w.high - float(np.max(v)))
+        verdict = "PASS" if margin >= 0 else "FAIL"
+        self.ax_v.plot(tr.t * k, v, color=color, lw=1.6,
+                       label=f"{name} ({w.load}): {float(np.min(v)):.4g} to "
+                             f"{float(np.max(v)):.4g} V, margin {margin * 1e3:+.3g} mV "
+                             f"{verdict}")
+        self.ax_v.axhline(w.v_dc, color=color, lw=0.8, ls=":", alpha=0.7)
+        for y in (w.low, w.high):
+            if np.isfinite(y):
+                self.ax_v.axhline(y, color=color, lw=1.0, ls="--", alpha=0.8)
 
     def _notes(self) -> str:
         notes = [f"{name}: {n}" for name, tr in self.transients.items() for n in tr.notes]
+        if self.chk_load.isChecked():
+            notes += [f"{name}: no DC voltage and tolerance for its load; solve the power "
+                      "tree in DC mode and give the load a tolerance"
+                      for name in self.transients if self.windows.get(name) is None]
         return "".join(f"<br>⚠ {html.escape(n)}" for n in notes)
 
     def _hover(self, event):

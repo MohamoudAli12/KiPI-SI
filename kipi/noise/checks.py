@@ -16,8 +16,9 @@ from kipi.core.model.board import BoardSnapshot
 from kipi.core.model.parts import (
     is_capacitor_ref, is_inductor_ref, parse_inductance, part_value,
 )
+from kipi.dc.pi.autofill import guess_ground_pins, part_nets
 from kipi.dc.pi.model import (
-    PinRef, PISetup, Vrm, _supplied_current, net_groups, rail_nominal, vin_range,
+    PinRef, PISetup, Vrm, VrmPhase, _supplied_current, net_groups, rail_nominal, vin_range,
 )
 from kipi.noise.model import Aggressor, AggressorPhase
 
@@ -198,12 +199,39 @@ def _two_net_parts(by_ref, net_a: str, net_b: str, test) -> List[str]:
     return sorted(out)
 
 
+def switching_frequency(snap: Optional[BoardSnapshot], vrm: Vrm) -> Optional[float]:
+    """The switcher's switching frequency, from its device's ``PI_FSW`` field or the parts
+    library's ``vrm: {fsw_hz}``, or None."""
+    from kipi.dc.pi.importers.rail_autofill import (
+        AutofillError, PartsLibrary, library_paths, parse_quantity,
+    )
+    if snap is None:
+        return None
+    try:
+        lib = PartsLibrary.load(library_paths(snap.project_dir))
+    except AutofillError:
+        lib = PartsLibrary()
+    fps = {f.reference: f for f in snap.footprints}
+    for r in (vrm.input, vrm.output):
+        fp = fps.get(r.ref) if r else None
+        if fp is None:
+            continue
+        hz = parse_quantity(fp.fields.get("PI_FSW", ""), "Hz")
+        e = lib.lookup(fp)
+        if hz is None and e and e.vrm:
+            hz = e.vrm.fsw_hz
+        if hz:
+            return hz
+    return None
+
+
 def seed_phases(snap: BoardSnapshot, setup: PISetup, vrm: Vrm, topo: str
                 ) -> List[AggressorPhase]:
     """One phase per VRM phase, filled from the board where it can be read:
 
     * the high-side pins: the VRM's input pins (buck) or output pins (boost);
-    * the low-side pins: its ground pins;
+    * the low-side pins: its ground pins, else the switching device's own on its ground
+      net (a VRM's ground is often left out, so its ground net is not simulated);
     * the inductor: an inductor between a net of the device and the output (buck) or
       input (boost) rail, and the switch node is that device net;
     * the capacitors on the input and output rails to ground, each given to the phase
@@ -214,8 +242,16 @@ def seed_phases(snap: BoardSnapshot, setup: PISetup, vrm: Vrm, topo: str
     phases = []
     vin_net = vrm.input.net if vrm.input else ""
     vout_net = vrm.output.net
-    gnd = vrm.ground.net if vrm.ground else ""
-    for vp in vrm.all_phases():
+    # Copies: a phase's ground guessed here is not the VRM's.
+    vps = [VrmPhase(p.output, p.input, p.ground) for p in vrm.all_phases()]
+    for vp in vps:
+        if vp.ground is None:
+            dev = vp.input if topo == "buck" else vp.output
+            vp.ground = guess_ground_pins(snap, setup, None, dev) if dev else None
+            if vp.ground is not None:
+                vp.ground.pins = list(part_nets(snap, vp.ground.ref).get(vp.ground.net, []))
+    gnd = next((vp.ground.net for vp in vps if vp.ground), "")
+    for vp in vps:
         hs = vp.input if topo == "buck" else vp.output
         hs = PinRef(hs.ref, hs.net, list(hs.pins)) if hs else None
         ls = PinRef(vp.ground.ref, vp.ground.net, list(vp.ground.pins)) if vp.ground else None
@@ -240,7 +276,7 @@ def seed_phases(snap: BoardSnapshot, setup: PISetup, vrm: Vrm, topo: str
     if gnd and phases:
         centers = [_centroid(by_ref.get(vp.ground.ref, []) or by_ref.get(vp.output.ref, []))
                    if (vp.ground and by_ref.get(vp.ground.ref)) or by_ref.get(vp.output.ref)
-                   else (0.0, 0.0) for vp in vrm.all_phases()]
+                   else (0.0, 0.0) for vp in vps]
 
         def nearest(ref: str) -> AggressorPhase:
             cx, cy = _centroid(by_ref[ref])

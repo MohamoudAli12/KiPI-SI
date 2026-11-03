@@ -42,11 +42,45 @@ def test_mode_switch_leads_the_toolbar_grouped_pi_and_si(window):
 
 def test_power_tree_buttons_are_pi_only(window):
     bar = window.setup_bar
+    tab = window.views.indexOf(window.power_tree)
     for mode, shown in (("si", False), ("noise", True), ("si", False), ("dc", True)):
         _mode(window, mode).setChecked(True)
         assert bar.btn_autofill.isHidden() is not shown
         assert bar.btn_import.isHidden() is not shown
         assert not bar.btn_save.isHidden()
+        # The Power tree tab, beside the 3D view, and its toolbar button.
+        assert window.views.isTabVisible(tab) is shown
+        assert window.act_power_tree.isVisible() is shown
+
+
+def test_pi_plots_tab_comes_with_a_dc_result_in_dc_mode_only(window):
+    from phase_boards import board, two_phase
+    from kipi.dc.pi.tree import solve_tree
+    _mode(window, "dc").setChecked(True)
+    window._set_tree(solve_tree(board(), two_phase()), {})
+    tab = window.views.indexOf(window._pi_plot)
+    assert tab == window.views.indexOf(window.power_tree) + 1
+    assert window.views.tabText(tab) == "PI plots" and window._pi_plot.tree is not None
+    window.views.setCurrentIndex(tab)
+    for mode, shown in (("ac", False), ("si", False), ("noise", False), ("dc", True)):
+        _mode(window, mode).setChecked(True)
+        assert window.views.isTabVisible(tab) is shown
+        if not shown:
+            assert window.views.currentWidget() is not window._pi_plot
+    window._set_tree(None, {})
+    assert window._pi_plot.tree is None
+    window.views.setCurrentWidget(window.viewer)
+
+
+def test_power_tree_tab_leaves_the_front_in_si(window):
+    _mode(window, "dc").setChecked(True)
+    window.act_power_tree.trigger()
+    assert window.views.currentWidget() is window.power_tree
+    _mode(window, "si").setChecked(True)
+    assert window.views.currentWidget() is not window.power_tree
+    window.act_power_tree.trigger()                     # hidden in SI: does nothing
+    assert window.views.currentWidget() is not window.power_tree
+    _mode(window, "dc").setChecked(True)
 
 
 def test_dc_is_the_default(window):
@@ -105,7 +139,8 @@ def _plot_tab_shown(w) -> bool:
 
 
 def test_impedance_plot_is_a_tab_beside_the_3d_view_in_ac_only(window):
-    assert window.views.indexOf(window.viewer) == 0 and window.views.indexOf(window.plot) == 1
+    # The 3D view, then the power tree, then the impedance plot.
+    assert window.views.indexOf(window.viewer) == 0 and window.views.indexOf(window.plot) == 2
     assert not _plot_tab_shown(window)
     _mode(window, "ac").setChecked(True)
     assert _plot_tab_shown(window)

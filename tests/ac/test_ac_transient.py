@@ -132,6 +132,42 @@ def test_the_transient_tab_plots_and_limits_bandwidth(app):
     assert p.result is None
 
 
+def test_the_transient_at_the_load_adds_its_dc_voltage_and_tolerance(app):
+    from kipi.ac.gui.transient_plot import TransientPlot
+    from kipi.ac.target import LoadWindow
+    p = TransientPlot()
+    window = LoadWindow("U1 load", 0.990, 1.0, 0.95, 1.05)
+    p.window_source = lambda name: window if name == "U1" else None
+    p.set_result(_result())
+    p.chk_load.setChecked(True)
+    tr = p.transients["U1"]
+    (line,) = [l for l in p.ax_v.lines if l.get_label().startswith("U1 (U1 load)")]
+    assert np.allclose(line.get_ydata(), 0.990 + tr.v)
+    margin = min(0.990 - tr.undershoot_v - 0.95, 1.05 - 0.990 - tr.overshoot_v)
+    assert f"{margin * 1e3:+.3g} mV PASS" in line.get_label()
+    assert p.ax_v.get_ylabel() == "Voltage at the load (V)" and "tolerance" in p.lbl.text()
+    p.window_source = lambda name: None                  # no DC solve: noted, not drawn
+    p.refresh()
+    assert "solve the power tree" in p.lbl.text()
+    p.chk_load.setChecked(False)
+    assert p.ax_v.get_ylabel() == "Rail deviation (mV)"
+    p.close()
+
+
+def test_load_window_from_a_dc_solve():
+    from phase_boards import board, two_phase
+    from kipi.ac.target import load_window
+    from kipi.dc.pi.tree import solve_tree
+    setup = two_phase(ground=True)
+    setup.loads[0].tol_min, setup.loads[0].tol_max = -3.0, 5.0
+    probe = Probe("P", PinRef("U2", "VOUT", ["1"]), PinRef("U2", "GND", ["2"]))
+    assert load_window(setup, probe, None) is None       # no DC solve yet
+    tree = solve_tree(board(), setup)
+    w = load_window(setup, probe, tree)
+    assert w.load == "U2" and w.v_dc == pytest.approx(tree.loads[0].v_effective)
+    assert (w.low, w.high) == (pytest.approx(0.97), pytest.approx(1.05))
+
+
 def test_the_results_table_shows_the_swing(app):
     from kipi.ac.gui.panel import ACPanel
     panel = ACPanel()

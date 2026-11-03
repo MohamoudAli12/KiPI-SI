@@ -11,3 +11,7 @@ dist/
 uv.lock
 .vscode/
 KiPI.lnk
+
+# Reports KiPI writes into a project, and KiCad's own project backups
+kipi_reports/
+*-backups/

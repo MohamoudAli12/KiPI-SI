@@ -10,7 +10,7 @@ from typing import List, Optional
 import numpy as np
 from qtpy.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from kipi.ac.board_map import ACMap
+from kipi.ac.board_map import ACMap, nets_text
 from kipi.ac.gui.plot import COLORS
 
 EMPTY = "Solve a rail in AC mode to see its mesh, capacitors and probes here."
@@ -40,7 +40,7 @@ class BoardMap(QWidget):
         self.chk_mesh.setChecked(True)
         self.chk_mesh.setToolTip("Draw the edges of the solver's triangles; untick to see "
                                  "the copper alone")
-        self.chk_mesh.toggled.connect(self._redraw)
+        self.chk_mesh.toggled.connect(self._show_edges)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(4, 4, 4, 4)
         top = QHBoxLayout()
@@ -54,10 +54,16 @@ class BoardMap(QWidget):
         # Else the controls set the main window's minimum width (it must fit small screens).
         self.setMinimumWidth(120)
         self.canvas.mpl_connect("motion_notify_event", self._hover)
+        self.canvas.mpl_connect("draw_event", self._drawn)
         self.board_map: Optional[ACMap] = None
         self._parts: List[tuple] = []          # (x, y, text) of every part drawn
         self._annot = None
         self._layer_ids: List[int] = []
+        self._mesh_pcs: List = []              # the mesh's copper, rail and ground
+        # The view never zooms or pans: each drawing of it (mesh edges on or off, at a
+        # canvas size) is kept, so the edges toggle and hovering need no redraw of a large
+        # mesh, which takes seconds.
+        self._backgrounds: dict = {}
         self._style()
         self._fill_layers()
         self.canvas.draw_idle()
@@ -80,6 +86,8 @@ class BoardMap(QWidget):
         self.lbl.setText(EMPTY)
         self.ax.clear()
         self._annot = None
+        self._mesh_pcs = []
+        self._backgrounds = {}
         self._style()
         self.canvas.draw_idle()
 
@@ -121,25 +129,25 @@ class BoardMap(QWidget):
         ax = self.ax
         ax.clear()
         self._annot = None
+        self._mesh_pcs = []
+        self._backgrounds = {}
         self._style()
         mesh = m.mesh
         layer = self.cmb_layer.currentData()
         if mesh is not None and len(mesh.tris):
             keep = np.ones(len(mesh.tris), bool) if layer in (None, ALL_LAYERS) \
                 else mesh.tri_layer == layer
-            edges = self.chk_mesh.isChecked()
             # Ground first, so the rail's copper shows on top of a ground plane.
             for ground, color, label in ((True, GROUND_COLOR, m.ground),
-                                         (False, RAIL_COLOR, " + ".join(m.rail_nets))):
+                                         (False, RAIL_COLOR, nets_text(m.rail_nets))):
                 sel = keep & (mesh.tri_ground == ground)
                 if not sel.any():
                     continue
                 pc = PolyCollection(mesh.points[mesh.tris[sel]], facecolors=color,
-                                    edgecolors="#111" if edges else "face",
-                                    linewidths=0.2 if edges else 0.3,   # no seams
-                                    label=label,
-                                    zorder=1 if ground else 2)
+                                    label=label, zorder=1 if ground else 2)
                 ax.add_collection(pc)
+                self._mesh_pcs.append(pc)
+            self._style_edges()
         for r in m.outline:
             ax.plot(r[:, 0], r[:, 1], color="#aaa", lw=1.0, zorder=3)
         self._parts = []
@@ -160,17 +168,51 @@ class BoardMap(QWidget):
         ax.set_xlabel("x (mm)")
         ax.set_ylabel("y (mm)")
         where = ("all layers" if layer in (None, ALL_LAYERS) else m.layer_name(layer))
-        ax.set_title(f"{m.rail}: {' + '.join(m.rail_nets)} against {m.ground}"
-                     + (f", mesh on {where}" if mesh is not None else ", meshing…"),
+        ax.set_title(f"{m.rail}: {nets_text(m.rail_nets)} against {m.ground}"
+                     + (f"\nmesh on {where}" if mesh is not None else "\nmeshing…"),
                      fontsize=10)
         handles, _ = ax.get_legend_handles_labels()
         if handles:
-            leg = ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1.0), fontsize=8,
-                            facecolor="#2a2a2a", edgecolor="#555")
+            # Below the board, as in the report: at its side, long labels squeezed the map.
+            leg = ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=3,
+                            fontsize=8, facecolor="#2a2a2a", edgecolor="#555")
             for t in leg.get_texts():
                 t.set_color("#ddd")
         self.lbl.setText(HINT)
         self.canvas.draw_idle()
+
+    def _style_edges(self):
+        """The mesh's triangles with their edges, or without: then unsmoothed, which draws
+        in half the time and leaves no seams between them."""
+        edges = self.chk_mesh.isChecked()
+        for pc in self._mesh_pcs:
+            pc.set_edgecolor("#111" if edges else "none")
+            pc.set_linewidth(0.2 if edges else 0.0)
+            pc.set_antialiased(edges)
+
+    def _show_edges(self, *_args):
+        self._style_edges()
+        bg = self._backgrounds.get(self._view_key())
+        if bg is None:
+            self.canvas.draw_idle()
+        else:                                  # drawn before: show that drawing again
+            self.canvas.restore_region(bg)
+            self._blit_annot()
+
+    def _view_key(self):
+        return self.chk_mesh.isChecked(), self.canvas.get_width_height()
+
+    def _drawn(self, _event):
+        """Keep each full drawing (without the hover label, which is drawn over it)."""
+        if self.board_map is not None:
+            self._backgrounds[self._view_key()] = self.canvas.copy_from_bbox(self.figure.bbox)
+            if self._annot is not None and self._annot.get_visible():
+                self.ax.draw_artist(self._annot)    # the full draw then shows it
+
+    def _blit_annot(self):
+        if self._annot is not None and self._annot.get_visible():
+            self.ax.draw_artist(self._annot)
+        self.canvas.blit(self.figure.bbox)
 
     def _scatter(self, parts, label, **kw):
         xs = [p.x for p in parts]
@@ -194,19 +236,30 @@ class BoardMap(QWidget):
         if self._annot is None:
             self._annot = self.ax.annotate(
                 "", (0, 0), xytext=(10, 10), textcoords="offset points", fontsize=8,
-                color="#eee", zorder=10,
+                color="#eee", zorder=10, animated=True,      # drawn by _blit_annot
                 bbox=dict(boxstyle="round", fc="#2a2a2a", ec="#777"))
             self._annot.set_visible(False)
         if text is None:
             if self._annot.get_visible():
                 self._annot.set_visible(False)
-                self.canvas.draw_idle()
+                self._repaint_annot()
             return
         x, y, t = text
+        if self._annot.get_visible() and self._annot.get_text() == t:
+            return
         self._annot.xy = (x, y)
         self._annot.set_text(t)
         self._annot.set_visible(True)
-        self.canvas.draw_idle()
+        self._repaint_annot()
+
+    def _repaint_annot(self):
+        """The hover label over the kept drawing; a full draw if there is none yet."""
+        bg = self._backgrounds.get(self._view_key())
+        if bg is None:
+            self.canvas.draw_idle()
+            return
+        self.canvas.restore_region(bg)
+        self._blit_annot()
 
     def _part_at(self, event):
         if not self._parts or event.inaxes is not self.ax or event.x is None:

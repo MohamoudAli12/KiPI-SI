@@ -140,6 +140,8 @@ ol.steps > li { margin-bottom: 6px; }
     <li><a href="#dc-concepts">DC concepts</a></li>
     <li><a href="#pin-picker">The pin picker</a></li>
     <li><a href="#autofill">Pre-filled fields</a></li>
+    <li><a href="#tree-autofill">Auto-fill power tree</a></li>
+    <li><a href="#rail-autofill">Auto-fill rail and part fields</a></li>
     <li><a href="#dc-setup">DC setup tabs</a>
       <ol>
         <li><a href="#dc-vrms">VRMs</a></li>
@@ -317,9 +319,10 @@ time you solve, so the next session starts where you left off.</p>
     the <b>AC setup</b>; VRMs and series links are shared with DC.</li>
   <li>Make sure the rail's net, its ground and every net its capacitors connect to are ticked
     in the Nets list.</li>
-  <li><a href="#ac-caps">Capacitors tab</a>: click <b>Models from values</b> to make one
-    model per capacitor value, then enter each model's <b>ESL</b> and <b>ESR</b> from the
-    datasheet (and check the capacitance).</li>
+  <li><a href="#ac-caps">Capacitors tab</a>: if <a href="#autofill-caps">Auto-fill rail</a>
+    filled the rail, its capacitors have models already; check them. Otherwise click
+    <b>Models from values</b> to make one model per capacitor value, then enter each model's
+    <b>ESL</b> and <b>ESR</b> from the datasheet (and check the capacitance).</li>
   <li><a href="#ac-probes">Probes tab</a>: click <b>Add</b>. KiPI picks the busiest part on
     the rail that also has ground pins, which is usually the load. Or click <b>From DC
     load</b> and pick a DC load: the probe gets that load's supply and ground pins. Set a
@@ -491,7 +494,9 @@ of decimals, plus more when a small typed value needs them.</p>
     remove PARDISO).</td></tr>
   <tr><td><b>Power Integrity: DC / AC / Noise<br>Signal Integrity: SI</b></td><td class="wrap">
     Chooses the analysis, at the start of the toolbar (<b>Ctrl+1</b> to <b>Ctrl+4</b>). The
-    setup dock shows that mode's panel; <b>Import…</b> and <b>Auto-fill rail…</b> fill the
+    setup dock shows that mode's panel; <b>Import…</b>,
+    <a href="#tree-autofill"><b>Auto-fill power tree…</b></a> and
+    <a href="#rail-autofill"><b>Auto-fill rail…</b></a> fill the
     power tree, so they are in the Power Integrity modes only. The DC setup and results are kept while you are in AC and come
     back when you switch to DC. You cannot switch while a task is running.</td></tr>
 </table>
@@ -923,6 +928,262 @@ guess uses it.</p>
 </div>
 </details>
 
+<details id="tree-autofill">
+<summary>Auto-fill power tree <span class="hint">every regulator and source at once; PI_VRM, PI_V, PI_FSW</span></summary>
+<div class="body">
+<p><b>Auto-fill power tree…</b> on the setup bar finds every regulator on the board, the
+source each of their input rails comes in from, and the transistors that switch one rail on
+to another, and shows them in a preview to check before anything changes. <b>OK</b> fills
+each one's rail as <a href="#rail-autofill">Auto-fill rail</a> does: its loads, series links
+and capacitor models.</p>
+<p>How each part is recognised, the first that applies:</p>
+<ul>
+  <li>its <code>PI_VRM</code> field (<code>switcher</code>, <code>ldo</code> or
+    <code>source</code>), or the library's <code>vrm: {kind: smps}</code>;</li>
+  <li>a <b>Switcher</b>: an inductor between a switch node and a rail. The switch node has an
+    IC (or a FET) on it and no capacitor to ground; the rail has one. The IC is the
+    switching device. Its output is the rail its feedback divider comes from (a net named
+    like <code>FB</code> first): an inductor on the input with the divider on the far rail is
+    a boost; otherwise a buck, with the inductor's pins on the rail as its output pins and the
+    device's pins on its input rail as its input. Several inductors to one output are its
+    phases;</li>
+  <li>an <b>LDO</b>: an IC on exactly two rails (nets with a capacitor to ground and
+    something else on them) with at most one signal to another part. A part with more, a
+    level translator or a buffer on two supplies, is a load on both rails, not a
+    regulator. The output is the lower rail by the names' voltages, else the one the IC is
+    the only active part on. Two rails at the same voltage are a load switch, and left as a
+    load;</li>
+  <li>a <b>Switch</b>: a transistor joining a regulator's input rail, which nothing else
+    feeds, to a rail that is fed (a P-FET load switch). It becomes a series link through
+    the transistor, with the <code>PI_R</code> field as its on-resistance (else a short, in
+    the notes);</li>
+  <li>a <b>Source</b> on each regulator input rail still not fed: on its connector, else the
+    transistor or diode the power comes in through (not a TVS to ground), else another part
+    on it.</li>
+</ul>
+<p>The preview lists them sources first, then down the tree. Untick a row to leave it out,
+change a <b>Type</b>, or, for a source, pick another <b>Part</b> from the list. Orange cells
+are guesses to check. The <b>Voltage</b> comes from the part's <code>PI_V</code> field, the
+library, or the rail's name; a rail like <code>VCC</code> gives none, so its cell is red and
+<b>OK</b> waits for a value. A switch has no voltage of its own.</p>
+<p>The rails filled replace their VRMs, loads and links (KiPI asks first), so a wrong source
+from an earlier Auto-fill rail goes. A part that is a VRM's input is not a load on the rail
+feeding it: the VRM draws its input current from its own load. Parts not fitted (KiCad's DNP)
+are left out, so a 0&nbsp;&Omega; strap option does not join two rails. Ground pins are set
+only with <b>Include the ground pins</b>, as in Auto-fill rail.</p>
+<p>For <a href="#noise-aggressors">Coupled Noise</a>: <b>Add</b> on the Aggressors tab lists the
+switchers found and fills their phases from the board: inductor, switch node, the device's
+input and ground pins (its own ground pins when the VRM has none) and the capacitors. The
+<code>PI_FSW</code> field (<code>600kHz</code>) or the library's <code>fsw_hz</code> gives the
+switching frequency; the edges and the datasheet values are still yours to enter.</p>
+</div>
+</details>
+
+<details id="rail-autofill">
+<summary>Auto-fill rail and part fields <span class="hint">PI_I, PI_R, PI_IMAX, PI_PMAX, PI_TOL, PI_ROLE, PI_ESL, PI_ESR and pi_parts.yml</span></summary>
+<div class="body">
+<p><b>Auto-fill rail…</b> on the setup bar fills one rail's power tree from the board. Pick the
+<b>Rail</b> and the part it is <b>Driven by</b> (the regulator or connector; the likeliest come
+first: a regulator <a href="#tree-autofill">Auto-fill power tree</a> finds driving the rail,
+even a switcher not on it itself, then other regulators and connectors; a level translator
+and a regulator fed from the rail come last). KiPI walks out from the rail's net and looks
+at every part with pads on it:</p>
+<ul>
+  <li>the source part becomes a <b>Source</b> VRM on its pads on the rail, or, when it is a
+    regulator Auto-fill power tree recognises, a <b>Switcher</b> or <b>LDO</b> with its input
+    pins (a switcher's output pins on its inductor);</li>
+  <li>a part that is another VRM's input is skipped: that VRM draws its current;</li>
+  <li>a two-pad part to another net that is not a ground and passes DC (a ferrite, an
+    inductor, a resistor up to <b>Follow resistors up to</b>, 1&nbsp;&Omega; by default, or a
+    part its fields or the library call a link) becomes a series link, and the walk goes on
+    into the net beyond it;</li>
+  <li>a capacitor from the net to a ground gets an <b>AC capacitor model</b>, one per value
+    and package (<code>100nF 0402</code>), unless a model has it already
+    (<a href="#autofill-caps">below</a>);</li>
+  <li>test points, bigger resistors (pull-ups, dividers) and parts not fitted (KiCad's DNP,
+    unless a <code>PI_ROLE</code> says otherwise) are skipped;</li>
+  <li>anything else becomes a load on its pads on the net.</li>
+</ul>
+<p>The rail's existing VRMs, loads and links are replaced (KiPI asks first); other rails and
+every setting stay as they are. Capacitor models are only added: a capacitor already in a
+model keeps it. The result is not saved until you press <b>Save</b>. Probes are not added:
+place them on the AC Probes tab, where the load matters.</p>
+<p><b>Removing</b> a VRM on the VRMs tab offers to remove the loads, series links and
+capacitor models on its rail too (its output net and the nets beyond its series links): what
+Auto-fill rail added with it. <b>No</b> removes the VRM alone. A model shared with another
+rail keeps its parts there.</p>
+
+<h4 id="pi-fields">Where the numbers come from</h4>
+<p>For each value, the first of these that gives it wins:</p>
+<ol>
+  <li>the part's <b>PI_ fields</b>, set on the symbol in the schematic and copied to the board
+    with <b>Update PCB from Schematic</b>;</li>
+  <li>the <b>parts library</b>, <code>pi_parts.yml</code>, by the part's manufacturer part
+    number (below);</li>
+  <li>for a resistor (reference <code>R…</code>) only, its resistance from its
+    <b>Value</b> field, or, when that is not a number, a <b>Val</b> or <b>Value</b> field.</li>
+</ol>
+<p>Nothing is guessed. A load with no current is added at 0&nbsp;A and a series part with no
+resistance as a short (0&nbsp;&Omega;), and each is named in the log's notes, to fill in.</p>
+
+<table>
+  <tr><th>Field</th><th>Sets</th><th>Examples</th></tr>
+  <tr><td><code>PI_I</code></td><td class="wrap">A load's current: one total, or a current
+    per group of pins</td><td class="wrap"><code>230mA</code>, <code>1.2A</code>,
+    <code>0.23</code>, <code>3,4=230mA; 12=0.4mA</code></td></tr>
+  <tr><td><code>PI_R</code></td><td class="wrap">A series part's DC resistance</td>
+    <td class="wrap"><code>55m</code>, <code>0.1</code>, <code>55mΩ</code>,
+    <code>0.1 ohm</code>, <code>0R1</code></td></tr>
+  <tr><td><code>PI_IMAX</code></td><td class="wrap">A series part's current rating, or the
+    source's current limit</td><td class="wrap"><code>2A</code>, <code>500mA</code></td></tr>
+  <tr><td><code>PI_PMAX</code></td><td class="wrap">A series part's power rating</td>
+    <td class="wrap"><code>63mW</code>, <code>0.25W</code></td></tr>
+  <tr><td><code>PI_TOL</code></td><td class="wrap">A load's supply tolerance</td>
+    <td class="wrap"><code>±5%</code>, <code>+/-5%</code>, <code>-3/+5%</code>,
+    <code>±0.1V</code>, <code>±100mV</code></td></tr>
+  <tr><td><code>PI_ROLE</code></td><td class="wrap">What the part is, when KiPI would take it
+    for something else</td><td class="wrap"><code>load</code>, <code>link</code>,
+    <code>vrm</code>, <code>ignore</code></td></tr>
+  <tr><td><code>PI_ESL</code></td><td class="wrap">A capacitor's ESL, from its datasheet</td>
+    <td class="wrap"><code>0.4nH</code>, <code>400pH</code></td></tr>
+  <tr><td><code>PI_ESR</code></td><td class="wrap">A capacitor's ESR, from its datasheet</td>
+    <td class="wrap"><code>30m</code>, <code>5mΩ</code></td></tr>
+  <tr><td><code>PI_VRM</code></td><td class="wrap">A regulator's type, for
+    <a href="#tree-autofill">Auto-fill power tree</a>, when KiPI can't tell from the board</td>
+    <td class="wrap"><code>switcher</code>, <code>ldo</code>, <code>source</code></td></tr>
+  <tr><td><code>PI_V</code></td><td class="wrap">A source's or regulator's output
+    voltage</td><td class="wrap"><code>12V</code>, <code>3.3</code></td></tr>
+  <tr><td><code>PI_FSW</code></td><td class="wrap">A switcher's switching frequency, for
+    Coupled Noise</td><td class="wrap"><code>600kHz</code>, <code>1.2MHz</code></td></tr>
+</table>
+<p>Field names are upper case, exactly as above. The value's spaces at either end are
+ignored.</p>
+
+<p><b>Numbers.</b> A number, an optional SI prefix and an optional unit:
+<code>230mA</code>, <code>230 mA</code>, <code>2.3e-1A</code>, <code>500uA</code>,
+<code>500µA</code>. The prefixes are <code>p n u µ m k M</code>. The unit's case does not
+matter (<code>230ma</code> reads), and a bare number is in the base unit: amps, ohms or watts.
+Words (<code>1.2 amps</code>) are not read.</p>
+
+<p><b>PI_I by pins.</b> When <code>PI_I</code> has an <code>=</code> in it, it is a list of
+pin groups, each <code>pins=current</code>:</p>
+<ul>
+  <li>groups are separated by <code>;</code> or <code>|</code>;</li>
+  <li>a group's pins by commas or spaces: <code>F7,F9=0.8A</code> or
+    <code>F7 F9=0.8A</code>;</li>
+  <li>a total and groups cannot be mixed: once there is an <code>=</code>, every part of the
+    field must be a group;</li>
+  <li>pins that are not on the rail are dropped, and a group left with no pins with them;</li>
+  <li>groups set in a field have no names; to name them, use a
+    <a href="#load-models">load model</a> or the library.</li>
+</ul>
+<p>A <code>PI_I</code> that cannot be read is named in the notes
+(<code>U5: PI_I '…' can't be read</code>), and the load gets its current from the library,
+else 0&nbsp;A.</p>
+
+<p><b>When PI_R is needed.</b> A resistor's value is read from its <b>Value</b> field, so a
+resistor needs no <code>PI_R</code>. The field is for series parts whose value is not their DC
+resistance:</p>
+<ul>
+  <li><b>ferrite beads</b> (<code>FB…</code>, <code>FL…</code>): the value is a part number
+    or an impedance such as <code>120R@100MHz</code>, which is the impedance at 100&nbsp;MHz,
+    not the DC resistance (often tens of mΩ). This is why only <code>R…</code> parts have
+    their resistance read from the value;</li>
+  <li><b>inductors</b> (<code>L…</code>): the value is the inductance, and the DCR is in the
+    datasheet;</li>
+  <li><b>fuses, load switches, connectors</b> and any part given <code>PI_ROLE=link</code>;</li>
+  <li><b>a resistor whose value you want to override</b>: a 0&nbsp;&Omega; jumper's value
+    makes it a perfect short, and <code>PI_R=30m</code> gives its real resistance.</li>
+</ul>
+<p>Without <code>PI_R</code> or a library entry, such a part is added as a short, with the note
+<i>no DC resistance (PI_R or the library), taken as a short</i>.</p>
+
+<p><b>PI_ROLE</b> changes how the walk treats the part:
+<code>load</code> makes it a load (even a resistor or capacitor); <code>link</code> a series
+part followed to its other net; <code>vrm</code> a regulator fed by the rail, added as a load
+(its input current); <code>ignore</code> leaves it out. Test points (<code>TP…</code>) are
+left out unless they have a role. Any other value is named in the notes and not used.</p>
+
+<p><b>PI_IMAX and PI_PMAX</b> are checked after each solve: the log lists every series part
+with a rating as <i>Series part ratings</i>, its current against <code>PI_IMAX</code> and its
+loss against <code>PI_PMAX</code>, each PASS or FAIL. On the source part, <code>PI_IMAX</code>
+is its current limit.</p>
+
+<h4 id="autofill-caps">Capacitors</h4>
+<p>The rail's capacitors to ground are grouped into one AC model per value and package. Each
+model's numbers come from, first found wins:</p>
+<ul>
+  <li><b>Capacitance</b>: the value field, else the library's <code>capacitance_f</code>. A
+    class II dielectric and a voltage rating in the value (<code>10uF 6.3V X5R</code>) turn
+    on the DC bias and aging estimates, as <b>Models from values</b> does.</li>
+  <li><b>ESL</b>: <code>PI_ESL</code>, else the library's <code>esl_h</code>, else the part's
+    own from its package (about 0.4&nbsp;nH for an 0402, 0.58&nbsp;nH for an 0603). The
+    solve adds the board's mounting inductance (pads, vias, planes) on top.</li>
+  <li><b>ESR</b>: <code>PI_ESR</code>, else the library's <code>esr_ohm</code>, else, for a
+    ceramic chip capacitor (MLCC), a typical one's at its capacitance: about
+    30&nbsp;m&Omega; at 100&nbsp;nF, 12&nbsp;m&Omega; at 1&nbsp;&micro;F and
+    5&nbsp;m&Omega; at 10&nbsp;&micro;F. Real parts differ by about 2&times; either way, so
+    each estimate is named in the log's notes. Polymer, tantalum and electrolytic parts
+    (by footprint or value) and parts with no chip size in their footprint get no
+    estimate.</li>
+</ul>
+<p>A value still unknown is left at 0 (the model shows <i>values needed</i>), named in the
+notes, and offered as a library stub to fill in.</p>
+
+<h4 id="parts-library">The parts library, pi_parts.yml</h4>
+<p>Numbers for a part kept once, for every copy of it on every board. KiPI reads two files,
+when they exist: the user's, in <code>%APPDATA%\kipi\pi_parts.yml</code> (Windows) or
+<code>~/.config/kipi/pi_parts.yml</code> (Linux and macOS, or
+<code>$XDG_CONFIG_HOME/kipi</code>), then the project's, beside the board. For a part in both,
+the project's entry wins. The Auto-fill rail dialog shows which files it found.</p>
+<p>A part is looked up by its manufacturer part number: the first of its
+<code>MANUFACTURER PART NUMBER</code>, <code>MPN</code>, <code>Manufacturer_Part_Number</code>,
+<code>Manufacturer Part Number</code>, <code>MFR PART NUMBER</code>, <code>MFN</code> or
+<code>PN</code> fields, else its value. A part's own PI_ fields override its library
+entry.</p>
+<pre>kipi_parts: 1
+parts:
+  LMH6518SQX/NOPB:                  # MPN, or the value field
+    supplies:                       # as in a load model
+      - {name: VA, pins: ['3', '4'], current_a: 0.23,
+         tolerance: {min: -5, max: 5, unit: "%"}}
+  BLM15PX121SN1D:                   # a ferrite bead
+    link: {resistance_ohm: 0.055, current_max_a: 2.0}
+  RC0402FR-070R1L:
+    link: {power_max_w: 0.0625}     # its resistance from its value field
+  TPS7A9101DSKR:
+    vrm: {out_pins: ['1', '2'], voltage: 1.8, current_limit_a: 1.0}
+  SIC431AED-T1-GE3:                 # a switcher, for Auto-fill power tree
+    vrm: {kind: smps, fsw_hz: 600e3}
+  GRM155R71C104KA88D:               # a capacitor, for AC
+    cap: {capacitance_f: 100e-9, esl_h: 0.4e-9, esr_ohm: 0.03}
+  TP-5000:
+    role: ignore                    # load, link, vrm or ignore</pre>
+<ul>
+  <li><code>supplies</code> are written as in a <a href="#load-models">load model</a>:
+    <code>current_a</code> or <code>pin_groups</code>, pins, ground pins and the
+    tolerances. On a part with several supplies, each load takes the supply sharing the most
+    pins with it, else the one whose name is in the load's name or net.</li>
+  <li><code>link</code>: <code>resistance_ohm</code>, <code>current_max_a</code>,
+    <code>power_max_w</code>.</li>
+  <li><code>vrm</code>: its <code>out_pins</code>, <code>voltage</code> (else read from the
+    rail's name, else 1&nbsp;V with a note), <code>current_limit_a</code>, <code>kind</code>
+    (<code>smps</code>, <code>ldo</code> or <code>source</code>, as <code>PI_VRM</code>) and
+    <code>fsw_hz</code> (as <code>PI_FSW</code>). A part with a <code>vrm</code> entry comes
+    early in the <b>Driven by</b> list.</li>
+  <li><code>cap</code>: <code>capacitance_f</code> (else read from the value field),
+    <code>esl_h</code>, <code>esr_ohm</code>.</li>
+</ul>
+<p>Unlike the fields, the library takes plain numbers in the base unit:
+<code>current_a: 0.23</code>, not <code>230mA</code>.</p>
+<p>After an auto-fill that found parts with no current, resistance or capacitor values, KiPI offers to add
+them to the project's <code>pi_parts.yml</code> with empty values, one entry per part
+number, to fill in once for every copy. Run <b>Auto-fill rail…</b> again after filling them.
+When the file's last section is not <code>parts:</code>, they go to
+<code>pi_parts.missing.yml</code> beside it instead, to copy in by hand.</p>
+</div>
+</details>
+
 <!-- ================================================================== DC SETUP -->
 <h2 id="dc-setup">DC setup tabs</h2>
 <p>The <b>PI setup</b> dock on the right. <b>Save</b> at its top writes the setup next to the
@@ -1158,7 +1419,9 @@ VRM. A load pin with no copper path to its VRM is reported, not guessed at (see
 <div class="body">
 <p>Lists every net group with its role (rail from a VRM, ground, or not driven). Untick
 groups that are not modeled or routed yet; <b>All</b> and <b>None</b> tick or untick them all.
-Only ticked groups are validated and solved, and the choice is saved. Where a solved group
+Only ticked groups are validated and solved, and the choice is saved. Each VRM in the
+<b>VRMs</b> tab has a tick box too: it ticks or unticks that VRM's rail here, so to solve one
+VRM alone, untick the others. Where a solved group
 meets an excluded one:</p>
 <ul>
   <li>A VRM whose <em>output</em> is excluded becomes a constant load on its input pins, drawing
@@ -1240,7 +1503,7 @@ It is disabled while there are problems (listed in red). If you click it while t
 still building nets, the solve is queued and starts as soon as that finishes.</p>
 <p>Once there are results, after a solve or with saved results opened, click
 <b>Report</b> to write <code>&lt;board&gt;_kipi_report_&lt;date&gt;_&lt;time&gt;.html</code>
-of them next to the board; the time stamp keeps each report instead of overwriting the
+of them in the <code>kipi_reports</code> folder next to the board; the time stamp keeps each report instead of overwriting the
 last one. It opens in your web browser when it is written, and
 <b>Open report</b> opens it again later. The report is a single offline file with every
 table, an interactive 3D view of each net group, per-layer statistics and maps, and the
@@ -1770,7 +2033,7 @@ setup and runs the sweep; problems that stop it are listed in red above. The log
 field solves as they go.</p>
 <p>Click <b>Report</b> next to <b>Solve rail</b> to write
 <code>&lt;board&gt;_&lt;rail&gt;_ac_report_&lt;date&gt;_&lt;time&gt;.html</code> (or, with
-<b>PDF</b> chosen, <code>.pdf</code>) of the shown rail's results next to the board, once
+<b>PDF</b> chosen, <code>.pdf</code>) of the shown rail's results in the <code>kipi_reports</code> folder next to the board, once
 it is solved or its saved results are opened; the report opens when it is written, and
 <b>Open report</b> opens the shown rail's report again later. See <a href="#ac-report">AC report</a>.</p>
 <p>Each rail keeps its last result: switch <b>Rail</b> to look at another rail's curves
@@ -1908,7 +2171,7 @@ under its VRM in <b>Rail</b>. Rails whose VRM is no longer in the setup are left
 <div class="body">
 <p><b>Report</b> writes
 <code>&lt;board&gt;_&lt;rail&gt;_ac_report_&lt;date&gt;_&lt;time&gt;.html</code> of the shown
-rail's results next to the board; the time stamp keeps every report. Like the DC report, it is a single offline file you can email. It holds:</p>
+rail's results in the <code>kipi_reports</code> folder next to the board; the time stamp keeps every report. Like the DC report, it is a single offline file you can email. It holds:</p>
 <ul>
   <li>a summary and the probe table: pins, minimum and worst |Z|, the target, the margin in dB
     at the worst point (positive passes), PASS/FAIL, and an overall verdict;</li>
@@ -2191,7 +2454,7 @@ shows how many signal nets are inside; it is the same value as Scan radius in Se
 Scan and a chosen victim
 work together: name the nets you know, scan for the ones you do not.</p>
 <p>Click <b>Report</b> to write <code>&lt;board&gt;_&lt;aggressor&gt;_noise_report_&lt;date&gt;_&lt;time&gt;.html</code>
-(or <code>.pdf</code>) of the shown aggressor's results next to the board: the victims against their
+(or <code>.pdf</code>) of the shown aggressor's results in the <code>kipi_reports</code> folder next to the board: the victims against their
 margins, the aggressor's parasitics, its waveforms, each victim's noise by mechanism, the
 scan's estimates and the notes. <b>Open report</b> opens it again. <b>Save results…</b> writes every solved aggressor to a
 <code>.kipi-noise-results</code> file that <b>Open results…</b> reopens in this mode.</p>
@@ -3010,6 +3273,14 @@ them a model or confirm they really do not belong on this rail.</p>
     before 0.8.0. It still opens, with a warning, when there is no <code>.yml</code> setup;
     the next save writes the <code>.yml</code> and leaves the JSON file alone. JSON setups
     are deprecated: a future KiPI will stop reading them.</td></tr>
+  <tr><td><code>pi_parts.yml</code></td><td class="wrap">The
+    <a href="#parts-library">parts library</a>: currents, resistances, ratings and roles by
+    part number, for <b>Auto-fill rail…</b>. Read from beside the board and from KiPI's
+    folder in the user's config; written to (beside the board) only when you let KiPI add
+    the parts it had no numbers for, or to <code>pi_parts.missing.yml</code>.</td></tr>
+  <tr><td><code>*.kipi-load.yml</code></td><td class="wrap">A
+    <a href="#load-models">load model</a>: one part's supplies, with their currents,
+    tolerances and AC targets.</td></tr>
   <tr><td><code>*.kipi.json.gz</code></td><td class="wrap">A board snapshot (copper, stackup,
     pads, vias, parts).</td></tr>
   <tr><td><code>*.kipi-dc-results</code></td><td class="wrap">A saved DC solve: JSON and NumPy
@@ -3020,11 +3291,11 @@ them a model or confirm they really do not belong on this rail.</p>
     earlier, as Python pickles, which can run code; KiPI asks before it opens one, and they
     are deprecated.</td></tr>
   <tr><td><code>*_noise_report_*.html</code>, <code>.pdf</code></td><td class="wrap">Coupled
-    Noise report, written with the Report button</td></tr>
+    Noise report, written with the Report button to <code>kipi_reports/</code></td></tr>
   <tr><td><code>*.kipi-noise-results</code></td><td class="wrap">Saved Coupled Noise results,
     every solved aggressor (Save results… / Open results… in Coupled Noise mode)</td></tr>
   <tr><td><code>*_si_report_*.html</code>, <code>.pdf</code></td><td class="wrap">Signal
-    Integrity report of a channel, written with the Report button</td></tr>
+    Integrity report of a channel, written with the Report button to <code>kipi_reports/</code></td></tr>
   <tr><td><code>*.kipi-si-results</code></td><td class="wrap">Saved Signal Integrity results:
     every solved channel and the Quick Scan</td></tr>
   <tr><td><code>*.s2p</code>, <code>*.s4p</code></td><td class="wrap">A channel's

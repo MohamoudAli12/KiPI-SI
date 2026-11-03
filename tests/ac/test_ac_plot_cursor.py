@@ -112,3 +112,19 @@ def test_cursor_reaches_the_info_pane(app, no_3d):
     w.plot.set_cursor(1, 0)
     assert "U2" in w.info.toPlainText() and "1 kHz" in w.info.toPlainText()
     w.close()
+
+
+def test_log_box_switches_the_z_axis(plot):
+    assert plot.ax.get_yscale() == "log"
+    plot.chk_log.setChecked(False)
+    assert plot.ax.get_yscale() == "linear" and plot.ax.get_ylim()[0] == 0
+    plot.chk_log.setChecked(True)
+    assert plot.ax.get_yscale() == "log"
+
+
+def test_title_of_a_rail_of_many_nets_stays_short(app):
+    r = _result()
+    r.rail_nets = [f"/Sheet/NET_{k}" for k in range(8)]
+    p = ImpedancePlot()
+    p.set_result(r)
+    assert p.ax.get_title() == "VRM1: /Sheet/NET_0 + /Sheet/NET_1 + 6 more against GND"

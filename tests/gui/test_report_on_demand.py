@@ -39,7 +39,7 @@ def test_the_dc_report_button_writes_and_opens_a_report(app, no_3d, tmp_path, op
         w.solve_panel.show_results(tree, next(iter(tree.groups)))
         assert opt.btn.isEnabled()
         opt.btn.click()
-        written, = tmp_path.glob("*_kipi_report_*.html")
+        written, = (tmp_path / "kipi_reports").glob("*_kipi_report_*.html")
         assert tree.report_path == written
         assert [Path(p) for p in opened_in_browser] == [written]
         assert w.solve_panel.btn_report.isVisibleTo(w.solve_panel)

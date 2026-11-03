@@ -654,6 +654,7 @@ class SIPanel(QWidget):
         lay.addLayout(top)
         self.lbl_errors = QLabel()
         self.lbl_errors.setWordWrap(True)
+        self.lbl_errors.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
         self.lbl_errors.setStyleSheet("color: #ff9060;")
         lay.addWidget(self.lbl_errors)
 

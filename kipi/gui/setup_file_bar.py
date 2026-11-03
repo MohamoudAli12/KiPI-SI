@@ -1,7 +1,8 @@
 # Copyright (c) 2026 Tomachie LLC.
 """The setup file's bar above the setup pages: which setup is open, Import, Auto-fill
-rail and Save. Every mode shares one setup file, so Save is in each; Import and Auto-fill
-fill the power tree, so only the Power Integrity modes (DC, AC, Noise) show them."""
+power tree, Auto-fill rail and Save. Every mode shares one setup file, so Save is in each;
+Import and Auto-fill fill the power tree, so only the Power Integrity modes (DC, AC, Noise)
+show them."""
 
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QPushButton, QWidget
@@ -13,6 +14,7 @@ UNSAVED_STYLE = "QPushButton { border: 2px solid #ff8c00; border-radius: 3px; pa
 class SetupFileBar(QWidget):
     import_requested = Signal()            # fill the setup from a power-tree file
     autofill_requested = Signal()          # fill one rail from the board and parts library
+    tree_requested = Signal()              # fill every rail: find the regulators and sources
     save_requested = Signal()
 
     def __init__(self, parent=None):
@@ -39,11 +41,22 @@ class SetupFileBar(QWidget):
             "PI_IMAX and PI_PMAX fields, else from pi_parts.yml (by part number). Parts with "
             "no data are listed, and can be added to pi_parts.yml to fill in.</p>")
         self.btn_autofill.clicked.connect(self.autofill_requested.emit)
+        self.btn_tree = QPushButton("Auto-fill power tree…", self)
+        self.btn_tree.setToolTip(
+            "<p>Find every regulator on the board (switchers by their inductors, LDOs between "
+            "two rails), the source each input rail comes in from, and the transistors that "
+            "switch one rail on to another, then fill every rail's loads, series parts and "
+            "capacitors under them.</p>"
+            "<p>A preview lists what was found, for you to check, change and give voltages "
+            "first. PI_VRM, PI_V and PI_FSW fields, or pi_parts.yml, settle any part it "
+            "can't tell.</p>")
+        self.btn_tree.clicked.connect(self.tree_requested.emit)
         self.btn_save = QPushButton("Save", self)
         self.btn_save.setToolTip(SAVE_TIP)
         self.btn_save.clicked.connect(self.save_requested.emit)
         row.addWidget(self.lbl_file, 1)
         row.addWidget(self.btn_import)
+        row.addWidget(self.btn_tree)
         row.addWidget(self.btn_autofill)
         row.addWidget(self.btn_save)
 
@@ -52,6 +65,7 @@ class SetupFileBar(QWidget):
         pi = mode != "si"
         self.btn_import.setVisible(pi)
         self.btn_autofill.setVisible(pi)
+        self.btn_tree.setVisible(pi)
 
     def set_label(self, text: str):
         self.lbl_file.setText(text)

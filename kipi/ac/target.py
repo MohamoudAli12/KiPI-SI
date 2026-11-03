@@ -366,6 +366,31 @@ def probe_loads(setup: "PISetup", rail: Optional["PinRef"],
     return out
 
 
+@dataclass
+class LoadWindow:
+    """Where a probe's load sits at DC and the window its tolerance allows, for the
+    transient at the load: its DC voltage plus the step's deviation, against the window."""
+    load: str             # the DC load's name
+    v_dc: float           # its solved effective voltage
+    nominal: float
+    low: float            # the tolerance's lower and upper ends, volts (±inf for none)
+    high: float
+
+
+def load_window(setup: "PISetup", probe, dc_result) -> Optional[LoadWindow]:
+    """The window of the DC load on ``probe``'s pins (the exact one first) that has both a
+    solved voltage in ``dc_result`` and a tolerance; None if no load has both."""
+    for p in probe_loads(setup, probe.rail, probe.ground, dc_result):
+        if p.drop is None or p.tolerance is None:
+            continue
+        t = p.tolerance
+        below = t.below_v if t.below_v is not None else t.v_ac_v
+        above = t.above_v if t.above_v is not None else t.v_ac_v
+        return LoadWindow(p.name, p.drop.v_effective, t.nominal_v, t.nominal_v - below,
+                          t.nominal_v + above)
+    return None
+
+
 def vrm_accuracies(setup: "PISetup", rail: Optional["PinRef"] = None) -> List[VrmAccuracy]:
     """LDOs and switchers with a DC accuracy: with the probe's supply pins ``rail``, only
     those driving that rail (its nets joined by series links)."""

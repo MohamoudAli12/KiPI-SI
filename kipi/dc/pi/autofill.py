@@ -108,22 +108,59 @@ def ground_net(snap: Optional[BoardSnapshot], ref: str, exclude: Iterable[str] =
     return None
 
 
-def input_net(snap: Optional[BoardSnapshot], ref: str, exclude: Iterable[str] = (),
-              allowed: Optional[Iterable[str]] = None) -> Optional[str]:
-    """The input rail of regulator ``ref``: its only other power net, or None.
+_PASSIVE_RE = re.compile(r"^(R|C|L|FB|FL|BEAD|D|F|TP)\d", re.IGNORECASE)
 
-    E.g. an LDO with pads on +5V, +3V3 and GND whose output is +3V3 gives +5V. With two
-    or more candidates (an EN pin tied to a second rail, say) it doesn't guess.
-    """
+
+def is_passive_ref(ref: str) -> bool:
+    """Whether ``ref`` is a passive part by its designator: a resistor, capacitor,
+    inductor, bead, diode, fuse or test point."""
+    return bool(_PASSIVE_RE.match(ref or ""))
+
+
+def refs_on_net(snap: Optional[BoardSnapshot], net: str) -> List[str]:
+    """The parts with pads on ``net``, in board order."""
     if snap is None:
-        return None
+        return []
+    return list(dict.fromkeys(p.footprint for p in snap.items_on_net(net)[2] if p.footprint))
+
+
+def is_local_net(snap: Optional[BoardSnapshot], net: str, ref: str) -> bool:
+    """Whether every part on ``net`` but ``ref`` is passive: one of the part's own nets (a
+    regulator's feedback, enable, bootstrap or switch node), not a rail it shares."""
+    return all(r == ref or is_passive_ref(r) for r in refs_on_net(snap, net))
+
+
+def net_kinds(snap: BoardSnapshot) -> Dict[str, str]:
+    """:func:`~kipi.core.model.nets.classify_nets`, worked out once per board."""
     kinds = snap.__dict__.get("_net_kinds")
     if kinds is None:
         kinds = snap.__dict__["_net_kinds"] = classify_nets(snap)
+    return kinds
+
+
+def input_net(snap: Optional[BoardSnapshot], ref: str, exclude: Iterable[str] = (),
+              allowed: Optional[Iterable[str]] = None) -> Optional[str]:
+    """The input rail of regulator ``ref`` among its other power nets, or None.
+
+    E.g. an LDO with pads on +5V, +3V3 and GND whose output is +3V3 gives +5V. A net named
+    like a rail that only the part and passives are on (3V3_FB, 3V3_EN, 3V3_BOOT beside
+    VCC) is the part's own, not its input. Of several left, the one it has the most pins
+    on; with a tie (an EN pin tied to a second rail, say) it doesn't guess.
+    """
+    if snap is None:
+        return None
+    kinds = net_kinds(snap)
     allowed = None if allowed is None else set(allowed)
-    cands = [n for n in part_nets(snap, ref)
+    nets = part_nets(snap, ref)
+    cands = [n for n in nets
              if n not in set(exclude) and kinds.get(n) == "power" and not is_ground_name(n)
              and (allowed is None or n in allowed)]
+    if len(cands) > 1:
+        shared = [n for n in cands if not is_local_net(snap, n, ref)]
+        cands = shared or cands
+    if len(cands) > 1:
+        most = max(len(nets[n]) for n in cands)
+        cands = [n for n in cands if len(nets[n]) == most]
     return cands[0] if len(cands) == 1 else None
 
 

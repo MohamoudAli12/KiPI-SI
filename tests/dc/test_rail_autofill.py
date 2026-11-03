@@ -8,9 +8,10 @@ from kipi.core.model import snapshot_io
 from kipi.core.model.board import Footprint, Net, Pad
 from kipi.dc.pi.importers.rail_autofill import (
     AutofillError, MissingPart, PartsLibrary, autofill_rail, parse_pin_currents,
-    parse_quantity, parse_tolerance, rating_checks, source_candidates, write_stubs,
+    parse_quantity, parse_tolerance, rail_caps, rail_parts, rating_checks,
+    source_candidates, write_stubs,
 )
-from kipi.dc.pi.model import PERCENT, DcLink, Load, PinRef, PISetup, Vrm
+from kipi.dc.pi.model import PERCENT, DcLink, Load, PinRef, PISetup, Vrm, validate
 from kipi.dc.solver.post import SeriesResult
 from kipi.sources.kicad_pcb.reader import _fields
 from kipi.sources.kicad_pcb.sexpr import parse
@@ -58,16 +59,20 @@ LIBRARY = {
 }
 
 
-def board():
+def board(parts=None, pins=(), packages=None):
+    """The test board, with ``parts`` and ``pins`` added, and ``packages`` (ref: KiCad
+    footprint) set."""
+    parts, pins, packages = {**PARTS, **(parts or {})}, [*PINS, *pins], packages or {}
     snap = make_board()
     snap.pads, snap.footprints = [], []
-    names = sorted({n for _, _, n in PINS})
+    names = sorted({n for _, _, n in pins})
     snap.nets = [Net(0, "")] + [Net(i + 1, n) for i, n in enumerate(names)]
-    for i, (ref, pin, net) in enumerate(PINS):
+    for i, (ref, pin, net) in enumerate(pins):
         snap.pads.append(Pad(f"p{i}", net, ref, pin, (float(i), 0.0), "smd"))
-    for ref, (value, fields) in PARTS.items():
+    for ref, (value, fields) in parts.items():
         ids = [p.id for p in snap.pads if p.footprint == ref]
         snap.footprints.append(Footprint(f"f{ref}", ref, value, (0.0, 0.0), "top", ids,
+                                         footprint=packages.get(ref, ""),
                                          fields=dict(fields)))
     snap.project_dir = ""
     snap.invalidate_index()
@@ -149,7 +154,8 @@ def test_currents_from_library_fields_and_missing():
     assert loads["U6"].current == pytest.approx(0.05)
     assert (loads["U6"].tol_min, loads["U6"].tol_max) == (-3.0, 3.0)
     assert loads["U4"].current == 0.0
-    assert [(m.key, m.kind, m.refs) for m in r.missing] == [("MYS-1", "load", ["U4"])]
+    assert [(m.key, m.kind, m.refs) for m in r.missing if m.kind != "cap"] == [
+        ("MYS-1", "load", ["U4"])]
     assert any(n.startswith("U4 on VB: no current") for n in r.notes)
 
 
@@ -188,6 +194,14 @@ def test_merge_keeps_other_rails_and_replaces_this_one():
     assert "old link" not in [k.name for k in s.links]
     assert s.nets[0] == "+3V3" and s.thermal.enabled
     assert base.vrms[0].name == "OLD"                               # base not changed
+
+
+def test_merge_renames_a_part_already_a_load_on_another_rail():
+    base = PISetup(loads=[Load("U2 OPAMP", PinRef("U2", "+3V3"), 0.1)])
+    s = fill(base=base).setup
+    names = [l.name for l in s.loads]
+    assert names[0] == "U2 OPAMP" and "U2 OPAMP (+5V)" in names
+    assert not [e for e in validate(s) if "unique" in e]
 
 
 def test_bad_rail_or_source():
@@ -283,3 +297,100 @@ def test_rating_checks():
     checks = dict(rating_checks(tree, snap, setup, PartsLibrary.from_dict(LIBRARY)))
     assert checks == {"FB1 120@100MHz: 0.5 A of 2 A (25 %)": True,
                       "R1 0.1: 4 mW of 1 mW (400 %)": False}
+
+
+# ---------------------------------------------------------------------------
+# Removing a rail
+# ---------------------------------------------------------------------------
+
+def test_rail_parts_are_what_autofill_added_with_the_vrm():
+    other = PISetup(vrms=[Vrm("VRM 3V3", PinRef("U9", "+3V3", ["1"]), 3.3)],
+                    loads=[Load("U9 load", PinRef("U9", "+3V3", ["1"]), 0.1)])
+    setup = fill(base=other).setup
+    vrm = next(v for v in setup.vrms if v.output.net == "+5V")
+    loads, links = rail_parts(setup, vrm)
+    assert {l.supply.net for l in loads} == {"+5V", "VA", "VB"}    # beyond FB1 and R1 too
+    assert {l.supply.net for l in setup.loads} - {l.supply.net for l in loads} == {"+3V3"}
+    assert sorted(k.side_a.ref for k in links) == ["FB1", "R1"]
+    assert rail_parts(setup, setup.vrms[0]) == (other.loads, [])   # the 3V3 rail's own
+
+
+def test_rail_parts_leave_a_rail_another_vrm_drives():
+    setup = fill().setup
+    vrm = setup.vrms[0]
+    setup.vrms.append(Vrm("second", PinRef("U2", vrm.output.net, ["5"]), 5.0))
+    assert rail_parts(setup, vrm) == ([], [])
+
+
+
+# ---------------------------------------------------------------------------
+# Capacitors, for AC
+# ---------------------------------------------------------------------------
+
+C0402 = "Capacitor_SMD:C_0402_1005Metric"
+CAP_PARTS = {
+    "C2": ("100nF 16V X7R", {}), "C3": ("100nF 16V X7R", {}),    # one model, one beyond FB1
+    "C4": ("330uF", {}),                                         # a polymer: no ESR
+    "C5": ("10uF", {"PI_ESR": "3m", "PI_ESL": "0.5nH"}),
+    "C6": ("1uF", {"MPN": "CAP-1"}),                             # from the library
+    "C7": ("100nF", {}),                                         # on another rail
+    "C8": ("100nF", {}),                                         # to a signal, not ground
+}
+CAP_PINS = [("C2", "1", "+5V"), ("C2", "2", "GND"), ("C3", "1", "VA"), ("C3", "2", "GND"),
+            ("C4", "1", "+5V"), ("C4", "2", "GND"), ("C5", "1", "+5V"), ("C5", "2", "GND"),
+            ("C6", "1", "VB"), ("C6", "2", "GND"), ("C7", "1", "+3V3"), ("C7", "2", "GND"),
+            ("C8", "1", "+5V"), ("C8", "2", "SDA")]
+CAP_PACKAGES = {"C2": C0402, "C3": C0402, "C4": "Capacitor_SMD:CP_Elec_6.3x7.7",
+                "C5": "Capacitor_SMD:C_0603_1608Metric", "C6": C0402, "C7": C0402,
+                "C8": C0402}
+
+
+def cap_fill(base=None):
+    lib = {**LIBRARY, "parts": {**LIBRARY["parts"],
+                                "CAP-1": {"cap": {"esl_h": 0.3e-9, "esr_ohm": 0.011}}}}
+    return autofill_rail(board(CAP_PARTS, CAP_PINS, CAP_PACKAGES), "+5V", "U1", base,
+                         PartsLibrary.from_dict(lib))
+
+
+def test_autofill_gives_the_rails_capacitors_ac_models():
+    r = cap_fill()
+    models = {m.name: m for m in r.setup.caps}
+    assert {r for m in models.values() for r in m.refs} == {"C1", "C2", "C3", "C4", "C5",
+                                                            "C6"}
+    m = models["100nF 16V X7R 0402"]
+    assert m.refs == ["C2", "C3"] and m.capacitance_f == pytest.approx(100e-9)
+    assert m.esl_h == pytest.approx(0.4e-9)                  # the 0402's own
+    assert m.esr_ohm == pytest.approx(0.0295, rel=0.02)      # a typical MLCC's
+    assert m.dielectric == "X7R" and m.rated_v == 16
+    c5 = models["10uF 0603"]
+    assert (c5.esl_h, c5.esr_ohm) == (pytest.approx(0.5e-9), pytest.approx(3e-3))
+    c6 = models["1uF 0402"]
+    assert (c6.esl_h, c6.esr_ohm) == (pytest.approx(0.3e-9), pytest.approx(0.011))
+    c4 = models["330uF"]
+    assert c4.capacitance_f == pytest.approx(330e-6) and c4.esr_ohm == 0
+    assert any("C4" in n and "ESR" in n for n in r.notes)
+    assert any("C2, C3" in n and "typical MLCC" in n for n in r.notes)
+    assert {"330uF", "10u"} <= {m.key for m in r.missing if m.kind == "cap"}
+
+
+def test_autofill_keeps_capacitor_models_set_by_hand():
+    from kipi.ac.model import CapModel
+    mine = CapModel("my 100n", 100e-9, 0.25e-9, 0.02, ["C2"])
+    setup = cap_fill(PISetup(caps=[mine])).setup
+    assert setup.caps[0].refs == ["C2"] and setup.caps[0].esl_h == 0.25e-9
+    assert sum(r == "C2" for m in setup.caps for r in m.refs) == 1
+    again = cap_fill(setup).setup                            # filling again adds nothing
+    assert [(m.name, m.refs) for m in again.caps] == [(m.name, m.refs) for m in setup.caps]
+
+
+def test_rail_caps_are_the_rails_to_ground():
+    snap = board(CAP_PARTS, CAP_PINS, CAP_PACKAGES)
+    setup = cap_fill().setup
+    vrm = next(v for v in setup.vrms if v.output.net == "+5V")
+    assert rail_caps(snap, setup, vrm) == ["C1", "C2", "C3", "C4", "C5", "C6"]
+
+
+def test_cap_stub_has_the_capacitor_values(tmp_path):
+    path, n = write_stubs(tmp_path / "pi_parts.yml", [MissingPart("330uF", "cap", ["C4"])])
+    assert n == 1
+    assert PartsLibrary.load([path]).parts["330uF"].cap is not None

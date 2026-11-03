@@ -7,27 +7,53 @@ regulators read apart in print and for colour-blind users too.
 
 A rail with many loads (or capacitor groups) packs them into a framed grid fed by one
 arrow, and the grids take the shape that fits the window best (:func:`place`).
+
+It is a tab beside the 3D view in the power integrity modes, drawn in light or dark to
+match the theme: dark mode has its own deeper fills under light text, so every block, label
+and arrow keeps its contrast.
 """
 
 from __future__ import annotations
 
 
-from qtpy.QtCore import QPointF, QRectF, Qt
-from qtpy.QtGui import QBrush, QColor, QFont, QFontMetricsF, QImage, QPainter, QPainterPath, QPen
+from qtpy.QtCore import QEvent, QPointF, QRectF, Qt, QTimer
+from qtpy.QtGui import (
+    QBrush, QColor, QFont, QFontMetricsF, QImage, QPainter, QPainterPath, QPalette, QPen,
+)
 from qtpy.QtWidgets import (
-    QDialog, QFileDialog, QGraphicsPathItem, QGraphicsScene, QGraphicsSimpleTextItem,
-    QGraphicsView, QHBoxLayout, QLabel, QPushButton, QVBoxLayout,
+    QApplication, QFileDialog, QGraphicsPathItem, QGraphicsScene, QGraphicsSimpleTextItem,
+    QGraphicsView, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
 
 from kipi.dc.pi.diagram import Block, Diagram, build_diagram, place, si
 
-FILL = {"rail": "#d9dde3", "link": "#fbe7b5", "load": "#f6c4c0", "cap": "#e2d4f3"}
-VRM_FILL = {"source": "#bfe3c0", "ldo": "#ffd29e", "smps": "#b9d7f5", "isolated": "#c9c3ef"}
 VRM_TAG = {"source": "SOURCE", "ldo": "LDO", "smps": "SMPS", "isolated": "ISOLATED"}
-EDGE = {"rail": "#59616b", "link": "#a07818", "load": "#b04a42", "cap": "#7a5aa8",
-        "vrm": "#3d6e9e"}
-TEXT = QColor("#1b1f24")
-BACKGROUND = "#fafbfc"
+# Each theme's colours: block fills, VRM fills by type, outlines and arrows, text, canvas.
+# Dark mode's fills are deep enough for light text, and its outlines light enough to show
+# on the #1e1e1e canvas the 3D view and plots use.
+LIGHT = {
+    "fill": {"rail": "#d9dde3", "link": "#fbe7b5", "load": "#f6c4c0", "cap": "#e2d4f3"},
+    "vrm_fill": {"source": "#bfe3c0", "ldo": "#ffd29e", "smps": "#b9d7f5",
+                 "isolated": "#c9c3ef"},
+    "edge": {"rail": "#59616b", "link": "#a07818", "load": "#b04a42", "cap": "#7a5aa8",
+             "vrm": "#3d6e9e"},
+    "text": "#1b1f24", "background": "#fafbfc",
+}
+DARK = {
+    "fill": {"rail": "#3a4048", "link": "#5a4818", "load": "#5e2d29", "cap": "#46375f"},
+    "vrm_fill": {"source": "#2d5a32", "ldo": "#6b4716", "smps": "#234b70",
+                 "isolated": "#43396f"},
+    "edge": {"rail": "#aab4bf", "link": "#e8bf55", "load": "#f39189", "cap": "#c0a3eb",
+             "vrm": "#8cc0f0"},
+    "text": "#eef0f2", "background": "#1e1e1e",
+}
+
+
+def is_dark() -> bool:
+    """Whether the windows are dark now: the palette on screen decides, so light mode on a
+    dark desktop counts as dark too."""
+    app = QApplication.instance()
+    return app is not None and app.palette().color(QPalette.Window).lightness() < 128
 PAD_X, PAD_Y, LINE_GAP = 10.0, 6.0, 2.0
 COL_GAP, ROW_GAP, MIN_W = 70.0, 16.0, 120.0
 
@@ -70,22 +96,18 @@ class _View(QGraphicsView):
             self.centerOn(r.center())
 
 
-class PowerTreeWindow(QDialog):
-    """Non-modal window: call :meth:`show_tree` with the setup (and board) to draw it."""
+class PowerTreeView(QWidget):
+    """The power tree tab: call :meth:`show_tree` with the setup (and board) to draw it."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("KiPI — Power tree")
-        self.setWindowFlag(Qt.WindowMaximizeButtonHint, True)
-        self.resize(1100, 650)
         self._setup = None
         self._snapshot = None
+        self._fitted = False                   # zoomed to fit once, when first shown
+        self.colors = LIGHT
         self.diagram: Diagram = Diagram()
         self.scene = QGraphicsScene(self)
         self.view = _View(self.scene, self)
-        # A light canvas in dark mode too: the blocks' pastel fills need it, and a saved
-        # image looks the same.
-        self.view.setBackgroundBrush(QBrush(QColor(BACKGROUND)))
 
         self.lbl_notes = QLabel(self)
         self.lbl_notes.setWordWrap(True)
@@ -108,12 +130,22 @@ class PowerTreeWindow(QDialog):
 
     # ------------------------------------------------------------------ data
     def show_tree(self, setup, snapshot=None):
+        """Draw ``setup`` and fit it in the view."""
         self._setup, self._snapshot = setup, snapshot
         self.refresh()
-        self.show()
-        self.raise_()
-        self.activateWindow()
         self.view.fit()
+        self._fitted = True
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        if not self._fitted and self.diagram.blocks:
+            self._fitted = True
+            QTimer.singleShot(0, self.view.fit)      # once the view has its size
+
+    def changeEvent(self, e):
+        super().changeEvent(e)
+        if e.type() == QEvent.PaletteChange and (LIGHT, DARK)[is_dark()] is not self.colors:
+            self.refresh()                           # the theme changed
 
     def set_source(self, setup, snapshot=None):
         """Redraw for a changed setup or board, keeping the zoom."""
@@ -121,6 +153,8 @@ class PowerTreeWindow(QDialog):
         self.refresh()
 
     def refresh(self):
+        self.colors = DARK if is_dark() else LIGHT
+        self.view.setBackgroundBrush(QBrush(QColor(self.colors["background"])))
         if self._setup is None:
             return
         self.diagram = build_diagram(self._setup, self._snapshot)
@@ -171,7 +205,7 @@ class PowerTreeWindow(QDialog):
                     continue
                 drawn.add(cid)
             self._arrow(rects[a.src], frames[cid] if cid else rects[a.dst], a.dashed,
-                        EDGE[dst.kind if src.kind == "rail" else src.kind])
+                        self.colors["edge"][dst.kind if src.kind == "rail" else src.kind])
         for cid, c in pl.clusters.items():
             self._frame(c, frames[cid], bold, fmb)
         for b in self.diagram.blocks.values():
@@ -185,8 +219,8 @@ class PowerTreeWindow(QDialog):
         title = _frame_title(self.diagram, c)
         path = QPainterPath()
         path.addRoundedRect(r, 8, 8)
-        color = QColor(EDGE[c.kind])
-        fill = QColor(FILL[c.kind])
+        color = QColor(self.colors["edge"][c.kind])
+        fill = QColor(self.colors["fill"][c.kind])
         fill.setAlpha(70)
         pen = QPen(color, 1.2)
         pen.setStyle(Qt.DashLine if c.kind == "cap" else Qt.SolidLine)
@@ -196,13 +230,14 @@ class PowerTreeWindow(QDialog):
         self._text(title, bold, fmb, r, r.top() + 6, item, color)
 
     def _block(self, b: Block, r: QRectF, font, bold, small, fm, fmb, fms, compact=False):
-        fill = VRM_FILL.get(b.vrm_kind) if b.kind == "vrm" else FILL[b.kind]
+        c = self.colors
+        fill = c["vrm_fill"].get(b.vrm_kind) if b.kind == "vrm" else c["fill"][b.kind]
         path = QPainterPath()
         radius = r.height() / 2 if b.kind == "rail" else 6.0
         path.addRoundedRect(r, min(radius, 14.0), min(radius, 14.0))
         item = QGraphicsPathItem(path)
         item.setBrush(QBrush(QColor(fill)))
-        pen = QPen(QColor(EDGE.get(b.kind, "#555")), 1.4)
+        pen = QPen(QColor(c["edge"].get(b.kind, "#555")), 1.4)
         if b.kind == "vrm" and b.vrm_kind in ("ldo", "smps", "isolated"):
             pen.setStyle(Qt.DashLine)
             pen.setWidthF(2.0)
@@ -214,20 +249,20 @@ class PowerTreeWindow(QDialog):
             inner = QPainterPath()
             inner.addRoundedRect(r.adjusted(3, 3, -3, -3), 4, 4)
             it = QGraphicsPathItem(inner, item)
-            it.setPen(QPen(QColor(EDGE["vrm"]), 1.0))
+            it.setPen(QPen(QColor(c["edge"]["vrm"]), 1.0))
 
         y = r.top() + PAD_Y
         if b.kind == "vrm":
             y = self._text(VRM_TAG.get(b.vrm_kind, ""), small, fms, r, y, item,
-                           QColor(EDGE["vrm"]))
+                           QColor(c["edge"]["vrm"]))
         y = self._text(b.title, bold, fmb, r, y, item)
         for t in _lines(b, compact):
             y = self._text(t, font, fm, r, y, item)
 
-    def _text(self, text, font, fm, r: QRectF, y, parent, color=TEXT):
+    def _text(self, text, font, fm, r: QRectF, y, parent, color=None):
         t = QGraphicsSimpleTextItem(text, parent)
         t.setFont(font)
-        t.setBrush(QBrush(color))
+        t.setBrush(QBrush(color or QColor(self.colors["text"])))
         t.setPos(r.center().x() - fm.horizontalAdvance(text) / 2, y)
         if parent is None:
             t.setZValue(3)
@@ -264,7 +299,7 @@ class PowerTreeWindow(QDialog):
         for label, key in items:
             w = fm.horizontalAdvance(label) + 16
             r = QRectF(x, y, w, fm.height() + 8)
-            vrm = key in VRM_FILL
+            vrm = key in self.colors["vrm_fill"]
             self._block(Block(f"legend:{key}", "vrm" if vrm else key, "", vrm_kind=key if vrm
                               else "", tip=""), r, font, font, small, fm, fm, fm)
             if not vrm:
@@ -281,7 +316,7 @@ class PowerTreeWindow(QDialog):
     def save_png(self, path: str, scale: float = 2.0):
         r = self.scene.itemsBoundingRect().adjusted(-20, -20, 20, 20)
         img = QImage(int(r.width() * scale), int(r.height() * scale), QImage.Format_ARGB32)
-        img.fill(QColor(BACKGROUND))
+        img.fill(QColor(self.colors["background"]))
         p = QPainter(img)
         p.setRenderHint(QPainter.Antialiasing)
         p.setRenderHint(QPainter.TextAntialiasing)
