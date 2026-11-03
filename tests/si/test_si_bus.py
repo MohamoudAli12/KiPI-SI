@@ -6,8 +6,8 @@ import os
 import pytest
 
 from helpers.si_boards import example, make_board, make_setup
-from kipi.core.model.board import BoardSnapshot, Footprint, Net, Track
-from kipi.si.bus import bus_nets, connected_parts, make_channels, parts_on
+from kipi_si.core.model.board import BoardSnapshot, Footprint, Net, Track
+from kipi_si.si.bus import bus_nets, connected_parts, make_channels, parts_on
 
 
 def ddr_lane() -> BoardSnapshot:
@@ -72,7 +72,7 @@ def app():
 
 def test_bus_dialog(app):
     from qtpy.QtCore import Qt
-    from kipi.si.gui.bus_dialog import BusDialog
+    from kipi_si.si.gui.bus_dialog import BusDialog
     d = BusDialog(ddr_lane(), taken=["DQ1"], tx="U1", rx="U2")
     assert d.cmb_tx.currentData() == "U1" and d.cmb_rx.currentData() == "U2"
     assert d.tbl.rowCount() == 5
@@ -90,7 +90,7 @@ def test_bus_dialog(app):
 
 
 def test_channel_ends_pickers(app):
-    from kipi.si.gui.panel import SIPanel
+    from kipi_si.si.gui.panel import SIPanel
     snap, setup = make_board(), make_setup()
     p = SIPanel()
     p.set_board(snap, setup)
@@ -110,8 +110,8 @@ def test_channel_ends_pickers(app):
 
 
 def test_one_end_set_guesses_the_other():
-    from kipi.si.model import Channel
-    from kipi.si.solver import ends
+    from kipi_si.si.model import Channel
+    from kipi_si.si.solver import ends
     snap, nets = make_board(), ["CLK", "CLK_R"]
     ch = Channel("CLK", "CLK")
     assert ends(snap, ch, nets) == ("U1", "U2")
@@ -156,8 +156,8 @@ def aux_to_ddc() -> BoardSnapshot:
 
 
 def test_pair_ends_need_both_legs():
-    from kipi.si.model import Channel
-    from kipi.si.solver import SIError, ends
+    from kipi_si.si.model import Channel
+    from kipi_si.si.solver import SIError, ends
     snap = aux_to_ddc()
     ch = Channel("AUX", "AUX_A+", "AUX_A-", follow_series=False)
     nets = ["AUX_A+", "AUX_A-"]
@@ -173,8 +173,8 @@ def test_pair_ends_need_both_legs():
 
 
 def test_pair_that_splits_into_two_nets_is_refused():
-    from kipi.si.model import Channel
-    from kipi.si.solver import SIError, chains, check_pair_legs
+    from kipi_si.si.model import Channel
+    from kipi_si.si.solver import SIError, chains, check_pair_legs
     snap = aux_to_ddc()
     ch = Channel("AUX", "AUX_A+", "AUX_A-")
     groups = chains(snap, ch)
@@ -190,8 +190,8 @@ def test_pair_that_splits_into_two_nets_is_refused():
 
 
 def test_nets_set_by_hand_win_over_their_names():
-    from kipi.si.model import SISettings
-    from kipi.si.pairs import manual_of, pair_map, set_kind
+    from kipi_si.si.model import SISettings
+    from kipi_si.si.pairs import manual_of, pair_map, set_kind
     nets = ["USB_P", "USB_N", "CLK_A", "CLK_B", "SDA"]
     assert pair_map(nets) == {"USB_P": "USB_N", "USB_N": "USB_P"}
     si = SISettings()
@@ -204,7 +204,7 @@ def test_nets_set_by_hand_win_over_their_names():
     with pytest.raises(ValueError):
         set_kind(si, ["SDA"], "pair")
     # Saved with the setup and read back.
-    from kipi.si.model import settings_from_dict
+    from kipi_si.si.model import settings_from_dict
     import dataclasses
     set_kind(si, ["SDA", "CLK_A"], "pair")
     assert settings_from_dict(dataclasses.asdict(si)).manual_pairs == [["SDA", "CLK_A"]]

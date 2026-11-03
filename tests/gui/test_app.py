@@ -14,7 +14,7 @@ def _run_with_unread_pipes(code: str, tmp_path: Path, timeout: float = 60.0) -> 
     script = tmp_path / "child.py"
     status = tmp_path / "status.txt"
     script.write_text(textwrap.dedent(code), encoding="utf-8")
-    # Session logs go under tmp_path: in the real %TEMP%\kipi they would count toward
+    # Session logs go under tmp_path: in the real %TEMP%\kipi_si they would count toward
     # KEEP_SESSIONS and push the user's own sessions out.
     env = dict(os.environ, TEMP=str(tmp_path), TMP=str(tmp_path))
     # stdout/stderr are pipes that nobody reads, like KiCad's when it is busy.
@@ -38,10 +38,10 @@ def test_logging_does_not_echo_into_a_pipe(tmp_path):
     out = _run_with_unread_pipes("""
         import sys, logging
         sys.path.insert(0, ".")
-        from kipi.gui import app
+        from kipi_si.gui import app
         app.setup_logging()                      # stderr is a pipe, not a terminal
         for i in range(20000):
-            logging.getLogger("kipi").info("progress line %d %s", i, "x" * 80)
+            logging.getLogger("kipi_si").info("progress line %d %s", i, "x" * 80)
         echo = [h for h in logging.getLogger().handlers if type(h) is logging.StreamHandler]
         open(sys.argv[1], "w").write(f"done {len(echo)}")
     """, tmp_path)
@@ -52,11 +52,11 @@ def test_detached_streams_absorb_native_and_python_writes(tmp_path):
     out = _run_with_unread_pipes("""
         import os, sys, logging
         sys.path.insert(0, ".")
-        from kipi.gui import app
+        from kipi_si.gui import app
         app.setup_logging(console=True)          # even with console echo forced on
         path = app.detach_std_streams()
         for i in range(5000):
-            logging.getLogger("kipi").info("line %d %s", i, "y" * 80)
+            logging.getLogger("kipi_si").info("line %d %s", i, "y" * 80)
             print("print", i)
             os.write(2, b"native stderr" + bytes([10]))
             os.write(1, b"native stdout" + bytes([10]))
@@ -69,7 +69,7 @@ def test_watchdog_dumps_a_running_task_from_python(tmp_path):
     out = _run_with_unread_pipes("""
         import sys, threading, time
         sys.path.insert(0, ".")
-        from kipi.gui import app
+        from kipi_si.gui import app
         log = app.setup_logging()
         stop = threading.Event()
         def busy_solver_step():
@@ -99,7 +99,7 @@ def test_watchdog_reports_a_stalled_ui_thread_with_its_stack(tmp_path):
     out = _run_with_unread_pipes("""
         import sys, time
         sys.path.insert(0, ".")
-        from kipi.gui import app
+        from kipi_si.gui import app
         log = app.setup_logging()
         app.ui_alive()
         app.watchdog_start(seconds=0.2, ui_stall_seconds=0.5)

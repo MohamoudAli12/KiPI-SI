@@ -10,7 +10,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from qtpy.QtWidgets import QApplication  # noqa: E402
 
-from kipi.dc.gui.pi_panel import RangeRow  # noqa: E402
+from kipi_si.dc.gui.pi_panel import RangeRow  # noqa: E402
 
 
 @pytest.fixture(scope="module")

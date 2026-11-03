@@ -9,9 +9,9 @@ import pytest
 pv = pytest.importorskip("pyvista")
 pytest.importorskip("pyvistaqt")
 
-from kipi.gui.viewer3d import Viewer3D, _copper_clim, apply_limits  # noqa: E402
-from kipi.dc.pi.tree import solve_tree  # noqa: E402
-from kipi.dc.viz.results import FIELDS, build_result_scene  # noqa: E402
+from kipi_si.gui.viewer3d import Viewer3D, _copper_clim, apply_limits  # noqa: E402
+from kipi_si.dc.pi.tree import solve_tree  # noqa: E402
+from kipi_si.dc.viz.results import FIELDS, build_result_scene  # noqa: E402
 from phase_boards import board, two_phase  # noqa: E402
 
 

@@ -7,9 +7,9 @@ import pytest
 pv = pytest.importorskip("pyvista")
 pytest.importorskip("pyvistaqt")
 
-from kipi.gui.viewer3d import _CATEGORY_LOOK, Viewer3D, _chunk_actor  # noqa: E402
-from kipi.dc.pi.tree import solve_tree  # noqa: E402
-from kipi.dc.viz.results import FIELDS, build_result_scene  # noqa: E402
+from kipi_si.gui.viewer3d import _CATEGORY_LOOK, Viewer3D, _chunk_actor  # noqa: E402
+from kipi_si.dc.pi.tree import solve_tree  # noqa: E402
+from kipi_si.dc.viz.results import FIELDS, build_result_scene  # noqa: E402
 from phase_boards import board, two_phase  # noqa: E402
 
 
@@ -81,7 +81,7 @@ def test_slider_fades_results_and_chunks(field, base):
 
 def test_depth_peeling_skips_pyvistas_probe_window(monkeypatch):
     # pyvista's check renders in a hidden window of its own, which access-violates on
-    # some drivers (Windows CI without a GPU); KiPI must never call it.
+    # some drivers (Windows CI without a GPU); KiPI-SI must never call it.
     from pyvista.plotting.utilities import gl_checks
 
     def probe(*a, **k):
@@ -108,7 +108,7 @@ def test_slider_updates_the_label(no_3d):
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from qtpy.QtWidgets import QApplication
     QApplication.instance() or QApplication([])
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     got = []
     w.viewer.set_layer_opacity = got.append

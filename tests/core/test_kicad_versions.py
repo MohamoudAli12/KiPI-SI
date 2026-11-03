@@ -1,4 +1,4 @@
-"""Extracting a board from each KiCad version KiPI supports, KiCad 9.0.0 onwards.
+"""Extracting a board from each KiCad version KiPI-SI supports, KiCad 9.0.0 onwards.
 
 The fake KiCad (``kicad_fake``) refuses the commands a version did not have yet, as the
 real one does, and kipy's own ``Board`` parses every answer, so this also checks the
@@ -16,12 +16,12 @@ from kipy.proto.common.envelope_pb2 import ApiStatusCode  # noqa: E402
 from shapely.geometry import box  # noqa: E402
 
 from kicad_fake import VERSIONS, FakeKiCad, parse  # noqa: E402
-from kipi.core.geometry.copper import drill_holes  # noqa: E402
-from kipi.sources.kicad_ipc.extract import (  # noqa: E402
+from kipi_si.core.geometry.copper import drill_holes  # noqa: E402
+from kipi_si.sources.kicad_ipc.extract import (  # noqa: E402
     _pad_type_names, extract_board, refill_and_wait,
 )
-from kipi.core.model.snapshot_io import from_dict, to_dict  # noqa: E402
-from kipi.sources.kicad_ipc.vias import via_type_names  # noqa: E402
+from kipi_si.core.model.snapshot_io import from_dict, to_dict  # noqa: E402
+from kipi_si.sources.kicad_ipc.vias import via_type_names  # noqa: E402
 
 COPPER = [L.BL_F_Cu, L.BL_In1_Cu, L.BL_In2_Cu, L.BL_B_Cu]
 
@@ -135,7 +135,7 @@ def test_unexpected_errors_are_not_mistaken_for_an_old_kicad():
 
 
 def test_kicad_enum_values_match():
-    """KiPI maps KiCad's via and pad types by kipy enum name onto its own names."""
+    """KiPI-SI maps KiCad's via and pad types by kipy enum name onto its own names."""
     via = {"VT_THROUGH": "through", "VT_BLIND_BURIED": "blind_buried", "VT_MICRO": "micro",
            "VT_BLIND": "blind", "VT_BURIED": "buried"}      # the last two: KiCad 10
     for name, kind in via.items():
@@ -150,7 +150,7 @@ def test_kicad_enum_values_match():
 def test_old_kicad_is_named_in_the_log(version, warned):
     from types import SimpleNamespace as NS
 
-    from kipi.sources.kicad_ipc.extract import _warn_old_kicad
+    from kipi_si.sources.kicad_ipc.extract import _warn_old_kicad
 
     said = []
     major, minor, patch = parse(version)

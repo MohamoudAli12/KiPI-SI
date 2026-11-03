@@ -13,9 +13,9 @@ import math
 import pytest
 
 from validation_boards import boards, open_board
-from kipi.dc.pi.tree import solve_tree
-from kipi.dc.solver.setup import RHO_CU_OHM_MM as RHO
-from kipi.dc.solver.via_barrel import rule_for
+from kipi_si.dc.pi.tree import solve_tree
+from kipi_si.dc.solver.setup import RHO_CU_OHM_MM as RHO
+from kipi_si.dc.solver.via_barrel import rule_for
 
 CORNER_SQUARES = 0.5587       # a square right-angle bend, by conformal mapping
 

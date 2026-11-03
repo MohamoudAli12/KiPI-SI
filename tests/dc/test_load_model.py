@@ -3,15 +3,15 @@ probes on one reference designator and applied to any number of loads and probes
 
 import pytest
 
-from kipi.ac.model import Probe
-from kipi.dc.pi.load_model import (
+from kipi_si.ac.model import Probe
+from kipi_si.dc.pi.load_model import (
     LoadModel, ModelError, SupplyModel, apply_to_load, apply_to_probe, best_supply, model_of,
     model_refs, new_items,
 )
-from kipi.dc.pi.model import Load, PinGroup, PinRef, PISetup, Vrm
+from kipi_si.dc.pi.model import Load, PinGroup, PinRef, PISetup, Vrm
 
 YAML = """\
-kipi_load_model: 1
+kipi_si_load_model: 1
 part: FPGA-X
 supplies:
   - name: VCCINT
@@ -48,7 +48,7 @@ def _setup():
 
 
 def test_a_model_file_reads_and_writes_back(tmp_path):
-    path = tmp_path / "fpga.kipi-load.yml"
+    path = tmp_path / "fpga.kipi_si-load.yml"
     path.write_text(YAML, encoding="utf-8")
     m = LoadModel.load(path)
     assert m.part == "FPGA-X" and [s.name for s in m.supplies] == ["VCCINT", "VCCAUX"]
@@ -64,22 +64,22 @@ def test_a_model_file_reads_and_writes_back(tmp_path):
 
 def test_only_yaml_files_are_load_models(tmp_path, monkeypatch):
     path = tmp_path / "model.json"
-    path.write_text('{"kipi_load_model": 1, "supplies": []}', encoding="utf-8")
+    path.write_text('{"kipi_si_load_model": 1, "supplies": []}', encoding="utf-8")
     with pytest.raises(ModelError, match="YAML files"):
         LoadModel.load(path)
-    from kipi.core import yaml_io
+    from kipi_si.core import yaml_io
     monkeypatch.setattr(yaml_io, "yaml", None)
     with pytest.raises(ModelError, match="need PyYAML"):
         LoadModel().save(tmp_path / "x.yml")
 
 
 @pytest.mark.parametrize("text, why", [
-    ("part: x\n", "not a KiPI load model"),
-    ("kipi_load_model: 99\n", "newer version"),
-    ("kipi_load_model: 1\nsupplies: [{pins: [1]}]\n", "needs a name"),
-    ("kipi_load_model: 1\nsupplies: [{name: A, current_a: lots}]\n", "must be a number"),
-    ("kipi_load_model: 1\nsupplies: [{name: A, tolerance: {max: 1, unit: mV}}]\n", "unit"),
-    ("kipi_load_model: [1\n", "not valid YAML"),
+    ("part: x\n", "not a KiPI-SI load model"),
+    ("kipi_si_load_model: 99\n", "newer version"),
+    ("kipi_si_load_model: 1\nsupplies: [{pins: [1]}]\n", "needs a name"),
+    ("kipi_si_load_model: 1\nsupplies: [{name: A, current_a: lots}]\n", "must be a number"),
+    ("kipi_si_load_model: 1\nsupplies: [{name: A, tolerance: {max: 1, unit: mV}}]\n", "unit"),
+    ("kipi_si_load_model: [1\n", "not valid YAML"),
 ])
 def test_bad_files_say_why(tmp_path, text, why):
     path = tmp_path / "bad.yml"
@@ -140,7 +140,7 @@ def test_a_probe_target_from_the_load_step():
 
 
 def test_new_loads_for_another_copy_of_the_part():
-    m = LoadModel.from_dict({"kipi_load_model": 1, "supplies": [
+    m = LoadModel.from_dict({"kipi_si_load_model": 1, "supplies": [
         {"name": "VCCINT", "pins": ["F7", "F9"], "ground_pins": ["A1"]},
         {"name": "VCCAUX", "pins": ["K1"]}, {"name": "VNONE"}]})
     nets = {"+1V0": ["F7", "F9", "Z1"], "GND": ["A1", "A2"], "+1V8": ["K2"]}

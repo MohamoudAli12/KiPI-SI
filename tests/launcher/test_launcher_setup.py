@@ -1,4 +1,4 @@
-"""The launcher's setup and start: installing into KiPI's environment, the console screen,
+"""The launcher's setup and start: installing into KiPI-SI's environment, the console screen,
 and what the launcher does on each start."""
 
 import os
@@ -9,11 +9,11 @@ from pathlib import Path, PurePosixPath
 
 import pytest
 
-from kipi.launcher import deps, install, main as launcher, paths, setup_env, state
-from kipi.launcher.install import Canceled, InstallError, Installer
-from kipi.launcher.setup_env import Progress, Summary
-from kipi.launcher.system import Python
-from kipi.launcher.ui_console import ConsoleUI
+from kipi_si.launcher import deps, install, main as launcher, paths, setup_env, state
+from kipi_si.launcher.install import Canceled, InstallError, Installer
+from kipi_si.launcher.setup_env import Progress, Summary
+from kipi_si.launcher.system import Python
+from kipi_si.launcher.ui_console import ConsoleUI
 
 PY = Python(sys.executable, (3, 12, 1), True)
 
@@ -22,7 +22,7 @@ def _summary(env, pardiso_offered=True, default=False):
     plan = deps.Plan([deps.Package("numpy", "2.5.4", 13_000_000)],
                      [deps.Package("pypardiso", "0.4.7", 10_000),
                       deps.Package("mkl", "2026.2.0", 185_000_000)], "live")
-    return Summary("KiPI's environment is not set up yet", PY, env, plan, pardiso_offered,
+    return Summary("KiPI-SI's environment is not set up yet", PY, env, plan, pardiso_offered,
                    "" if pardiso_offered else "Intel MKL is not available for Darwin", default)
 
 
@@ -55,7 +55,7 @@ def test_cancel_stops_the_running_installer(tmp_path):
 
 
 def test_only_kipis_environment_is_ever_deleted(tmp_path):
-    data = tmp_path / "KiPI"
+    data = tmp_path / "KiPI-SI"
     env = data / "venv"
     env.mkdir(parents=True)
     (env / "pyvenv.cfg").write_text("home = x\n")
@@ -121,7 +121,7 @@ def fake_installer(monkeypatch):
 
 
 def _perform(tmp_path, pardiso, uv=None, fresh=False):
-    data = tmp_path / "KiPI"
+    data = tmp_path / "KiPI-SI"
     data.mkdir(exist_ok=True)
     req = paths.requirements_file()
     fractions = []
@@ -135,7 +135,7 @@ def test_a_first_setup_makes_the_environment_and_records_it(tmp_path, fake_insta
     inst = fake_installer.made[-1]
     assert inst.calls == ["create", ("install", ("pypardiso",))]
     assert st.pardiso and st.tool == "pip" and st.python == "3.12.1"
-    env = tmp_path / "KiPI" / "venv"
+    env = tmp_path / "KiPI-SI" / "venv"
     assert state.load(env) == st
     assert state.needs_setup(env, deps.requirements_hash(paths.requirements_file())) is None
     assert fractions[-1] == 1.0
@@ -185,7 +185,7 @@ def test_installer_runs_uv_through_pipx(tmp_path):
 
 def test_a_real_environment_is_made(tmp_path):
     """venv and pip for real, installing nothing (no network needed)."""
-    data = tmp_path / "KiPI"
+    data = tmp_path / "KiPI-SI"
     data.mkdir()
     req = tmp_path / "requirements.txt"
     req.write_text("# nothing\n")
@@ -241,11 +241,11 @@ def test_the_console_says_why_pardiso_is_not_offered(tmp_path):
 
 @pytest.fixture
 def started(tmp_path, monkeypatch):
-    """The launcher with a scratch home, a stand-in setup and no KiPI started."""
-    monkeypatch.setenv("KIPI_HOME", str(tmp_path / "KiPI"))
+    """The launcher with a scratch home, a stand-in setup and no KiPI-SI started."""
+    monkeypatch.setenv("KIPI_SI_HOME", str(tmp_path / "KiPI-SI"))
     monkeypatch.delenv("KICAD_API_SOCKET", raising=False)
     got = {"launched": [], "performed": [], "answers": ["n", "y"], "out": [], "icon": []}
-    from kipi.launcher import shortcut              # never a real KiPI.lnk in the repo
+    from kipi_si.launcher import shortcut              # never a real KiPI-SI.lnk in the repo
     monkeypatch.setattr(shortcut, "keep_folder_icon",
                         lambda root=None, stamp=None: got["icon"].append(stamp))
     monkeypatch.setattr(launcher.system, "find_python", lambda commands=None: (PY, []))
@@ -276,12 +276,12 @@ def started(tmp_path, monkeypatch):
     return got
 
 
-def test_the_first_start_sets_up_then_starts_kipi(started):
-    assert launcher.main(["board.kipi.json.gz"]) == 0
+def test_the_first_start_sets_up_then_starts_kipi_si(started):
+    assert launcher.main(["board.kipi_si.json.gz"]) == 0
     assert started["performed"] == [(False, False)]
-    assert started["launched"] == ["board.kipi.json.gz"]
+    assert started["launched"] == ["board.kipi_si.json.gz"]
     started["answers"] = []
-    assert launcher.main([]) == 0                        # ready: straight to KiPI
+    assert launcher.main([]) == 0                        # ready: straight to KiPI-SI
     assert len(started["performed"]) == 1 and started["launched"][-1] is None
 
 
@@ -312,7 +312,7 @@ def test_repair_starts_from_scratch_and_reset_deletes(started, tmp_path):
     assert launcher.main(["--repair", "--no-launch"]) == 0
     assert started["performed"][-1] == (False, True)
     assert launcher.main(["--reset"]) == 0
-    assert not (tmp_path / "KiPI" / "venv").exists()
+    assert not (tmp_path / "KiPI-SI" / "venv").exists()
 
 
 def test_no_python_to_use(started, monkeypatch):
@@ -338,12 +338,12 @@ def test_kicad_starting_the_launcher_runs_the_plugin(started, monkeypatch):
         @staticmethod
         def main():
             return 42
-    monkeypatch.setitem(sys.modules, "kipi_entry", Entry)
+    monkeypatch.setitem(sys.modules, "kipi_si_entry", Entry)
     monkeypatch.setenv("KICAD_API_SOCKET", "ipc://x")
     assert launcher.main([]) == 42 and started["launched"] == []
 
 
-def test_kipi_starts_standalone_from_this_folder(tmp_path, monkeypatch):
+def test_kipi_si_starts_standalone_from_this_folder(tmp_path, monkeypatch):
     env = tmp_path / "venv"
     py = paths.env_python(env)
     py.parent.mkdir(parents=True)
@@ -352,31 +352,31 @@ def test_kipi_starts_standalone_from_this_folder(tmp_path, monkeypatch):
     monkeypatch.setattr(launcher.subprocess, "call",
                         lambda cmd, env=None: calls.append((cmd, env)) or 0)
     monkeypatch.setenv("PYTHONPATH", "elsewhere")
-    assert launcher.launch(env, "b.kipi.json.gz", windowed=False) == 0
+    assert launcher.launch(env, "b.kipi_si.json.gz", windowed=False) == 0
     cmd, environ = calls[0]
-    assert cmd[:3] == [str(py), "-m", "kipi"] and cmd[3] == str(Path("b.kipi.json.gz").resolve())
-    assert environ["PYTHONPATH"].split(os.pathsep) == [str(paths.KIPI_ROOT), "elsewhere"]
-    assert environ["KIPI_HOST"] == "standalone"
-    assert environ[launcher.LAUNCHER_ENV].endswith("kipi_launcher.py")
+    assert cmd[:3] == [str(py), "-m", "kipi_si"] and cmd[3] == str(Path("b.kipi_si.json.gz").resolve())
+    assert environ["PYTHONPATH"].split(os.pathsep) == [str(paths.KIPI_SI_ROOT), "elsewhere"]
+    assert environ["KIPI_SI_HOST"] == "standalone"
+    assert environ[launcher.LAUNCHER_ENV].endswith("kipi_si_launcher.py")
 
 
-# --- python -m kipi without the packages -----------------------------------------------------
+# --- python -m kipi_si without the packages -----------------------------------------------------
 
-def test_python_m_kipi_points_at_the_launcher(monkeypatch, capsys):
+def test_python_m_kipi_si_points_at_the_launcher(monkeypatch, capsys):
     import importlib.util
-    from kipi import __main__ as cli
+    from kipi_si import __main__ as cli
     real = importlib.util.find_spec
     monkeypatch.setattr(importlib.util, "find_spec",
                         lambda name, *a: None if name in ("PySide6", "pyamg") else real(name, *a))
     assert cli.main([]) == 2
     err = capsys.readouterr().err
-    assert "PySide6, pyamg are missing" in err and "kipi_launcher.py" in err
+    assert "PySide6, pyamg are missing" in err and "kipi_si_launcher.py" in err
 
 
-# --- Waiting for KiPI, shortcuts, and KiPI asking for its setup ------------------------------
+# --- Waiting for KiPI-SI, shortcuts, and KiPI-SI asking for its setup ------------------------------
 
 def test_waiting_for_a_process_to_end():
-    from kipi.launcher import system
+    from kipi_si.launcher import system
     import subprocess
     quick = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(0.5)"])
     assert system.wait_for_exit(quick.pid, timeout=20)
@@ -388,8 +388,8 @@ def test_waiting_for_a_process_to_end():
         slow.wait()
 
 
-def test_kipi_asking_for_its_setup_waits_for_it_to_close(started, monkeypatch):
-    from kipi.launcher import system
+def test_kipi_si_asking_for_its_setup_waits_for_it_to_close(started, monkeypatch):
+    from kipi_si.launcher import system
     launcher.main([])
     monkeypatch.setattr(system, "wait_for_exit", lambda pid, timeout=60.0: False)
     assert launcher.main(["--setup", "--after-pid", "123"]) == 1
@@ -400,14 +400,14 @@ def test_kipi_asking_for_its_setup_waits_for_it_to_close(started, monkeypatch):
     started["answers"] = ["n", "n"]                     # change nothing after all
     assert launcher.main(["--setup", "--after-pid", "123", "--after-pid", "45"]) == 0
     assert waited == [123, 45]
-    assert started["launched"][-1] is None              # KiPI opens again anyway
+    assert started["launched"][-1] is None              # KiPI-SI opens again anyway
 
 
 def test_the_shortcut_option(started, monkeypatch, tmp_path):
-    from kipi.launcher import shortcut
-    monkeypatch.setattr(shortcut, "create", lambda: tmp_path / "KiPI.lnk")
+    from kipi_si.launcher import shortcut
+    monkeypatch.setattr(shortcut, "create", lambda: tmp_path / "KiPI-SI.lnk")
     assert launcher.main(["--create-shortcut"]) == 0
-    assert "KiPI.lnk" in "\n".join(started["out"]) and started["launched"] == []
+    assert "KiPI-SI.lnk" in "\n".join(started["out"]) and started["launched"] == []
 
     def fail():
         raise shortcut.ShortcutError("not supported on macOS yet")
@@ -416,64 +416,64 @@ def test_the_shortcut_option(started, monkeypatch, tmp_path):
 
 
 def test_a_linux_menu_entry(tmp_path, monkeypatch):
-    from kipi.launcher import shortcut
+    from kipi_si.launcher import shortcut
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
-    path = shortcut.create("linux", root=Path("/opt/KiPI"))
-    assert path == tmp_path / "applications" / "kipi.desktop"
+    path = shortcut.create("linux", root=Path("/opt/KiPI-SI"))
+    assert path == tmp_path / "applications" / "kipi_si.desktop"
     text = path.read_text()
-    assert f'Exec="{sys.executable}" "{Path("/opt/KiPI/kipi_launcher.py")}" %f' in text
-    assert "Name=KiPI" in text and "Terminal=false" in text
-    assert "StartupWMClass=KiPI" in text                # groups with the launcher's window
+    assert f'Exec="{sys.executable}" "{Path("/opt/KiPI-SI/kipi_si_launcher.py")}" %f' in text
+    assert "Name=KiPI-SI" in text and "Terminal=false" in text
+    assert "StartupWMClass=KiPI-SI" in text                # groups with the launcher's window
 
 
 def test_a_macos_app_that_runs_the_launcher(tmp_path):
-    """#127: an app with the KiPI icon in ~/Applications, instead of a Python file."""
-    from kipi.launcher import shortcut
+    """#127: an app with the KiPI-SI icon in ~/Applications, instead of a Python file."""
+    from kipi_si.launcher import shortcut
     path = shortcut.create("darwin", home=tmp_path)
-    assert path == tmp_path / "Applications" / "KiPI.app"
+    assert path == tmp_path / "Applications" / "KiPI-SI.app"
     contents = path / "Contents"
     plist = (contents / "Info.plist").read_text()
-    assert "<string>KiPI</string>" in plist and "<key>CFBundleIconFile</key>" in plist
-    script = (contents / "MacOS" / "KiPI").read_text()
-    assert script.startswith("#!/bin/sh\nexec ") and "kipi_launcher.pyw" in script
+    assert "<string>KiPI-SI</string>" in plist and "<key>CFBundleIconFile</key>" in plist
+    script = (contents / "MacOS" / "KiPI-SI").read_text()
+    assert script.startswith("#!/bin/sh\nexec ") and "kipi_si_launcher.pyw" in script
     assert sys.executable in script
     if sys.platform != "win32":
-        assert os.access(contents / "MacOS" / "KiPI", os.X_OK)
-    icns = (contents / "Resources" / "kipi.icns").read_bytes()
-    png = (paths.KIPI_ROOT / "resources" / "kipi_256.png").read_bytes()
+        assert os.access(contents / "MacOS" / "KiPI-SI", os.X_OK)
+    icns = (contents / "Resources" / "kipi_si.icns").read_bytes()
+    png = (paths.KIPI_SI_ROOT / "resources" / "kipi_si_256.png").read_bytes()
     assert icns[:4] == b"icns" and int.from_bytes(icns[4:8], "big") == len(icns)
     assert icns[8:12] == b"ic08" and icns[16:] == png
 
 
 def test_the_mac_script_quotes_paths_with_spaces_and_quotes():
-    from kipi.launcher import shortcut
-    text = shortcut.mac_script("/opt/my python/bin/python3", PurePosixPath("/Users/a/it's KiPI"))
-    assert "exec '/opt/my python/bin/python3' '/Users/a/it'\\''s KiPI/kipi_launcher.pyw'" \
+    from kipi_si.launcher import shortcut
+    text = shortcut.mac_script("/opt/my python/bin/python3", PurePosixPath("/Users/a/it's KiPI-SI"))
+    assert "exec '/opt/my python/bin/python3' '/Users/a/it'\\''s KiPI-SI/kipi_si_launcher.pyw'" \
         in text
 
 
-def test_other_platforms_say_how_to_start_kipi_instead():
-    from kipi.launcher import shortcut
-    with pytest.raises(shortcut.ShortcutError, match="kipi_launcher.py"):
+def test_other_platforms_say_how_to_start_kipi_si_instead():
+    from kipi_si.launcher import shortcut
+    with pytest.raises(shortcut.ShortcutError, match="kipi_si_launcher.py"):
         shortcut.create("freebsd14")
 
 
 def test_every_start_keeps_the_folder_shortcut(started, tmp_path):
     assert launcher.main(["--console"]) == 0
-    assert started["icon"] == [tmp_path / "KiPI" / "folder-shortcut.txt"]
+    assert started["icon"] == [tmp_path / "KiPI-SI" / "folder-shortcut.txt"]
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows shortcut")
-def test_a_kipi_icon_in_the_kipi_folder(tmp_path, monkeypatch):
+def test_a_kipi_si_icon_in_the_kipi_si_folder(tmp_path, monkeypatch):
     """#127: PowerShell for real, in a scratch copy of the folder; made once, not every start."""
-    from kipi.launcher import shortcut
-    root, stamp = tmp_path / "KiPI folder", tmp_path / "data" / "stamp.txt"
+    from kipi_si.launcher import shortcut
+    root, stamp = tmp_path / "KiPI-SI folder", tmp_path / "data" / "stamp.txt"
     root.mkdir()
-    (root / "desktop.ini").write_text("[.ShellClassInfo]\nIconResource=resources\\kipi.ico,0\n")
+    (root / "desktop.ini").write_text("[.ShellClassInfo]\nIconResource=resources\\kipi_si.ico,0\n")
     shortcut.keep_folder_icon(root, stamp)
-    lnk = root / "KiPI.lnk"
+    lnk = root / "KiPI-SI.lnk"
     assert lnk.is_file() and stamp.is_file()
-    from kipi.launcher import appid
+    from kipi_si.launcher import appid
     assert appid.read_file_property(lnk, appid.PKEY_ID) == appid.APP_ID
     import ctypes
     attrs = ctypes.windll.kernel32.GetFileAttributesW(str(root / "desktop.ini"))
@@ -490,16 +490,16 @@ def test_a_kipi_icon_in_the_kipi_folder(tmp_path, monkeypatch):
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows Start menu")
 def test_a_windows_start_menu_shortcut(tmp_path, monkeypatch):
     """PowerShell for real, writing into a scratch folder instead of the Start menu."""
-    from kipi.launcher import shortcut
+    from kipi_si.launcher import shortcut
     monkeypatch.setenv("APPDATA", str(tmp_path))
     path = shortcut.create("win32")
-    assert path == tmp_path / "Microsoft/Windows/Start Menu/Programs/KiPI.lnk"
+    assert path == tmp_path / "Microsoft/Windows/Start Menu/Programs/KiPI-SI.lnk"
     assert path.is_file() and path.stat().st_size > 0
-    from kipi.launcher import appid          # pinned, it shares the window's taskbar button
+    from kipi_si.launcher import appid          # pinned, it shares the window's taskbar button
     assert appid.read_file_property(path, appid.PKEY_ID) == appid.APP_ID
 
 
-def test_kipi_learns_which_python_ran_the_launcher(tmp_path, monkeypatch):
+def test_kipi_si_learns_which_python_ran_the_launcher(tmp_path, monkeypatch):
     env = tmp_path / "venv"
     py = paths.env_python(env)
     py.parent.mkdir(parents=True)

@@ -10,7 +10,7 @@ import pytest
 pv = pytest.importorskip("pyvista")
 pytest.importorskip("pyvistaqt")
 
-from kipi.gui.viewer3d import Viewer3D  # noqa: E402
+from kipi_si.gui.viewer3d import Viewer3D  # noqa: E402
 
 
 def test_picked_out_nets_do_not_clip_the_board():

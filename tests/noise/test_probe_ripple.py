@@ -3,10 +3,10 @@ chosen probe's rail and ground pins."""
 
 import numpy as np
 
-from kipi.ac.model import Probe
-from kipi.dc.pi.model import PinRef
-from kipi.noise.model import Aggressor, Victim, aggressor_from_dict
-from kipi.noise.solver import solve_noise
+from kipi_si.ac.model import Probe
+from kipi_si.dc.pi.model import PinRef
+from kipi_si.noise.model import Aggressor, Victim, aggressor_from_dict
+from kipi_si.noise.solver import solve_noise
 from noise_boards import buck_board
 from test_board_model import _setup
 
@@ -68,7 +68,7 @@ def test_the_choice_is_kept():
 
 
 def test_the_report_shows_them(tmp_path):
-    from kipi.noise.html_report import write_noise_report
+    from kipi_si.noise.html_report import write_noise_report
     snap = buck_board()
     setup = _setup(snap, [])
     _probes(setup)

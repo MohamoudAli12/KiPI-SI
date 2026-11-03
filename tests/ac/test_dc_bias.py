@@ -9,12 +9,12 @@ import numpy as np
 import pytest
 
 from ac_boards import plane_pair, plane_setup
-from kipi.ac.checks import validate_ac
-from kipi.ac.html_report import write_ac_report
-from kipi.ac.model import CapModel
-from kipi.ac.solver import solve_ac
-from kipi.core.model.parts import is_class2, parse_voltage_rating
-from kipi.dc.pi.model import Load, PinRef, PISetup
+from kipi_si.ac.checks import validate_ac
+from kipi_si.ac.html_report import write_ac_report
+from kipi_si.ac.model import CapModel
+from kipi_si.ac.solver import solve_ac
+from kipi_si.core.model.parts import is_class2, parse_voltage_rating
+from kipi_si.dc.pi.model import Load, PinRef, PISetup
 
 # A small board with a coarse mesh: these tests are about the capacitor models, and the
 # field solve on a bigger one takes ~20 s without PARDISO.
@@ -96,7 +96,7 @@ def test_without_a_dc_solve_the_vrm_set_point_is_used(board):
 
 
 def test_the_dc_solve_gives_each_parts_voltage(board):
-    from kipi.dc.pi.tree import solve_tree
+    from kipi_si.dc.pi.tree import solve_tree
     setup = _setup(board)
     setup.loads.append(Load("C2", PinRef("C2", "+3V3", ["1"]), 20.0,
                             PinRef("C2", "GND", ["2"])))
@@ -124,7 +124,7 @@ def panel():
     pytest.importorskip("qtpy")
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from qtpy.QtWidgets import QApplication
-    from kipi.ac.gui.panel import ACPanel
+    from kipi_si.ac.gui.panel import ACPanel
     app = QApplication.instance() or QApplication([])   # noqa: F841
     p = ACPanel()
     snap = plane_pair(caps=[("C1", "10uF 6.3V X5R", (25.0, 25.0)),

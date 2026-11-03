@@ -1,8 +1,8 @@
-"""KiPI's copper layer ids, which every board reader shares."""
+"""KiPI-SI's copper layer ids, which every board reader shares."""
 
 import pytest
 
-from kipi.core.model import layers
+from kipi_si.core.model import layers
 
 
 def test_ids_follow_the_stack():
@@ -31,7 +31,7 @@ def test_inner_range():
 
 
 def test_ids_are_kicads_board_layers():
-    """Snapshots and results already saved use KiCad's ids, so KiPI's must stay equal."""
+    """Snapshots and results already saved use KiCad's ids, so KiPI-SI's must stay equal."""
     pytest.importorskip("kipy")
     from kipy.proto.board.board_types_pb2 import BoardLayer
     assert layers.F_CU == BoardLayer.BL_F_Cu

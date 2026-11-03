@@ -8,10 +8,10 @@ import os
 import pytest
 
 from ac_boards import plane_pair, plane_setup
-from kipi.ac.html_report import write_ac_report
-from kipi.ac.model import CapModel
-from kipi.ac.solver import solve_ac
-from kipi.dc.pi.model import PISetup
+from kipi_si.ac.html_report import write_ac_report
+from kipi_si.ac.model import CapModel
+from kipi_si.ac.solver import solve_ac
+from kipi_si.dc.pi.model import PISetup
 
 SMALL = dict(max_edge_mm=2.0, min_edge_mm=0.15, grading=0.6)
 
@@ -91,7 +91,7 @@ def panel():
     pytest.importorskip("qtpy")
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from qtpy.QtWidgets import QApplication
-    from kipi.ac.gui.panel import ACPanel
+    from kipi_si.ac.gui.panel import ACPanel
     app = QApplication.instance() or QApplication([])   # noqa: F841
     p = ACPanel()
     p.set_board(plane_pair(caps=[("C1", "10uF 6.3V X5R", (25.0, 25.0))]), PISetup())

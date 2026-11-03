@@ -8,9 +8,9 @@ from types import SimpleNamespace as NS
 import numpy as np
 import pytest
 
-from kipi.dc.pi.model import DcLink, PinRef
-from kipi.ac.viz.markers import ac_markers
-from kipi.dc.viz.markers import LIFT_MM, pi_markers
+from kipi_si.dc.pi.model import DcLink, PinRef
+from kipi_si.ac.viz.markers import ac_markers
+from kipi_si.dc.viz.markers import LIFT_MM, pi_markers
 from phase_boards import T, board, two_phase
 from shapely.geometry import box
 from tree_boards import B, pad
@@ -39,7 +39,7 @@ def test_markers_sit_on_the_pads_of_the_shown_nets():
 
 
 def test_links_and_parts_under_the_board():
-    from kipi.core.model.board import Footprint
+    from kipi_si.core.model.board import Footprint
     snap, setup = board(), two_phase()
     setup.links.append(DcLink("FB1", PinRef("L1", "VOUT", ["2"]), PinRef("Q1", "VIN", ["1"]),
                               0.01))
@@ -53,7 +53,7 @@ def test_links_and_parts_under_the_board():
 
 
 def test_capacitors_with_a_model_are_marked_by_reference_in_ac_mode_only():
-    from kipi.ac.model import CapModel
+    from kipi_si.ac.model import CapModel
     snap, setup = board(), two_phase()
     snap.pads.append(pad("c1_1", "VOUT", "C1", "1", box(2, 0, 3, 1)))
     snap.pads.append(pad("c1_2", "GND", "C1", "2", box(2, 0, 3, 1), B))
@@ -68,7 +68,7 @@ def test_capacitors_with_a_model_are_marked_by_reference_in_ac_mode_only():
 
 
 def _two_caps(snap, setup):
-    from kipi.ac.model import CapModel
+    from kipi_si.ac.model import CapModel
     snap.pads.append(pad("c1_1", "VOUT", "C1", "1", box(2, 0, 3, 1)))
     snap.pads.append(pad("c2_1", "VOUT", "C2", "1", box(12, 0, 13, 1)))
     setup.caps.append(CapModel("10u", 10e-6, 1e-9, 0.005, ["C1", "C2"]))
@@ -92,7 +92,7 @@ pv = pytest.importorskip("pyvista")
 pytest.importorskip("pyvistaqt")
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from kipi.gui.viewer3d import Viewer3D  # noqa: E402
+from kipi_si.gui.viewer3d import Viewer3D  # noqa: E402
 
 
 class _Timer:
@@ -162,9 +162,9 @@ def test_markers_are_drawn_over_the_copper_only():
 
 
 def test_ac_mode_draws_its_probes_in_their_own_color():
-    from kipi.ac.model import Probe
-    from kipi.ac.viz.markers import ac_markers
-    from kipi.gui.viewer3d import _PI_COLORS
+    from kipi_si.ac.model import Probe
+    from kipi_si.ac.viz.markers import ac_markers
+    from kipi_si.gui.viewer3d import _PI_COLORS
     v = _view()
     setup = two_phase(ground=True)
     setup.probes.append(Probe("U2 core", PinRef("U2", "VOUT", ["1"]),
@@ -210,7 +210,7 @@ def test_the_part_selected_in_the_setup_is_marked():
 
 
 def test_the_selected_part_blinks_then_stays_amber():
-    from kipi.gui.viewer3d import _PI_BLINK_COLORS, _PI_BLINKS, _PI_SELECTED_COLORS
+    from kipi_si.gui.viewer3d import _PI_BLINK_COLORS, _PI_BLINKS, _PI_SELECTED_COLORS
     v = _view()
     v.set_pi_markers(pi_markers(board(), two_phase(ground=True), {"VOUT", "GND"}))
     v.set_pi_selected(("vrm", "U1"))
@@ -279,8 +279,8 @@ def app():
 def test_the_window_marks_each_modes_parts(app, no_3d, monkeypatch):
     """DC mode marks the loads; AC mode marks the probes in their place (#84)."""
     from qtpy.QtWidgets import QCheckBox
-    from kipi.ac.model import Probe
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.ac.model import Probe
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     labels = [cb.text() for cb in w.findChildren(QCheckBox)]
     assert "PI Models" in labels and "3D Models" in labels and "Models" not in labels
@@ -305,7 +305,7 @@ def test_the_window_marks_each_modes_parts(app, no_3d, monkeypatch):
 
 
 def test_picking_a_part_in_the_setup_marks_it_and_goes_there(app, no_3d, monkeypatch):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     w.snapshot = board()
     w.solve_panel.setup = two_phase()
@@ -338,7 +338,7 @@ def test_picking_a_part_in_the_setup_marks_it_and_goes_there(app, no_3d, monkeyp
 
 
 def test_clicking_a_name_in_3d_selects_the_part(app, no_3d, monkeypatch):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     w.snapshot = board()
     w.solve_panel.setup = two_phase()
@@ -358,8 +358,8 @@ def test_clicking_a_name_in_3d_selects_the_part(app, no_3d, monkeypatch):
 
 
 def _ac_window(monkeypatch):
-    from kipi.ac.model import Probe
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.ac.model import Probe
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     w.snapshot = board()
     setup = two_phase()
@@ -464,7 +464,7 @@ def test_clicking_a_marker_in_ac_mode_selects_it_in_the_ac_setup(app, no_3d, mon
 def test_the_hot_loops_are_drawn_in_their_colours():
     """Coupled Noise's hot loops (#178): a tube, cones and a name per loop; hidden over
     results, removed with None."""
-    from kipi.noise.viz import LoopOverlay, LoopPath
+    from kipi_si.noise.viz import LoopOverlay, LoopPath
     v = _view()
     segs = np.array([[[0, 0, 1.5], [4, 0, 1.5]], [[4, 0, 1.5], [4, 0, 1.3]]], float)
     loop = LoopPath("C1 (phase 1)", "C1", segs, np.array([[2, 0, 1.5]]),
@@ -521,7 +521,7 @@ def test_an_si_channel_s_ends_are_marked_tx_and_rx():
 def test_a_field_slice_is_drawn_and_animated():
     """Coupled Noise's field slice (#146): a coloured plane with arrows; frames step its
     scalars; hidden over results, removed with None."""
-    from kipi.noise.viz import FieldOverlay
+    from kipi_si.noise.viz import FieldOverlay
     v = _view()
     nx, ny = 6, 5
     gx, gy = np.meshgrid(np.arange(nx) * 1.0, np.arange(ny) * 1.0)
@@ -556,7 +556,7 @@ def test_a_field_slice_is_drawn_and_animated():
 def test_a_victims_coupling_is_drawn_over_the_copper():
     """Coupled Noise's overlay (#152): the victim's segments colored by their share and
     the common-ground dot; hidden over results, removed with None."""
-    from kipi.noise.viz import CouplingOverlay
+    from kipi_si.noise.viz import CouplingOverlay
     v = _view()
     segs = np.array([[[0, 0, 1.5], [1, 0, 1.5]], [[1, 0, 1.5], [2, 0, 1.5]]], float)
     ov = CouplingOverlay("Superposition share of the peak (mV)", segs, np.array([2.0, -1.0]),
@@ -584,7 +584,7 @@ def test_an_overlay_colours_the_copper_itself():
     """An SI overlay with its copper (widths and foil heights) also draws a box over each
     segment's copper, a little larger than it, so it shows however close the view is; a
     segment with no value is grey."""
-    from kipi.noise.viz import CouplingOverlay
+    from kipi_si.noise.viz import CouplingOverlay
     v = _view()
     segs = np.array([[[0, 0, 1.5], [1, 0, 1.5]], [[1, 0, 1.5], [2, 0, 1.5]]], float)
     ov = CouplingOverlay("Zdiff − 100 Ω", segs, np.array([-5.0, np.nan]), np.zeros((0, 3)),

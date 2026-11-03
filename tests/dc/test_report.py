@@ -4,11 +4,11 @@ import csv
 
 import pytest
 
-from kipi.dc.pi.report import (
+from kipi_si.dc.pi.report import (
     export_csv, export_vtk, load_results, loss_rows, save_results, via_rows,
 )
-from kipi.dc.pi.tree import solve_tree
-from kipi.dc.viz.results import build_result_scene
+from kipi_si.dc.pi.tree import solve_tree
+from kipi_si.dc.viz.results import build_result_scene
 from tree_boards import board, setup
 
 
@@ -31,12 +31,12 @@ def test_loss_rows_add_up_to_each_groups_loss(solved):
 
 
 def test_via_rows_ranked_with_limit(tmp_path):
-    from kipi.core.model.board import Via
+    from kipi_si.core.model.board import Via
     snap = board()
     # Feed the +3V3 load from B.Cu through a via: add B.Cu copper and a via.
     from shapely.geometry import box
     from tree_boards import F, B, poly
-    from kipi.core.model.board import Zone
+    from kipi_si.core.model.board import Zone
     snap.zones.append(Zone("vb", "+3V3", "", 0, {B: [poly(box(12, 2, 22, 3))]}))
     snap.vias.append(Via("v1", "+3V3", (17.0, 0.5), 0.3, 0.6, [F, B]))
     snap.invalidate_index()
@@ -65,7 +65,7 @@ def test_vtk_export_and_results_round_trip(solved, tmp_path):
     (vtm,) = [p for p in export_vtk(tree, scenes, snap, tmp_path, "t") if "3V3" in p.name]
     mb = pv.read(str(vtm))
     assert "F.Cu" in mb.keys() and "V" in mb["F.Cu"].point_data
-    path = save_results(tmp_path / "r.kipi-results", tree, snap, s)
+    path = save_results(tmp_path / "r.kipi_si-results", tree, snap, s)
     back = load_results(path)
     assert back["board"] == snap.board_name and back["setup"] == s
     assert [l.drop for l in back["tree"].loads] == [l.drop for l in tree.loads]

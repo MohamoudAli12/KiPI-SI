@@ -5,10 +5,10 @@ footprint's variants), which kicad-cli 10 reads back and applies."""
 import dataclasses
 
 from helpers.si_boards import make_board
-from kipi.core.model.board import Footprint
-from kipi.core.model.snapshot_io import from_dict, to_dict
-from kipi.sources.kicad_pcb.reader import _dnp, _variant_dnp, read_variants
-from kipi.sources.kicad_pcb.sexpr import parse
+from kipi_si.core.model.board import Footprint
+from kipi_si.core.model.snapshot_io import from_dict, to_dict
+from kipi_si.sources.kicad_pcb.reader import _dnp, _variant_dnp, read_variants
+from kipi_si.sources.kicad_pcb.sexpr import parse
 
 BOARD = """(kicad_pcb (version 20250000)
   (variants (variant (name "USB4") (description "USB4 enclosure")) (variant (name "PCIe")))

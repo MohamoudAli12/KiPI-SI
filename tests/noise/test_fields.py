@@ -9,21 +9,21 @@ import os
 import numpy as np
 import pytest
 
-from kipi.ac.model import CapModel
-from kipi.core.model.board import Poly
-from kipi.noise.checks import seed_phases
-from kipi.noise.extract import peec
-from kipi.noise.extract.capacitive import Segment
-from kipi.noise.fields import (
+from kipi_si.ac.model import CapModel
+from kipi_si.core.model.board import Poly
+from kipi_si.noise.checks import seed_phases
+from kipi_si.noise.extract import peec
+from kipi_si.noise.extract.capacitive import Segment
+from kipi_si.noise.fields import (
     ESource, FieldSlice, FieldSources, HSource, biot_savart, near_field_report, patch_field,
 )
-from kipi.noise.model import Aggressor, AggressorPhase, Victim, phase_from_dict
-from kipi.noise.network import Termination, VictimNetwork
-from kipi.noise.parasitics import _Board, inductor_loop
-from kipi.noise.solver import solve_noise
-from kipi.noise.splits import plane_splits, slot_inductance
-from kipi.noise.viz import field_choices, field_overlay
-from kipi.noise.waveforms import Spectrum
+from kipi_si.noise.model import Aggressor, AggressorPhase, Victim, phase_from_dict
+from kipi_si.noise.network import Termination, VictimNetwork
+from kipi_si.noise.parasitics import _Board, inductor_loop
+from kipi_si.noise.solver import solve_noise
+from kipi_si.noise.splits import plane_splits, slot_inductance
+from kipi_si.noise.viz import field_choices, field_overlay
+from kipi_si.noise.waveforms import Spectrum
 from noise_boards import buck_board, buck_setup
 from synthetic import F, IN1, rect
 
@@ -234,7 +234,7 @@ def test_the_slice_adds_the_sources_fields(solved):
 
 
 def test_the_solve_works_out_the_field_views_once(solved):
-    from kipi.noise.viz import FIELD_HEIGHT_MM, field_views
+    from kipi_si.noise.viz import FIELD_HEIGHT_MM, field_views
     _, _, r = solved
     views = field_views(r)
     assert views is r.field_views and views.ready("H", FIELD_HEIGHT_MM)
@@ -286,7 +286,7 @@ def test_the_near_field_report_finds_the_loops_and_the_switch_node(solved):
 
 
 def test_hotspots_are_separate_peaks():
-    from kipi.noise.fields import _peaks
+    from kipi_si.noise.fields import _peaks
     x, y = np.meshgrid(np.arange(20.0), np.arange(10.0))
     bump = lambda x0, y0, a: a * np.exp(-((x - x0) ** 2 + (y - y0) ** 2) / 4)
     g = bump(4, 5, 1.0) + bump(14, 5, 0.5) + bump(19, 0, 0.01)      # the last under the floor
@@ -313,7 +313,7 @@ def test_the_field_maps_cover_the_board_and_peak_at_the_hotspots(solved, tmp_pat
         assert fmap.values.max() == pytest.approx(spots[0].value, rel=0.25)
     assert r.fields.board_bounds == (0.0, 0.0, 32.0, 20.0)
     # The report draws them over the board, the hotspots numbered as in their tables.
-    from kipi.noise.html_report import write_noise_report
+    from kipi_si.noise.html_report import write_noise_report
     text = write_noise_report(tmp_path / "n.html", r, snap, setup).read_text(encoding="utf-8")
     emi_part = text[text.index("id='emi'"):text.index("id='notes'")]
     assert emi_part.count("data:image/png") == 3                    # H, E and the radiated
@@ -321,7 +321,7 @@ def test_the_field_maps_cover_the_board_and_peak_at_the_hotspots(solved, tmp_pat
 
 
 def test_a_big_board_gets_a_zoomed_field_map_too(monkeypatch):
-    from kipi.noise import html_report
+    from kipi_si.noise import html_report
     snap = buck_board(victim_gap=0.2)
     snap.outline = [Poly(rect(-40, -30, 90, 60))]
     setup = _setup(snap, [Victim("SIG")], shielded=False)
@@ -422,7 +422,7 @@ def test_a_victim_leaving_one_plane_for_another_detours_through_a_capacitor():
     snap = buck_board(victim_gap=0.2)
     # VOUT copper under the victim's end on In1 beside the ground plane.
     snap.zones[0].filled = {IN1: [Poly(rect(0, 0, 20, 20))]}
-    from kipi.core.model.board import Zone
+    from kipi_si.core.model.board import Zone
     snap.zones.append(Zone("zvout", "VOUT", "", 0, filled={IN1: [Poly(rect(20, 0, 32, 20))]}))
     snap.invalidate_index()
     segs = [Segment((x, 14.3), (x + 0.5, 14.3), F, 0.2) for x in np.arange(11.5, 24.0, 0.5)]
@@ -434,9 +434,9 @@ def test_a_victim_leaving_one_plane_for_another_detours_through_a_capacitor():
 
 
 def test_only_the_aggressors_planes_count():
-    from kipi.core.model.board import Zone
-    from kipi.noise.extract.common import aggressor_nets
-    from kipi.noise.model import Aggressor
+    from kipi_si.core.model.board import Zone
+    from kipi_si.noise.extract.common import aggressor_nets
+    from kipi_si.noise.model import Aggressor
     setup = buck_setup()
     agg = Aggressor("U1 buck", vrm="U1")
     nets = aggressor_nets(setup, agg)
@@ -458,7 +458,7 @@ def test_only_the_aggressors_planes_count():
 
 def test_a_board_model_solve_reports_each_long_step():
     import logging
-    from kipi.core.progress import ProgressReporter
+    from kipi_si.core.progress import ProgressReporter
 
     class Log(ProgressReporter):
         def __init__(self):
@@ -493,7 +493,7 @@ def app():
 
 def test_the_aggressor_pane_edits_the_winding(app):
     from qtpy.QtCore import Qt
-    from kipi.noise.gui.panel import NoisePanel
+    from kipi_si.noise.gui.panel import NoisePanel
     snap = buck_board()
     p = NoisePanel()
     p.set_board(snap, _setup(snap))
@@ -519,7 +519,7 @@ def _settled(app, p):
 
 def test_the_panel_offers_the_fields(app, solved):
     from qtpy.QtCore import Qt
-    from kipi.noise.gui.panel import NoisePanel
+    from kipi_si.noise.gui.panel import NoisePanel
     snap, setup, r = solved
     p = NoisePanel()
     p.set_board(snap, setup)
@@ -567,7 +567,7 @@ def test_the_panel_offers_the_fields(app, solved):
 
 def test_the_window_draws_the_field_in_noise_mode(app, no_3d, solved):
     from qtpy.QtWidgets import QRadioButton
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     snap, setup, r = solved
     w = MainWindow()
     try:

@@ -6,15 +6,15 @@ import math
 import numpy as np
 import pytest
 
-from kipi.ac.model import CapModel
-from kipi.noise.checks import seed_phases
-from kipi.noise.extract.inductive import LoopSource, loop_sources
-from kipi.noise.extract.peec import (
+from kipi_si.ac.model import CapModel
+from kipi_si.noise.checks import seed_phases
+from kipi_si.noise.extract.inductive import LoopSource, loop_sources
+from kipi_si.noise.extract.peec import (
     distribution_inductance, loop_inductance, mutual_matrix, plane_sides, polyline, segment,
 )
-from kipi.noise.model import Aggressor, Victim
-from kipi.noise.parasitics import phase_layout
-from kipi.noise.solver import solve_noise
+from kipi_si.noise.model import Aggressor, Victim
+from kipi_si.noise.parasitics import phase_layout
+from kipi_si.noise.solver import solve_noise
 from noise_boards import buck_board, buck_setup
 from synthetic import F, IN1
 
@@ -34,9 +34,9 @@ def _setup(snap, victims=(), board_model=True):
 
 def _copper(snap, setup):
     """The rails' and ground's mesh and its paths, as the solve builds them."""
-    from kipi.core.progress import NULL
-    from kipi.noise.checks import operating_point
-    from kipi.noise.solver import _copper
+    from kipi_si.core.progress import NULL
+    from kipi_si.noise.checks import operating_point
+    from kipi_si.noise.solver import _copper
     agg = setup.aggressors[0]
     warnings = []
     mesh, copper = _copper(snap, setup, agg, operating_point(setup, agg), {}, warnings, NULL)
@@ -198,7 +198,7 @@ def test_the_solve_traces_the_loops_and_says_so():
 
 def test_loop_sources_carry_the_weights(traced):
     snap, setup, mesh, copper, lay = traced
-    from kipi.noise.waveforms import Spectrum
+    from kipi_si.noise.waveforms import Spectrum
     class _WF:
         input_caps = {"C1": Spectrum("I(C1)", "A", 0.0, np.ones(3))}
         output_caps = {}

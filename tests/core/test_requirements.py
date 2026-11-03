@@ -32,9 +32,15 @@ def test_standalone_needs_no_kicad():
     assert any(d.startswith("kicad-python") for d in project["optional-dependencies"]["kicad"])
 
 
-def test_dev_tools_match():
-    dev = {d.replace(" ", "") for d in _pyproject()["optional-dependencies"]["dev"]}
-    assert _requirements(ROOT / "requirements-dev.txt") == dev
+def test_the_uv_dev_environment_is_the_plugins_plus_the_tools():
+    """`uv sync` gives what KiCad installs (the kicad extra) and the lint and test tools."""
+    groups = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))[
+        "dependency-groups"]
+    assert "kipi_si[kicad]" in groups["dev"]
+    assert {"include-group": "lint"} in groups["dev"]
+    assert {"include-group": "test"} in groups["dev"]
+    assert any(d.startswith("ruff==") for d in groups["lint"])          # pinned, as CI runs it
+    assert any(d.startswith("pytest") for d in groups["test"])
 
 
 def test_the_launcher_installs_what_standalone_needs():
@@ -42,9 +48,9 @@ def test_the_launcher_installs_what_standalone_needs():
     assert _requirements(ROOT / "requirements-standalone.txt") == standalone
 
 
-def test_python_m_kipi_checks_every_standalone_package():
-    """kipi/__main__.py names the module each requirement is imported under."""
-    from kipi.__main__ import _MODULES
+def test_python_m_kipi_si_checks_every_standalone_package():
+    """kipi_si/__main__.py names the module each requirement is imported under."""
+    from kipi_si.__main__ import _MODULES
     import_names = {"pyside6-essentials": "pyside6", "pyyaml": "yaml"}
     wanted = set()
     for line in _requirements(ROOT / "requirements-standalone.txt"):
@@ -53,3 +59,9 @@ def test_python_m_kipi_checks_every_standalone_package():
             name = name.split(sep, 1)[0]
         wanted.add(import_names.get(name.lower(), name.lower()))
     assert {m.lower() for m in _MODULES} == wanted
+
+
+def test_the_package_version_is_the_codes():
+    """uv_build takes the version from pyproject.toml, the app from kipi_si.__version__."""
+    from kipi_si import __version__
+    assert _pyproject()["version"] == __version__

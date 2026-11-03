@@ -11,9 +11,9 @@ from pathlib import Path
 
 import pytest
 
-from kipi.dc.pi.model import Load, PinRef, PISetup, Vrm, VrmPhase, validate
-from kipi.dc.pi.tree import solve_tree
-from kipi.dc.solver.setup import SolveSettings
+from kipi_si.dc.pi.model import Load, PinRef, PISetup, Vrm, VrmPhase, validate
+from kipi_si.dc.pi.tree import solve_tree
+from kipi_si.dc.solver.setup import SolveSettings
 from phase_boards import I_LOAD, board, two_phase
 from tree_boards import R, by_name
 
@@ -135,7 +135,7 @@ def test_phases_round_trip_through_json(tmp_path):
 
 
 def test_phase_csv_and_html_report(tmp_path):
-    from kipi.dc.pi.report import export_csv
+    from kipi_si.dc.pi.report import export_csv
     snap, s = board(), two_phase("smps", ground=True)
     tree = solve_tree(snap, s)
     (csv,) = [p for p in export_csv(tree, snap, tmp_path, stem="t")
@@ -146,15 +146,15 @@ def test_phase_csv_and_html_report(tmp_path):
 
     pytest.importorskip("plotly")
     pytest.importorskip("matplotlib")
-    from kipi.dc.report.html import write_report
-    from kipi.dc.viz.results import build_result_scene
+    from kipi_si.dc.report.html import write_report
+    from kipi_si.dc.viz.results import build_result_scene
     scenes = {n: build_result_scene(snap, g.result) for n, g in tree.groups.items()}
     text = write_report(tmp_path / "r.html", tree, scenes, snap, s).read_text(encoding="utf-8")
     assert "VRM phases" in text
 
 
 def test_single_phase_results_skip_the_phase_csv(tmp_path):
-    from kipi.dc.pi.report import export_csv
+    from kipi_si.dc.pi.report import export_csv
     s = two_phase()
     s.vrms[1].phases = []
     paths = export_csv(solve_tree(board(), s), board(), tmp_path, stem="t")
@@ -163,7 +163,7 @@ def test_single_phase_results_skip_the_phase_csv(tmp_path):
 
 def test_results_saved_before_phases_still_load():
     import pickle
-    from kipi.dc.pi.tree import VrmReport
+    from kipi_si.dc.pi.tree import VrmReport
     r = VrmReport("U1", "ldo", "VOUT", 1.0, 1.0, None, 2.0, None, None, 2.0, None)
     blob = pickle.dumps(r)
     old = pickle.loads(blob.replace(b"phases", b"phasez"))    # as if the field never existed
@@ -174,10 +174,10 @@ EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "multiphase_buck"
 
 
 def test_example_board_solves():
-    from kipi.core.model.snapshot_io import load
+    from kipi_si.core.model.snapshot_io import load
     folder = EXAMPLE
-    snap = load(folder / "multiphase_buck.kipi.json.gz")
-    s = PISetup.load(folder / "multiphase_buck.kipi-setup.yml")
+    snap = load(folder / "multiphase_buck.kipi_si.json.gz")
+    s = PISetup.load(folder / "multiphase_buck.kipi_si-setup.yml")
     tree = solve_tree(snap, s)
     u1, ld = by_name(tree.vrms, "U1"), by_name(tree.loads, "U10")
     assert [p.i_out for p in u1.phases] == pytest.approx([10.0] * 4, rel=1e-9)
@@ -220,7 +220,7 @@ def test_ldo_dropout_is_judged_on_the_worst_phase():
 
 
 def test_heat_by_source_with_phases():
-    from kipi.dc.thermal.cosim import heat_sources
+    from kipi_si.dc.thermal.cosim import heat_sources
     snap, s = board(), two_phase("smps", eff=0.85)
     s.thermal.load_power = True
     tree = solve_tree(snap, s)

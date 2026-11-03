@@ -5,14 +5,14 @@ coupling onto victims."""
 import numpy as np
 import pytest
 
-from kipi.ac.model import CapModel
-from kipi.ac.solver.fem import PortDef
-from kipi.ac.solver.sweep import element_currents, terminate, terminate_transfer
-from kipi.noise.checks import seed_phases
-from kipi.noise.model import Aggressor, Victim
-from kipi.noise.network import Termination, VictimNetwork
-from kipi.noise.extract.capacitive import Segment
-from kipi.noise.solver import solve_noise
+from kipi_si.ac.model import CapModel
+from kipi_si.ac.solver.fem import PortDef
+from kipi_si.ac.solver.sweep import element_currents, terminate, terminate_transfer
+from kipi_si.noise.checks import seed_phases
+from kipi_si.noise.model import Aggressor, Victim
+from kipi_si.noise.network import Termination, VictimNetwork
+from kipi_si.noise.extract.capacitive import Segment
+from kipi_si.noise.solver import solve_noise
 from noise_boards import buck_board, buck_setup
 from synthetic import F
 
@@ -49,7 +49,7 @@ def test_element_currents_balance_the_source():
     """With the parts' impedances, V_E = −Z_e·I_E at every part."""
     zb, f, ports = _random_board()
     E, i = element_currents(zb, f, ports, [0])
-    from kipi.ac.solver.sweep import element_impedance
+    from kipi_si.ac.solver.sweep import element_impedance
     for k in range(len(f)):
         ie = i[k, :, 0]
         ze = np.array([element_impedance(ports[e], 2 * np.pi * f[k]) for e in E])
@@ -132,7 +132,7 @@ def test_shared_ground_coupling_is_a_mechanism():
 
 def test_a_victim_whose_ends_share_a_part_has_no_ground_difference():
     snap = buck_board(victim_gap=0.2)
-    from kipi.dc.pi.model import PinRef
+    from kipi_si.dc.pi.model import PinRef
     v = Victim("SIG", driver=PinRef("U3", "SIG", ["1"]), receiver=PinRef("U3", "SIG", ["1"]))
     r = solve_noise(snap, _setup(snap, [v]), "U1 buck").victims[0]
     assert "common" not in r.peak_by

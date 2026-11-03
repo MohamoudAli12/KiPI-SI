@@ -13,8 +13,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from matplotlib.backend_bases import KeyEvent, MouseEvent  # noqa: E402
 from qtpy.QtWidgets import QApplication  # noqa: E402
 
-from kipi.ac.gui.plot import ImpedancePlot  # noqa: E402
-from kipi.ac.solver.sweep import ACResult, ProbeCurve  # noqa: E402
+from kipi_si.ac.gui.plot import ImpedancePlot  # noqa: E402
+from kipi_si.ac.solver.sweep import ACResult, ProbeCurve  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -106,7 +106,7 @@ def test_new_result_removes_the_cursor(plot):
 
 
 def test_cursor_reaches_the_info_pane(app, no_3d):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     w.plot.set_result(_result())
     w.plot.set_cursor(1, 0)

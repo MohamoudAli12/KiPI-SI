@@ -15,10 +15,10 @@ from qtpy.QtCore import Signal  # noqa: E402
 from qtpy.QtWidgets import QApplication, QMessageBox, QWidget  # noqa: E402
 from shapely.geometry import box  # noqa: E402
 
-from kipi.core.model.board import Net, Zone  # noqa: E402
-from kipi.dc.pi.model import DcLink, Load, PinRef  # noqa: E402
-from kipi.dc.pi.tree import solve_tree  # noqa: E402
-from kipi.dc.viz.results import build_result_scene  # noqa: E402
+from kipi_si.core.model.board import Net, Zone  # noqa: E402
+from kipi_si.dc.pi.model import DcLink, Load, PinRef  # noqa: E402
+from kipi_si.dc.pi.tree import solve_tree  # noqa: E402
+from kipi_si.dc.viz.results import build_result_scene  # noqa: E402
 from tree_boards import F, board, pad, poly, setup  # noqa: E402
 
 
@@ -30,7 +30,7 @@ def app():
 @pytest.fixture
 def window(app, monkeypatch, tmp_path):
     """A MainWindow whose 3D view only records what it was asked to show."""
-    from kipi.gui import main_window
+    from kipi_si.gui import main_window
 
     class ResultView(QWidget):
         zscale = 1.0
@@ -194,9 +194,9 @@ def _idle(app, w):
 
 
 def test_results_save_and_open_in_the_background(app, window, monkeypatch, tmp_path):
-    from kipi.core import results_io
+    from kipi_si.core import results_io
     tree, first = _solved(app, window, *_bridged_board())
-    path = tmp_path / "r.kipi-dc-results"
+    path = tmp_path / "r.kipi_si-dc-results"
     offered = []
 
     def save_as(parent, title, name, filt):
@@ -207,7 +207,7 @@ def test_results_save_and_open_in_the_background(app, window, monkeypatch, tmp_p
     _idle(app, window)
     assert path.is_file() and not results_io.is_legacy(path)
     # The suggested name says what was solved: DC alone here.
-    assert offered[0][0].endswith(".kipi-dc-results") and "DC results" in offered[0][1]
+    assert offered[0][0].endswith(".kipi_si-dc-results") and "DC results" in offered[0][1]
 
     window._tree, window._scenes = None, {}
     monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: pytest.fail(str(a[2])))
@@ -219,20 +219,20 @@ def test_results_save_and_open_in_the_background(app, window, monkeypatch, tmp_p
     monkeypatch.setattr("qtpy.QtWidgets.QFileDialog.getOpenFileName", open_file)
     window.open_results()
     # Both kinds open, and so do results named as before 0.8.0.
-    assert all(f"*{s}" in filters[0] for s in (".kipi-dc-results", ".kipi-dc-thermal-results",
-                                               ".kipi-results"))
+    assert all(f"*{s}" in filters[0] for s in (".kipi_si-dc-results", ".kipi_si-dc-thermal-results",
+                                               ".kipi_si-results"))
     _idle(app, window)
     assert set(window._scenes) == set(tree.groups)        # the 3D views are rebuilt
     assert window.viewer.result is window._scenes[first]
     assert [l.drop for l in window._tree.loads] == [l.drop for l in tree.loads]
 
 
-def test_results_pickled_by_an_older_kipi_open_only_when_confirmed(app, window, monkeypatch,
+def test_results_pickled_by_an_older_kipi_si_open_only_when_confirmed(app, window, monkeypatch,
                                                                    tmp_path):
     import gzip
     import pickle
     tree, first = _solved(app, window, *_bridged_board())
-    path = tmp_path / "old.kipi-results"
+    path = tmp_path / "old.kipi_si-results"
     with gzip.open(path, "wb") as fh:
         pickle.dump({"format": 1, "kind": "dc", "saved": "2026-01-01 00:00:00",
                      "board": window.snapshot.board_name, "tree": tree,

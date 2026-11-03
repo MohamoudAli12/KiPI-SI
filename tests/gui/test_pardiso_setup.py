@@ -11,8 +11,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from qtpy.QtCore import QSettings  # noqa: E402
 from qtpy.QtWidgets import QApplication, QDialog, QLabel  # noqa: E402
 
-from kipi.gui import pardiso_setup as ps  # noqa: E402
-from kipi.launcher.install import Installer  # noqa: E402
+from kipi_si.gui import pardiso_setup as ps  # noqa: E402
+from kipi_si.launcher.install import Installer  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -22,7 +22,7 @@ def app():
 
 @pytest.fixture
 def settings(tmp_path, monkeypatch):
-    s = QSettings(str(tmp_path / "kipi.ini"), QSettings.IniFormat)
+    s = QSettings(str(tmp_path / "kipi_si.ini"), QSettings.IniFormat)
     monkeypatch.setattr(ps, "_settings", lambda: s)
     return s
 
@@ -30,7 +30,7 @@ def settings(tmp_path, monkeypatch):
 @pytest.fixture
 def here(monkeypatch):
     """A computer that can have PARDISO, without it installed; nothing really runs pip."""
-    monkeypatch.setenv("KIPI_DIRECT_SOLVER", "")    # an opt-out sets it; undone after
+    monkeypatch.setenv("KIPI_SI_DIRECT_SOLVER", "")    # an opt-out sets it; undone after
     monkeypatch.setattr(ps, "available", lambda: (True, ""))
     monkeypatch.setattr(ps, "installed", lambda: False)
     calls = []
@@ -95,7 +95,7 @@ def test_turned_off_but_still_there_is_not_used(app, settings, here, monkeypatch
     monkeypatch.setattr(ps, "installed", lambda: True)
     settings.setValue(ps.CHOICE_KEY, "off")
     ps.startup()
-    assert os.environ.get("KIPI_DIRECT_SOLVER") == "superlu"
+    assert os.environ.get("KIPI_SI_DIRECT_SOLVER") == "superlu"
 
 
 def test_startup_never_raises(settings, monkeypatch):

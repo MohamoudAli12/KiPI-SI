@@ -7,8 +7,8 @@ import os
 import numpy as np
 import pytest
 
-from kipi.core.model.board import Footprint
-from kipi.core.model.spice import (
+from kipi_si.core.model.board import Footprint
+from kipi_si.core.model.spice import (
     Library, SpiceError, best_match, capacitor_ref, capacitor_values, evaluate, link_ref,
     link_values, number,
 )
@@ -167,7 +167,7 @@ def test_a_file_is_read_and_too_big_ones_refused(tmp_path, monkeypatch):
     p = tmp_path / "parts.lib"
     p.write_bytes(LIB.replace("0.05", "0.05 ; 5 µm²").encode("latin-1"))
     assert "WSL0805" in Library.read(p).two_pin()
-    monkeypatch.setattr("kipi.core.model.spice.MAX_FILE_BYTES", 10)
+    monkeypatch.setattr("kipi_si.core.model.spice.MAX_FILE_BYTES", 10)
     with pytest.raises(SpiceError, match="too large"):
         Library.read(p)
     with pytest.raises(SpiceError, match="no .ENDS"):
@@ -200,7 +200,7 @@ def app():
 
 
 def test_a_parts_val_field_is_one_more_name_to_find_its_model_by(app):
-    from kipi.gui.spice_dialog import part_values
+    from kipi_si.gui.spice_dialog import part_values
     snap = make_board()
     snap.footprints.append(Footprint("f9", "C110", "C_220n_0402", (5, 0), "top",
                                      fields={"Val": "GRM155R71C224KA12"}))
@@ -209,7 +209,7 @@ def test_a_parts_val_field_is_one_more_name_to_find_its_model_by(app):
 
 def test_the_dialog_shows_the_values_or_why_not(app):
     from qtpy.QtWidgets import QDialogButtonBox
-    from kipi.gui.spice_dialog import CAPACITOR, SpiceModelDialog
+    from kipi_si.gui.spice_dialog import CAPACITOR, SpiceModelDialog
     d = SpiceModelDialog(Library(LIB, "parts.lib"), CAPACITOR, ["LT"])
     assert d.name == "LT" and "10 µF" in d.result.text()
     d.list.setCurrentRow(2)                                  # the resistor
@@ -221,8 +221,8 @@ def test_the_dialog_shows_the_values_or_why_not(app):
 
 
 def test_the_link_editor_imports_the_model_and_locks_dcr_and_esl(app, monkeypatch):
-    from kipi.dc.gui import pi_panel
-    from kipi.dc.pi.model import DcLink, PinRef
+    from kipi_si.dc.gui import pi_panel
+    from kipi_si.dc.pi.model import DcLink, PinRef
     seen = {}
 
     def fake(parent, kind, hints, pins=()):
@@ -254,8 +254,8 @@ def test_the_link_editor_imports_the_model_and_locks_dcr_and_esl(app, monkeypatc
 
 
 def test_the_capacitor_editor_imports_the_model(app, monkeypatch):
-    from kipi.ac.gui import panel
-    from kipi.ac.model import CapModel
+    from kipi_si.ac.gui import panel
+    from kipi_si.ac.model import CapModel
 
     monkeypatch.setattr(panel, "import_spice",
                         lambda parent, kind, hints: capacitor_ref(Library(LIB), "LT"))
@@ -290,8 +290,8 @@ R2 d 2 20m
 
 
 def test_a_kept_model_reads_back_alone_and_is_saved_with_the_setup():
-    from kipi.ac.model import CapModel
-    from kipi.dc.pi.model import DcLink, PinRef, PISetup
+    from kipi_si.ac.model import CapModel
+    from kipi_si.dc.pi.model import DcLink, PinRef, PISetup
     lib = Library(".param lval=0.4n\n" + LIB.replace("L1 3 4 0.4n", "L1 3 4 {lval}"))
     ref, _ = capacitor_ref(lib, "CAP_NESTED")
     assert ".SUBCKT GRM155R61A105KE15" in ref.netlist and "LT" not in ref.netlist
@@ -309,7 +309,7 @@ def test_a_kept_model_reads_back_alone_and_is_saved_with_the_setup():
 
 def test_a_capacitor_takes_its_impedance_from_its_model():
     import dataclasses
-    from kipi.ac.model import CapModel
+    from kipi_si.ac.model import CapModel
     ref, v = capacitor_ref(Library(TWO_BRANCH), "TWO")
     m = CapModel("TWO", v.capacitance_f, v.esl_h, v.esr_ohm, spice=ref)
     w = 2 * np.pi * np.logspace(4, 9, 300)
@@ -330,9 +330,9 @@ def test_a_capacitor_takes_its_impedance_from_its_model():
 
 
 def test_a_link_takes_its_impedance_from_its_model_in_the_solves():
-    from kipi.ac.solver.fem import PortDef
-    from kipi.ac.solver.sweep import element_impedance
-    from kipi.dc.pi.model import DcLink, PinRef
+    from kipi_si.ac.solver.fem import PortDef
+    from kipi_si.ac.solver.sweep import element_impedance
+    from kipi_si.dc.pi.model import DcLink, PinRef
     ref, v = link_ref(Library(LIB), "BLM18PG221")
     k = DcLink("FB1", PinRef("FB1", "A"), PinRef("FB1", "B"), v.resistance_ohm,
                v.esl_h, spice=ref)
@@ -347,8 +347,8 @@ def test_a_link_takes_its_impedance_from_its_model_in_the_solves():
 
 
 def test_the_noise_split_uses_the_model():
-    from kipi.ac.model import CapModel
-    from kipi.noise.waveforms import CapBranch
+    from kipi_si.ac.model import CapModel
+    from kipi_si.noise.waveforms import CapBranch
     ref, v = capacitor_ref(Library(TWO_BRANCH), "TWO")
     m = CapModel("TWO", v.capacitance_f, v.esl_h, v.esr_ohm, spice=ref)
     w = 2 * np.pi * np.array([1e6, 3e7])
@@ -357,9 +357,9 @@ def test_the_noise_split_uses_the_model():
 
 
 def test_a_setup_with_a_model_goes_in_a_results_file(tmp_path):
-    from kipi.ac.model import CapModel
-    from kipi.core import results_io
-    from kipi.dc.pi.model import PISetup
+    from kipi_si.ac.model import CapModel
+    from kipi_si.core import results_io
+    from kipi_si.dc.pi.model import PISetup
     ref, v = capacitor_ref(Library(LIB), "LT")
     setup = PISetup(caps=[CapModel("LT", v.capacitance_f, v.esl_h, v.esr_ohm, spice=ref)])
     path = results_io.write(tmp_path / "r.kipires", {}, setup)
@@ -369,8 +369,8 @@ def test_a_setup_with_a_model_goes_in_a_results_file(tmp_path):
 def test_an_ac_solve_uses_the_model():
     """A SPICE model that is a series RLC solves as that RLC does; derated (DC bias) too."""
     from ac_boards import plane_pair, plane_setup
-    from kipi.ac.model import CapModel
-    from kipi.ac.solver import solve_ac
+    from kipi_si.ac.model import CapModel
+    from kipi_si.ac.solver import solve_ac
     snap = plane_pair(20.0, caps=[("C1", "10u X5R", (10.0, 10.0))])
 
     def setup(spice):
@@ -386,7 +386,7 @@ def test_an_ac_solve_uses_the_model():
 
 
 def test_the_dialog_lists_diode_models_for_a_series_part(app):
-    from kipi.gui.spice_dialog import CAPACITOR, LINK, SpiceModelDialog
+    from kipi_si.gui.spice_dialog import CAPACITOR, LINK, SpiceModelDialog
     d = SpiceModelDialog(Library(DIODES, "diodes.lib"), LINK, ["D1N4148"])
     assert [d.list.item(i).text() for i in range(d.list.count())] == [
         "SCH", "D1N4148", "SS34", "IDEAL"]

@@ -2,7 +2,7 @@
 
 import pytest
 
-from kipi.sources.odbpp.reader import _copper_thickness
+from kipi_si.sources.odbpp.reader import _copper_thickness
 
 MM, INCH = 1.0, 25.4
 

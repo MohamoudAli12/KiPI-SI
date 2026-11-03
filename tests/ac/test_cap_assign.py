@@ -12,7 +12,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from qtpy.QtCore import Qt  # noqa: E402
 from qtpy.QtWidgets import QApplication  # noqa: E402
 
-from kipi.core.model.snapshot_io import from_dict, to_dict  # noqa: E402
+from kipi_si.core.model.snapshot_io import from_dict, to_dict  # noqa: E402
 
 C0402 = "Capacitor_SMD:C_0402_1005Metric"
 C0603 = "Capacitor_SMD:C_0603_1608Metric"
@@ -26,7 +26,7 @@ def app():
 
 
 def _board():
-    from kipi.core.model.board import Footprint, Pad
+    from kipi_si.core.model.board import Footprint, Pad
     from synthetic import make_board
     snap = make_board()
     for k, (ref, value, fp) in enumerate(PARTS):
@@ -48,8 +48,8 @@ def test_footprint_round_trips_and_old_snapshots_load():
 
 @pytest.fixture
 def editor(app):
-    from kipi.ac.gui.panel import ACPanel
-    from kipi.dc.pi.model import PISetup
+    from kipi_si.ac.gui.panel import ACPanel
+    from kipi_si.dc.pi.model import PISetup
     setup = PISetup()
     panel = ACPanel()
     panel.set_board(_board(), setup)

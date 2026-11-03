@@ -11,10 +11,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from qtpy.QtWidgets import QApplication  # noqa: E402
 
-from kipi.core.model.stackup import thicknesses  # noqa: E402
-from kipi.dc.pi.model import PISetup  # noqa: E402
-from kipi.gui import stackup_view as sv  # noqa: E402
-from kipi.gui.stackup_window import StackupWindow  # noqa: E402
+from kipi_si.core.model.stackup import thicknesses  # noqa: E402
+from kipi_si.dc.pi.model import PISetup  # noqa: E402
+from kipi_si.gui import stackup_view as sv  # noqa: E402
+from kipi_si.gui.stackup_window import StackupWindow  # noqa: E402
 from phase_boards import board  # noqa: E402
 
 
@@ -25,7 +25,7 @@ def app():
 
 @pytest.fixture
 def unit_setting(monkeypatch):
-    from kipi.gui import stackup_window
+    from kipi_si.gui import stackup_window
     store = {}
 
     class Settings:

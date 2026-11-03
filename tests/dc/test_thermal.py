@@ -5,12 +5,12 @@ import numpy as np
 import pytest
 from shapely.geometry import box
 
-from kipi.core.model.board import (
+from kipi_si.core.model.board import (
     BoardSnapshot, CopperLayer, DielectricLayer, Net, Poly, Stackup, Zone,
 )
-from kipi.dc.solver import CurrentLoad, NetProblem, SolveSettings, VoltageSource, run
-from kipi.dc.thermal.cosim import solve_electrothermal
-from kipi.dc.thermal.model import BoardThermalModel, ThermalSettings
+from kipi_si.dc.solver import CurrentLoad, NetProblem, SolveSettings, VoltageSource, run
+from kipi_si.dc.thermal.cosim import solve_electrothermal
+from kipi_si.dc.thermal.model import BoardThermalModel, ThermalSettings
 from tree_boards import F, B, board, setup, by_name, R
 
 TCR = 0.00393
@@ -142,14 +142,14 @@ def test_load_heat_raises_the_board_temperature():
     ("", 0.8, True),
 ])
 def test_dielectric_lookup(name, k, assumed):
-    from kipi.dc.thermal.materials import lookup
+    from kipi_si.dc.thermal.materials import lookup
     d = lookup(name)
     assert d.k_w_mk == pytest.approx(k) and d.assumed == assumed
 
 
 def test_laminate_conductance_follows_stackup_materials():
-    from kipi.core.model.board import DielectricLayer
-    from kipi.dc.thermal.materials import laminate_conductance
+    from kipi_si.core.model.board import DielectricLayer
+    from kipi_si.dc.thermal.materials import laminate_conductance
     st = plate().stackup
     g_fr4, rows = laminate_conductance(st)
     assert g_fr4 == pytest.approx(0.8e-3 * 1.5)
@@ -173,7 +173,7 @@ def test_laminate_conductance_follows_stackup_materials():
 
 
 def test_every_listed_material_is_found_by_its_own_name():
-    from kipi.dc.thermal.materials import catalog, lookup
+    from kipi_si.dc.thermal.materials import catalog, lookup
     mats = catalog()
     assert mats[0].material == "FR4 core" and len({m.material for m in mats}) == len(mats)
     for m in mats:
@@ -209,9 +209,9 @@ def test_a_layers_conductor_sets_its_heat_spreading():
 
 
 def test_dc_and_thermal_solves_use_the_direct_backend(monkeypatch):
-    # #108: both the copper and the heat systems go through kipi.core.solver.direct, so
+    # #108: both the copper and the heat systems go through kipi_si.core.solver.direct, so
     # they get PARDISO wherever it is installed (SuperLU otherwise).
-    from kipi.core.solver import direct
+    from kipi_si.core.solver import direct
     names, factorize = [], direct.factorize
 
     def spy(A, *a, **k):
@@ -259,8 +259,8 @@ def test_a_one_layer_board_loses_heat_from_both_faces():
 
 
 def test_vias_carry_heat_between_layers():
-    from kipi.core.model.board import Via
-    from kipi.dc.solver.via_barrel import barrel_copper_area, default_via_rules, rule_for
+    from kipi_si.core.model.board import Via
+    from kipi_si.dc.solver.via_barrel import barrel_copper_area, default_via_rules, rule_for
     s = ThermalSettings(enabled=True, grid_mm=1.0)
     bare = BoardThermalModel(plate(), s)
     snap = plate()
@@ -289,7 +289,7 @@ def test_heat_without_a_layer_is_shared():
 
 
 def test_laminate_is_shared_by_the_copper_it_touches():
-    from kipi.dc.thermal.materials import laminate_layers
+    from kipi_si.dc.thermal.materials import laminate_layers
     ids = [3, 4, 5, 34]
     t = [0.035] * 4
     diel = [DielectricLayer(0.2, "2116 prepreg", 4.2, 3, 4),
@@ -316,7 +316,7 @@ def test_laminate_is_shared_by_the_copper_it_touches():
 def test_each_layer_of_the_cosim_has_its_own_temperature():
     """The rail is on F.Cu and the ground return on B.Cu: F.Cu, carrying the regulator's and
     the rail's heat, runs hotter, and the solvers read each layer's own copper."""
-    from kipi.dc.pi.report import layer_temps
+    from kipi_si.dc.pi.report import layer_temps
     snap = board()
     s = setup("ldo", ground=True)
     tree = solve_electrothermal(snap, s, ThermalSettings(enabled=True, iterations=2,
@@ -333,8 +333,8 @@ def test_each_layer_of_the_cosim_has_its_own_temperature():
 
 
 def test_results_saved_before_layers_read_as_one_sheet():
-    from kipi.dc.thermal.cosim import ThermalResult
-    from kipi.dc.thermal.model import ThermalSettings as TS
+    from kipi_si.dc.thermal.cosim import ThermalResult
+    from kipi_si.dc.thermal.model import ThermalSettings as TS
     x, y = np.arange(3.0), np.arange(2.0)
     temps = np.array([[30.0, 31.0, 32.0], [33.0, 34.0, 35.0]])
     th = ThermalResult.__new__(ThermalResult)
@@ -364,7 +364,7 @@ def test_the_solver_reads_each_layers_own_copper():
 
 def _coat(snap, silk_box=None):
     """Mask and silkscreen on both faces; the silkscreen prints ``silk_box`` on each."""
-    from kipi.core.model.board import MASK, SILK, Coating
+    from kipi_si.core.model.board import MASK, SILK, Coating
     snap.stackup.coatings = [Coating(SILK, "top", 0.02), Coating(MASK, "top", 0.03),
                              Coating(MASK, "bottom", 0.03), Coating(SILK, "bottom", 0.02)]
     if silk_box is not None:
@@ -375,7 +375,7 @@ def _coat(snap, silk_box=None):
 
 def test_solder_mask_and_silkscreen_hold_heat_in():
     """Uniform heat on a coated board: each face loses q_face / (1/h + sum t/k) (#82)."""
-    from kipi.dc.thermal.materials import MASK_K_W_MK, SILK_K_W_MK, coating_resistance
+    from kipi_si.dc.thermal.materials import MASK_K_W_MK, SILK_K_W_MK, coating_resistance
     s = ThermalSettings(enabled=True, ambient_c=25.0, grid_mm=1.0)
     snap = plate()
     bare = BoardThermalModel(snap, s)
@@ -399,7 +399,7 @@ def test_solder_mask_and_silkscreen_hold_heat_in():
 def test_the_silkscreen_holds_heat_in_only_where_it_prints():
     """The mask covers the face; the silkscreen adds its t/k only in the cells it prints
     on (here the left half), and nothing when it prints nothing (#82)."""
-    from kipi.dc.thermal.materials import MASK_K_W_MK, SILK_K_W_MK
+    from kipi_si.dc.thermal.materials import MASK_K_W_MK, SILK_K_W_MK
     s = ThermalSettings(enabled=True, ambient_c=25.0, grid_mm=1.0)
     h = s.h_w_mm2_k()
     r_mask, r_silk = 0.03 / (MASK_K_W_MK * 1e-3), 0.02 / (SILK_K_W_MK * 1e-3)

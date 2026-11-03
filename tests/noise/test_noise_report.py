@@ -5,8 +5,8 @@ import os
 
 import pytest
 
-from kipi.noise.html_report import report_name, write_noise_report
-from kipi.noise.solver import solve_noise
+from kipi_si.noise.html_report import report_name, write_noise_report
+from kipi_si.noise.solver import solve_noise
 from validation_boards import open_board
 
 pytest.importorskip("qtpy")
@@ -41,7 +41,7 @@ def test_the_pdf_plots_fit_the_page(board, tmp_path, monkeypatch):
 
     from qtpy.QtWidgets import QApplication
 
-    from kipi.core import pdf
+    from kipi_si.core import pdf
     QApplication.instance() or QApplication([])
     got = []
     real = pdf.write_pdf
@@ -58,7 +58,7 @@ def test_the_pdf_plots_fit_the_page(board, tmp_path, monkeypatch):
 def panel():
     from qtpy.QtWidgets import QApplication
     QApplication.instance() or QApplication([])
-    from kipi.noise.gui.panel import NoisePanel
+    from kipi_si.noise.gui.panel import NoisePanel
     snap, setup = open_board("coupled_noise")
     p = NoisePanel()
     p.set_board(snap, setup)

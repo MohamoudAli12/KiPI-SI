@@ -6,15 +6,15 @@ import json
 import pytest
 from shapely.geometry import box
 
-from kipi.core.model.board import (
+from kipi_si.core.model.board import (
     BoardSnapshot, CopperLayer, DielectricLayer, Net, Stackup, Zone,
 )
-from kipi.dc.pi.importers.pdn_figures import dc_resistance
-from kipi.dc.pi.importers.tomachie_pdn import (
+from kipi_si.dc.pi.importers.pdn_figures import dc_resistance
+from kipi_si.dc.pi.importers.tomachie_pdn import (
     PdnImportError, TomachiePdnImporter, import_tomachie_pdn, path_to_rail,
 )
-from kipi.dc.pi.model import PISetup, validate
-from kipi.dc.pi.tree import solve_tree
+from kipi_si.dc.pi.model import PISetup, validate
+from kipi_si.dc.pi.tree import solve_tree
 from tree_boards import B, F, T, board, by_name, pad, poly
 
 PDN = {

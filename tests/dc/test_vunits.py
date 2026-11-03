@@ -5,8 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from kipi.dc.pi import vunits
-from kipi.dc.pi.vunits import MV, PCT, VOLTS
+from kipi_si.dc.pi import vunits
+from kipi_si.dc.pi.vunits import MV, PCT, VOLTS
 
 
 def _load(**kw):
@@ -51,8 +51,8 @@ def app():
 
 
 def test_the_loads_table_switches_units(app):
-    from kipi.dc.gui.pi_panel import PIPanel
-    from kipi.dc.pi.tree import solve_tree
+    from kipi_si.dc.gui.pi_panel import PIPanel
+    from kipi_si.dc.pi.tree import solve_tree
     from phase_boards import board, two_phase
     setup = two_phase()
     for ld in setup.loads:

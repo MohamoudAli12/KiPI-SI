@@ -8,8 +8,8 @@ from qtpy.QtCore import QLocale  # noqa: E402
 from qtpy.QtGui import QValidator  # noqa: E402
 from qtpy.QtWidgets import QApplication  # noqa: E402
 
-from kipi.dc.gui.pi_panel import _optional_volts, _spin  # noqa: E402
-from kipi.gui.unit_spin import parse_value, split_unit  # noqa: E402
+from kipi_si.dc.gui.pi_panel import _optional_volts, _spin  # noqa: E402
+from kipi_si.gui.unit_spin import parse_value, split_unit  # noqa: E402
 
 
 @pytest.fixture(scope="module", autouse=True)

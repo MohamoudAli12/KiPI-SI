@@ -5,7 +5,7 @@ import math
 
 import pytest
 
-from kipi.noise.extract.peec import loop_inductance, mutual, polyline, segment
+from kipi_si.noise.extract.peec import loop_inductance, mutual, polyline, segment
 
 MU0 = 4e-7 * math.pi
 

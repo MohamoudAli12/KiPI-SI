@@ -1,4 +1,4 @@
-"""Only one KiPI runs at a time; a second one brings the first to the front."""
+"""Only one KiPI-SI runs at a time; a second one brings the first to the front."""
 
 import os
 import subprocess
@@ -14,7 +14,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from qtpy.QtWidgets import QApplication  # noqa: E402
 
-from kipi.gui import single_instance as si  # noqa: E402
+from kipi_si.gui import single_instance as si  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -26,10 +26,10 @@ def app():
 
 @pytest.fixture
 def isolated(monkeypatch, tmp_path):
-    """A lock and socket of this test's own, so a KiPI the developer has open is untouched."""
-    name = f"kipi-test-{os.getpid()}-{tmp_path.name}"
+    """A lock and socket of this test's own, so a KiPI-SI the developer has open is untouched."""
+    name = f"kipi_si-test-{os.getpid()}-{tmp_path.name}"
     monkeypatch.setattr(si, "server_name", lambda: name)
-    monkeypatch.setattr(si, "lock_path", lambda: tmp_path / "kipi.lock")
+    monkeypatch.setattr(si, "lock_path", lambda: tmp_path / "kipi_si.lock")
     return name
 
 
@@ -44,24 +44,24 @@ def test_second_instance_finds_the_lock_taken(isolated):
     again.release()
 
 
-def test_a_dead_owner_does_not_lock_the_next_kipi_out(isolated, tmp_path):
-    # A KiPI that crashed: its lock file names a process that no longer exists.
+def test_a_dead_owner_does_not_lock_the_next_kipi_si_out(isolated, tmp_path):
+    # A KiPI-SI that crashed: its lock file names a process that no longer exists.
     p = subprocess.run([sys.executable, "-c", textwrap.dedent(f"""
         import os, sys
         sys.path.insert(0, ".")
-        from kipi.gui import single_instance as si
-        g = si.acquire(__import__("pathlib").Path(r"{tmp_path / 'kipi.lock'}"))
+        from kipi_si.gui import single_instance as si
+        g = si.acquire(__import__("pathlib").Path(r"{tmp_path / 'kipi_si.lock'}"))
         assert g is not None and g.locked
         os._exit(0)                       # never unlocks
     """)], cwd=ROOT, env=dict(os.environ, QT_API="pyside6"), timeout=60)
-    assert p.returncode == 0 and (tmp_path / "kipi.lock").exists()
+    assert p.returncode == 0 and (tmp_path / "kipi_si.lock").exists()
     g = si.acquire()
     assert g is not None and g.locked
     g.release()
 
 
-def test_an_unwritable_lock_still_lets_kipi_start(monkeypatch, tmp_path):
-    g = si.acquire(tmp_path / "no such folder" / "kipi.lock")
+def test_an_unwritable_lock_still_lets_kipi_si_start(monkeypatch, tmp_path):
+    g = si.acquire(tmp_path / "no such folder" / "kipi_si.lock")
     assert g is not None and not g.locked
     assert g.listen(lambda: None) is False
     g.release()
@@ -71,12 +71,12 @@ def test_second_instance_brings_the_first_to_the_front(app, isolated):
     first = si.acquire()
     activated = []
     assert first.listen(lambda: activated.append(True))
-    # The second KiPI is another process, as it is when KiCad starts it again.
+    # The second KiPI-SI is another process, as it is when KiCad starts it again.
     child = subprocess.Popen([sys.executable, "-c", textwrap.dedent(f"""
         import logging, sys
         sys.path.insert(0, ".")
         logging.basicConfig(level=logging.INFO)   # says why, if the handoff fails
-        from kipi.gui import single_instance as si
+        from kipi_si.gui import single_instance as si
         si.server_name = lambda: "{isolated}"
         sys.exit(0 if si.activate_running(timeout_ms=10000) else 3)
     """)], cwd=ROOT, env=dict(os.environ, QT_API="pyside6"))

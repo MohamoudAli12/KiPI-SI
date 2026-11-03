@@ -4,10 +4,10 @@ import numpy as np
 import pytest
 
 from helpers.si_boards import make_board
-from kipi.dc.pi.model import PISetup
-from kipi.si.model import new_channel
-from kipi.si.scan import FAIL, PASS
-from kipi.si.solver import SIError, edge_metrics, solve_channel
+from kipi_si.dc.pi.model import PISetup
+from kipi_si.si.model import new_channel
+from kipi_si.si.scan import FAIL, PASS
+from kipi_si.si.solver import SIError, edge_metrics, solve_channel
 
 
 @pytest.fixture(scope="module")
@@ -70,9 +70,9 @@ def test_edge_metrics():
 def test_a_pairs_impedance_is_judged_over_its_whole_route():
     """1 mm off target in a 15 mm route is a WARN, though only 5 mm of it has a Zdiff
     (the rest runs beside an aggressor or with P alone)."""
-    from kipi.si.extract import SectionInfo
-    from kipi.si.scan import WARN
-    from kipi.si.solver import ChannelResult, SISettings, _checks
+    from kipi_si.si.extract import SectionInfo
+    from kipi_si.si.scan import WARN
+    from kipi_si.si.solver import ChannelResult, SISettings, _checks
     ch = new_channel("USB_P", "USB_N")
     f = np.linspace(1e7, 1e9, 10)
     res = ChannelResult(ch, ["USB_P", "USB_N"], [], f, np.zeros((10, 4, 4)))
@@ -89,7 +89,7 @@ def test_a_pairs_impedance_is_judged_over_its_whole_route():
 def test_a_pairs_overlay_covers_its_whole_route(board):
     """Every segment of the pair is coloured, with its copper: grey (NaN) only where a leg
     runs without its partner."""
-    from kipi.si.viz import channel_overlay
+    from kipi_si.si.viz import channel_overlay
     r = solve_channel(board, _setup(new_channel("USB_P", "USB_N")), "USB_P/USB_N")
     ov = channel_overlay(board, r)
     n = sum(len(s.segs) for s in r.sections)
@@ -104,7 +104,7 @@ def test_a_pairs_overlay_covers_its_whole_route(board):
 def test_the_ends_are_marked_where_the_parts_are(board):
     """TX over the driving part's pads on the channel's nets, RX over the receiving part's,
     each a set end or the solver's guess; swapped ends swap the labels; none with no net."""
-    from kipi.si.viz import end_labels
+    from kipi_si.si.viz import end_labels
     ch = new_channel("CLK")
     labels = end_labels(board, PISetup().si, ch)
     assert [t for t, _ in labels] == ["TX U1", "RX U2"]
@@ -124,9 +124,9 @@ def test_tdr_note_names_a_source_termination():
     from ~31 ps; a channel with no series resistor gets no note."""
     from pathlib import Path
     from types import SimpleNamespace
-    from kipi.si.model import new_channel
-    from kipi.si.solver import _tdr_note
-    from kipi.sources.kicad_pcb.reader import read_board
+    from kipi_si.si.model import new_channel
+    from kipi_si.si.solver import _tdr_note
+    from kipi_si.sources.kicad_pcb.reader import read_board
     pcb = Path(__file__).resolve().parents[2] / "examples" / "si_demo" / "si_demo.kicad_pcb"
     snap = read_board(pcb)
     chan = SimpleNamespace(net_delay=lambda n: {"CLK_GOOD": 15.5e-12}.get(n, 400e-12))

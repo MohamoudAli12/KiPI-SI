@@ -3,7 +3,7 @@ passively, and the SPICE netlist written is the model."""
 
 import numpy as np
 
-from kipi.si import vectfit as vf
+from kipi_si.si import vectfit as vf
 
 
 def test_recovers_a_rational_function():
@@ -21,10 +21,10 @@ def test_recovers_a_rational_function():
 
 def test_channel_model_and_netlist(tmp_path):
     from helpers.si_boards import make_board
-    from kipi.dc.pi.model import PISetup
-    from kipi.si.model import new_channel
-    from kipi.si.report import export_spice
-    from kipi.si.solver import solve_channel
+    from kipi_si.dc.pi.model import PISetup
+    from kipi_si.si.model import new_channel
+    from kipi_si.si.report import export_spice
+    from kipi_si.si.solver import solve_channel
     snap = make_board()
     setup = PISetup()
     setup.si_channels = [new_channel("USB_P", "USB_N")]

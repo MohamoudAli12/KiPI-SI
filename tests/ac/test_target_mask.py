@@ -8,10 +8,10 @@ import os
 import numpy as np
 import pytest
 
-from kipi.ac.model import Probe
-from kipi.ac.solver.sweep import ProbeCurve
-from kipi.ac.target import mask_at, target_at
-from kipi.dc.pi.model import PinRef, PISetup, Vrm
+from kipi_si.ac.model import Probe
+from kipi_si.ac.solver.sweep import ProbeCurve
+from kipi_si.ac.target import mask_at, target_at
+from kipi_si.dc.pi.model import PinRef, PISetup, Vrm
 
 # 10 mΩ to 100 kHz, rising to 20 mΩ at 1 MHz, 20 mΩ above
 MASK = [(1e6, 0.02), (1e5, 0.01)]
@@ -69,7 +69,7 @@ def test_mask_round_trips_through_the_setup_file():
                                          ([(1e5, 0.0)], "above zero"),
                                          ([(1e5, 0.01), (1e5, 0.02)], "same frequency")])
 def test_bad_masks_stop_the_solve(points, msg):
-    from kipi.ac.checks import validate_ac
+    from kipi_si.ac.checks import validate_ac
     errors = validate_ac(_setup(_probe(target_custom=True, target_points=points)),
                          "VRM1", "GND")
     assert any(msg in e for e in errors)
@@ -84,7 +84,7 @@ def app():
 
 
 def test_editor_switches_to_a_custom_mask(app):
-    from kipi.ac.gui.panel import ACPanel
+    from kipi_si.ac.gui.panel import ACPanel
     panel = ACPanel()
     probe = _probe(target_ohm=0.01, target_hz=1e5)
     panel.setup.probes.append(probe)
@@ -113,8 +113,8 @@ def test_editor_switches_to_a_custom_mask(app):
 
 def test_plot_draws_the_mask(app):
     pytest.importorskip("matplotlib")
-    from kipi.ac.gui.plot import ImpedancePlot
-    from kipi.ac.solver.sweep import ACResult
+    from kipi_si.ac.gui.plot import ImpedancePlot
+    from kipi_si.ac.solver.sweep import ACResult
     f = np.logspace(4, 8, 41)
     c = ProbeCurve("U1", np.full(f.shape, 0.015 + 0j), target_points=MASK)
     p = ImpedancePlot()

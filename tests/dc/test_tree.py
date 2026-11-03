@@ -6,12 +6,12 @@ import numpy as np
 import pytest
 from shapely.geometry import box
 
-from kipi.dc.pi.model import (
+from kipi_si.dc.pi.model import (
     DcLink, Load, PinRef, PISetup, Vrm, net_groups, validate, vin_range,
 )
-from kipi.core.model.spice import constant_drop_ref
-from kipi.dc.pi.tree import NOT_CONVERGED, OUT_OF_REGULATION, _mean_v, solve_tree
-from kipi.dc.solver.fem import SolveError
+from kipi_si.core.model.spice import constant_drop_ref
+from kipi_si.dc.pi.tree import NOT_CONVERGED, OUT_OF_REGULATION, _mean_v, solve_tree
+from kipi_si.dc.solver.fem import SolveError
 
 from tree_boards import R, board, by_name, isolated_board, isolated_setup, pad, setup
 
@@ -118,14 +118,14 @@ def test_setup_file_round_trip(tmp_path):
     s.links.append(DcLink("D1", PinRef("U2", "+3V3", ["1"]),
                           PinRef("U2", "+3V3", ["2"]), 0.05,
                           spice=constant_drop_ref(0.32, 0.05)))
-    from kipi.dc.pi.model import PinGroup
+    from kipi_si.dc.pi.model import PinGroup
     s.loads[0].groups = [PinGroup(["1"], 0.4, "a")]
     s.settings.rho_by_layer = {"In1.Cu": 1.9e-5}
     s.settings.tcr_per_c = 0.0038
-    path = s.save(tmp_path / "x.kipi-setup.json")
-    assert path.name == "x.kipi-setup.yml"           # YAML only from 0.8.0 (#76)
+    path = s.save(tmp_path / "x.kipi_si-setup.json")
+    assert path.name == "x.kipi_si-setup.yml"           # YAML only from 0.8.0 (#76)
     assert PISetup.load(path) == s
-    from kipi.core import yaml_io
+    from kipi_si.core import yaml_io
     saved = yaml_io.loads(path.read_text(encoding="utf-8"))
     assert saved["format_version"] == 2
 
@@ -147,32 +147,32 @@ def test_a_constant_diode_drop_loads_as_a_diode_model():
 def test_legacy_json_setups_still_load(tmp_path):
     import json
     s = setup(kind="smps", eff=0.85, sense=True, ground=True)
-    legacy = tmp_path / "x.kipi-setup.json"
+    legacy = tmp_path / "x.kipi_si-setup.json"
     legacy.write_text(json.dumps(s.to_dict(), indent=2), encoding="utf-8")
     assert PISetup.load(legacy) == s
-    from kipi.dc.pi.model import find_setup
+    from kipi_si.dc.pi.model import find_setup
     assert find_setup("x.kicad_pcb", str(tmp_path)) == legacy
     s.save(legacy)
-    assert find_setup("x.kicad_pcb", str(tmp_path)) == tmp_path / "x.kipi-setup.yml"
+    assert find_setup("x.kicad_pcb", str(tmp_path)) == tmp_path / "x.kipi_si-setup.yml"
 
 
 def test_hand_edited_yaml_reads_numbers_as_numbers(tmp_path):
-    from kipi.core import yaml_io
+    from kipi_si.core import yaml_io
     d = yaml_io.loads("a: 1e-9\nb: 2.5E+3\nc: 3\nd: '1e-9'\ne: .5\nf: 1_000.5\n")
     assert d == {"a": 1e-9, "b": 2500.0, "c": 3, "d": "1e-9", "e": 0.5, "f": 1000.5}
 
 
 def test_without_pyyaml_setups_stay_json(tmp_path, monkeypatch):
-    from kipi.core import yaml_io
-    from kipi.dc.pi.model import setup_path
+    from kipi_si.core import yaml_io
+    from kipi_si.dc.pi.model import setup_path
     monkeypatch.setattr(yaml_io, "yaml", None)
     s = setup()
-    assert setup_path("x.kicad_pcb", str(tmp_path)).name == "x.kipi-setup.json"
-    path = s.save(tmp_path / "x.kipi-setup.yml")
-    assert path.name == "x.kipi-setup.json" and PISetup.load(path) == s
-    (tmp_path / "y.kipi-setup.yml").write_text("nets: []\n", encoding="utf-8")
+    assert setup_path("x.kicad_pcb", str(tmp_path)).name == "x.kipi_si-setup.json"
+    path = s.save(tmp_path / "x.kipi_si-setup.yml")
+    assert path.name == "x.kipi_si-setup.json" and PISetup.load(path) == s
+    (tmp_path / "y.kipi_si-setup.yml").write_text("nets: []\n", encoding="utf-8")
     with pytest.raises(ValueError, match="PyYAML"):
-        PISetup.load(tmp_path / "y.kipi-setup.yml")
+        PISetup.load(tmp_path / "y.kipi_si-setup.yml")
 
 
 def test_resistivity_must_be_positive():
@@ -193,7 +193,7 @@ def board_two_pin():
 
 
 def test_per_pin_group_currents():
-    from kipi.dc.pi.model import PinGroup
+    from kipi_si.dc.pi.model import PinGroup
     s = setup("ldo")
     s.loads[0] = Load("U2", PinRef("U2", "+3V3", []), 0.0, tol_min=-0.05, tol_max=0.05,
                       groups=[PinGroup(["3"], 0.3, "mid"), PinGroup(["1"], 0.7, "end")])
@@ -225,7 +225,7 @@ def _sensed_at_end(*loads):
 
 
 def test_pins_before_the_sense_point_are_boosted():
-    from kipi.dc.pi.tree import fmt_drop
+    from kipi_si.dc.pi.tree import fmt_drop
     boost = 1.0 * R(4)               # END's 1 A flows from the mid pin (x 17) to the end (x 21)
     pct = 100 * boost / 3.3
     for tol, ok in ((0.9 * pct, False), (1.1 * pct, True)):
@@ -252,7 +252,7 @@ def test_worst_pin_is_furthest_from_nominal_either_way():
 
 def test_results_saved_before_boosts_still_load():
     import pickle
-    from kipi.dc.pi.tree import LoadReport
+    from kipi_si.dc.pi.tree import LoadReport
     old = LoadReport("U2", "+3V3", 1.0, 3.3, 3.29, 3.28, None, 3.29, 0.01, 1.0, True, 3.28,
                      [("a", 1.0, 3.29, 3.28)])
     del old.v_low, old.v_high                               # as a file from before them
@@ -262,7 +262,7 @@ def test_results_saved_before_boosts_still_load():
 
 
 def test_pin_group_validation():
-    from kipi.dc.pi.model import PinGroup
+    from kipi_si.dc.pi.model import PinGroup
     s = setup()
     s.loads[0].groups = [PinGroup(["1"], 0.5), PinGroup(["1"], 0.5)]
     assert any("more than one group" in e for e in validate(s))
@@ -348,7 +348,7 @@ def test_input_range_in_percent_is_of_the_input_rails_vrm():
 
 
 def test_load_tolerance_min_and_max_apart_in_percent_or_volts():
-    from kipi.dc.pi.model import tolerance_label
+    from kipi_si.dc.pi.model import tolerance_label
     s = setup("ldo")                           # U2 sees a little under 3.3 V
     u2 = s.loads[0]
     v = by_name(solve_tree(board(), s).loads, "U2").v_low
@@ -376,7 +376,7 @@ def test_load_tolerance_min_and_max_apart_in_percent_or_volts():
 
 def test_old_symmetric_tolerances_still_load():
     import pickle
-    from kipi.dc.pi.results import LoadReport
+    from kipi_si.dc.pi.results import LoadReport
     d = setup("ldo").to_dict()
     for ld in d["loads"]:
         for k in ("tol_min", "tol_max", "tol_pct"):
@@ -410,7 +410,7 @@ def test_input_range_in_percent_needs_a_vrm_on_the_input_rail():
 
 
 def test_unconverged_group_leaves_its_loads_unjudged(monkeypatch):
-    import kipi.dc.pi.tree as tree
+    import kipi_si.dc.pi.tree as tree
     monkeypatch.setattr(tree, "MAX_TREE_ITERATIONS", 1)
     s = setup("smps", eff=0.9)
     s.loads.append(Load("U1in", PinRef("U1", "VIN", ["1"]), 0.0, tol_min=-50.0, tol_max=50.0))
@@ -423,7 +423,7 @@ def test_unconverged_group_leaves_its_loads_unjudged(monkeypatch):
 
 def test_ranges_in_volts_from_nominal():
     """A third unit beside V and % (#131): volts below and above nominal."""
-    from kipi.dc.pi.model import DELTA_VOLTS, PERCENT, VOLTS, range_volts, tolerance_label, volts_in
+    from kipi_si.dc.pi.model import DELTA_VOLTS, PERCENT, VOLTS, range_volts, tolerance_label, volts_in
     assert range_volts(3.3, -0.1, 0.2, DELTA_VOLTS) == pytest.approx((3.2, 3.5))
     assert range_volts(-5.0, -0.1, 0.2, DELTA_VOLTS) == pytest.approx((-5.1, -4.8))
     assert range_volts(None, -0.1, 0.2, DELTA_VOLTS) == (None, None)
@@ -464,9 +464,9 @@ def test_a_solved_dc_current_biases_a_diode_before_the_estimate():
     """AC and Coupled Noise take the diode's bias from the last DC solve where there is
     one (the current the copper really carries), else the estimate from the loads."""
     from types import SimpleNamespace as NS
-    from kipi.ac.bias import dc_link_currents
-    from kipi.dc.pi.model import biased_link
-    from kipi.dc.solver.post import SeriesResult
+    from kipi_si.ac.bias import dc_link_currents
+    from kipi_si.dc.pi.model import biased_link
+    from kipi_si.dc.solver.post import SeriesResult
     d = DcLink("D1", PinRef("D1", "A", ["1"]), PinRef("D1", "B", ["2"]), 0.05,
                spice=constant_drop_ref(0.4, 0.05))
     s = PISetup(vrms=[Vrm("J1", PinRef("J1", "A"), 5.0)], links=[d],
@@ -482,7 +482,7 @@ def test_a_solved_dc_current_biases_a_diode_before_the_estimate():
 
 
 def test_a_diode_is_biased_by_the_loads_beyond_it():
-    from kipi.dc.pi.model import biased_link, link_bias
+    from kipi_si.dc.pi.model import biased_link, link_bias
     d = DcLink("D1", PinRef("D1", "A", ["1"]), PinRef("D1", "B", ["2"]), 0.05,
                spice=constant_drop_ref(0.4, 0.05))
     r = DcLink("R1", PinRef("R1", "B", ["1"]), PinRef("R1", "C", ["2"]), 0.1)
@@ -530,7 +530,7 @@ def test_isolated_converter_validation():
 
 
 def test_isolated_converter_with_an_excluded_input_becomes_a_source():
-    from kipi.dc.pi.model import active_setup
+    from kipi_si.dc.pi.model import active_setup
     s = isolated_setup()
     s.excluded_nets = ["VIN"]
     out, _ = active_setup(s)

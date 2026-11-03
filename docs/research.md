@@ -1,4 +1,4 @@
-# KiPI research notes (2026-10)
+# KiPI-SI research notes (2026-10)
 
 ## Reference: KiPIDA (kbralten/KiPIDA, AGPL-3.0)
 
@@ -19,7 +19,7 @@ The same approach as atx/padne (GPL-3.0). Its FEM core is about 40 lines on SciP
 
 * **Geometry.** Per net and layer, take the shapely union of buffered tracks and arcs, pad polygons
   (`GetPadShapeAsPolygon`), via rings and zone `filled_polygons`, minus drill holes.
-  This is implemented in `kipi/geometry/copper.py`.
+  This is implemented in `kipi_si/geometry/copper.py`.
 * **Mesh.** Use `triangle` (Shewchuk; win/cp311 wheels exist) with quality and max-area constraints,
   refined near pads, vias and narrow necks. Conforming triangles resolve thin traces cheaply
   and stay coarse in planes.
@@ -49,7 +49,7 @@ The same approach as atx/padne (GPL-3.0). Its FEM core is about 40 lines on SciP
 * All coordinates are in nm. Pad positions from `FootprintInstance.definition.pads` are absolute
   board coordinates (verified: 0 mismatches against pad-shape centroids on a 355-pad board).
 * `Board.get_pad_shapes_as_polygons(list)` **drops pads with no shape**, which misaligns its
-  result with the input list. KiPI sends `GetPadShapeAsPolygon` directly and matches by pad id.
+  result with the input list. KiPI-SI sends `GetPadShapeAsPolygon` directly and matches by pad id.
 * `check_padstack_presence_on_layers` handles unconnected-layer removal on inner layers.
 * `Zone.filled_polygons` gives `{layer: [PolygonWithHoles]}`. `Zone.is_rule_area()` is a method.
 * Zone fills come back **fractured**. Every antipad or clearance hole is joined to the outer ring
@@ -70,7 +70,7 @@ and speaks the same protobuf API, but some requests arrived during 9.0.x. The ki
 version does not matter: it is only the client, and the newest one works with an older
 KiCad. What matters is whether that KiCad has a handler for each request.
 
-| Request KiPI sends | First KiCad | What KiPI does on an older one |
+| Request KiPI-SI sends | First KiCad | What KiPI-SI does on an older one |
 |---|---|---|
 | `GetNetClassForNets` | 9.0.1 | Leaves net classes empty |
 | `CheckPadstackPresenceOnLayers` | 9.0.3 | Keeps pads on every layer, and warns |

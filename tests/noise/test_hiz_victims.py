@@ -2,10 +2,10 @@
 
 import pytest
 
-from kipi.noise.model import (
+from kipi_si.noise.model import (
     CUSTOM, VICTIM_PRESETS, NoiseSettings, scan_victim, settings_from_dict,
 )
-from kipi.noise.solver import solve_noise
+from kipi_si.noise.solver import solve_noise
 from validation_boards import open_board
 
 

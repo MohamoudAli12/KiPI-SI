@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>KiPI User Guide</title>
+<title>KiPI-SI User Guide</title>
 <style>
 :root {
   --bg: #fbfbfa; --panel: #ffffff; --text: #1f2328; --muted: #5d646d; --border: #d9dce0;
@@ -116,11 +116,11 @@ ol.steps > li { margin-bottom: 6px; }
 <body>
 <div class="layout">
 <nav id="toc" aria-label="Contents">
-  <div class="brand">KiPI User Guide</div>
+  <div class="brand">KiPI-SI User Guide</div>
   <div class="sub">Power integrity for KiCad, DC and AC</div>
   <ol>
     <li class="group">Start here</li>
-    <li><a href="#overview">What KiPI does</a></li>
+    <li><a href="#overview">What KiPI-SI does</a></li>
     <li><a href="#quickstart">Quick start</a></li>
     <li><a href="#window">The main window</a></li>
     <li class="group">Interface reference</li>
@@ -221,14 +221,14 @@ ol.steps > li { margin-bottom: 6px; }
     <li class="group">Workflows</li>
     <li><a href="#workflows">Step-by-step workflows</a></li>
     <li class="group">Reference</li>
-    <li><a href="#files">Files KiPI reads and writes</a></li>
+    <li><a href="#files">Files KiPI-SI reads and writes</a></li>
     <li><a href="#troubleshooting">Troubleshooting</a></li>
     <li><a href="#glossary">Glossary</a></li>
   </ol>
 </nav>
 
 <main>
-<h1>KiPI User Guide</h1>
+<h1>KiPI-SI User Guide</h1>
 <p class="lead">How to set up, solve and read power integrity simulations of a KiCad board. Every
 section below can be opened and closed; use the contents on the left to jump around.</p>
 <div class="toolbar">
@@ -237,15 +237,15 @@ section below can be opened and closed; use the contents on the left to jump aro
   <button type="button" id="theme">Toggle light/dark</button>
 </div>
 
-<div class="callout tip"><b>Tip:</b> almost every button, box and table in KiPI has a tooltip.
+<div class="callout tip"><b>Tip:</b> almost every button, box and table in KiPI-SI has a tooltip.
 Hover over it for a one-line reminder of what it does. Fields that are easier to see than to
 read, such as a capacitor's ESL and ESR or a VRM's load line, show a small drawing in their
-tooltip with that field's part picked out. Press <kbd>F1</kbd> in KiPI to open this
+tooltip with that field's part picked out. Press <kbd>F1</kbd> in KiPI-SI to open this
 guide.</div>
 
 <!-- ================================================================== OVERVIEW -->
-<h2 id="overview">What KiPI does</h2>
-<p>KiPI is a power integrity (PI) analyzer that runs as a KiCad 9/10 plugin. It reads the
+<h2 id="overview">What KiPI-SI does</h2>
+<p>KiPI-SI is a power integrity (PI) analyzer that runs as a KiCad 9/10 plugin. It reads the
 copper of your board straight from the PCB editor and simulates how power gets from your
 regulators to the parts that use it. It also runs <a href="#window">standalone</a>, without
 KiCad, on board files. It has four analysis modes, chosen at the right end of the
@@ -275,11 +275,11 @@ and AC solvers work.</p>
     with equalisation, COM, waveforms with IBIS or generic buffers, PASS/FAIL, Touchstone
     and SPICE export.</td></tr>
 </table>
-<p>KiPI infers nothing about your power system from the schematic. You tell it where the
+<p>KiPI-SI infers nothing about your power system from the schematic. You tell it where the
 regulators are, what each load draws, which parts sit in series between nets, and (for AC)
 which capacitor model each decoupling capacitor uses. The board's copper, layer stackup,
 vias and pads come from KiCad.</p>
-<div class="callout warn"><b>Accuracy:</b> KiPI's solvers are a 2.5D finite element model of
+<div class="callout warn"><b>Accuracy:</b> KiPI-SI's solvers are a 2.5D finite element model of
 the copper, checked against closed-form results. Solving the field is the well-understood
 part; the modelling of vias, regulators and parts is where the approximations are. Treat the
 results as an engineering estimate and sanity-check anything surprising.</div>
@@ -291,10 +291,10 @@ results as an engineering estimate and sanity-check anything surprising.</div>
 <div class="body">
 <ol class="steps">
   <li>In KiCad, enable <b>Preferences → Plugins → Enable KiCad API</b> (once).</li>
-  <li>Open your board in the PCB editor and click the <b>KiPI</b> toolbar button. KiPI
+  <li>Open your board in the PCB editor and click the <b>KiPI-SI</b> toolbar button. KiPI-SI
     reads the board (refilling zones first) and draws it in 3D.</li>
   <li>In the <a href="#nets">Nets</a> list on the left, tick the power and ground nets you
-    want to analyze. KiPI pre-ticks a guess the first time.</li>
+    want to analyze. KiPI-SI pre-ticks a guess the first time.</li>
   <li>In the <b>PI setup</b> panel on the right, <a href="#dc-vrms">VRMs tab</a>: click
     <b>Add</b>, pick the regulator's output net and part, set its voltage. Add its
     <b>Ground pins</b> if you want the ground return solved too.</li>
@@ -307,7 +307,7 @@ results as an engineering estimate and sanity-check anything surprising.</div>
     view to probe voltages. Switch the field to <b>Current density</b> and tick
     <b>Arrows</b> to find bottlenecks.</li>
 </ol>
-<p>The setup is saved next to your board as <code>&lt;board&gt;.kipi-setup.yml</code> every
+<p>The setup is saved next to your board as <code>&lt;board&gt;.kipi_si-setup.yml</code> every
 time you solve, so the next session starts where you left off.</p>
 </div>
 </details>
@@ -323,7 +323,7 @@ time you solve, so the next session starts where you left off.</p>
     filled the rail, its capacitors have models already; check them. Otherwise click
     <b>Models from values</b> to make one model per capacitor value, then enter each model's
     <b>ESL</b> and <b>ESR</b> from the datasheet (and check the capacitance).</li>
-  <li><a href="#ac-probes">Probes tab</a>: click <b>Add</b>. KiPI picks the busiest part on
+  <li><a href="#ac-probes">Probes tab</a>: click <b>Add</b>. KiPI-SI picks the busiest part on
     the rail that also has ground pins, which is usually the load. Or click <b>From DC
     load</b> and pick a DC load: the probe gets that load's supply and ground pins. Set a
     target impedance,
@@ -340,39 +340,39 @@ time you solve, so the next session starts where you left off.</p>
 <div class="body">
 <p>The repository includes an example: a 4-phase 12 V → 0.9 V, 40 A core rail with decoupling
 and probes already set up. From a development checkout run</p>
-<p><code>python -m kipi examples/multiphase_buck/multiphase_buck.kipi.json.gz</code></p>
-<p>which opens it in standalone KiPI, or open that file with <b>Open…</b> (standalone) or
+<p><code>python -m kipi_si examples/multiphase_buck/multiphase_buck.kipi_si.json.gz</code></p>
+<p>which opens it in standalone KiPI-SI, or open that file with <b>Open…</b> (standalone) or
 <b>Open snapshot…</b> (the plugin).</p>
 </div>
 </details>
 
 <!-- ================================================================== WINDOW -->
 <h2 id="window">The main window</h2>
-<figure><img src="images/overview.png" alt="KiPI main window with nets on the left, the board in 3D and the PI setup on the right">
+<figure><img src="images/overview.png" alt="KiPI-SI main window with nets on the left, the board in 3D and the PI setup on the right">
 <figcaption>The main window in DC mode.</figcaption></figure>
 <p>The Board, setup and Log panels are dock widgets: drag their title bars to move them or
 float them in their own windows. A floating panel has its own minimize and maximize
 buttons, and <b>F11</b> (with the panel clicked) toggles it full screen. Double-click its
 title bar, or drag it onto the main window, to dock it again.</p>
-<h4>Starting KiPI</h4>
+<h4>Starting KiPI-SI</h4>
 <ul>
-  <li><b>Plugin or standalone.</b> Started from the KiPI button in KiCad's PCB editor, KiPI
+  <li><b>Plugin or standalone.</b> Started from the KiPI-SI button in KiCad's PCB editor, KiPI-SI
     runs as the <b>plugin</b>: it reads the board open in the editor and can re-read it,
     refill its zones and select items in it. Started any other way (<code>python -m
-    kipi</code>, or the <code>kipi</code> command), it runs <b>standalone</b>: it opens
+    kipi_si</code>, or the <code>kipi_si</code> command), it runs <b>standalone</b>: it opens
     board files with <b>Open…</b> and needs no KiCad. The title bar then ends in
     <i>(standalone)</i>, and the controls that need KiCad are hidden (see the
     <a href="#toolbar">toolbar</a>). Standalone opens KiCad board files
-    (<code>.kicad_pcb</code>), ODB++ jobs, HyperLynx files (<code>.hyp</code>) and KiPI
-    snapshots (<code>.kipi.json.gz</code>).</li>
+    (<code>.kicad_pcb</code>), ODB++ jobs, HyperLynx files (<code>.hyp</code>) and KiPI-SI
+    snapshots (<code>.kipi_si.json.gz</code>).</li>
   <li><b>KiCad board files.</b> A <code>.kicad_pcb</code> from KiCad 7 to 10 reads the
     same as the plugin reads it from KiCad, so a board set up in the plugin opens standalone
-    with its setup. Net classes come from the <code>.kicad_pro</code> next to it. KiPI uses
+    with its setup. Net classes come from the <code>.kicad_pro</code> next to it. KiPI-SI uses
     the zone fills saved in the file and cannot refill them: <b>fill the zones in KiCad (B)
     and save</b> before opening. Zones saved unfilled are listed under <b>Placeholders</b>
     in the <a href="#info">board summary</a>.</li>
   <li><b>ODB++.</b> Open a job as a <code>.zip</code>, <code>.tgz</code> or
-    <code>.tar.gz</code>, or unpacked by picking its <code>matrix/matrix</code> file. KiPI
+    <code>.tar.gz</code>, or unpacked by picking its <code>matrix/matrix</code> file. KiPI-SI
     reads the copper as the job gives it and the stackup from its layer matrix. The setup
     is found by the job's name: export <code>Board.zip</code> beside
     <code>Board.kicad_pcb</code> to share the board's setup. Export at 6 decimals if your
@@ -380,43 +380,43 @@ title bar, or drag it onto the main window, to dock it again.</p>
     out (copper drawings' nets, a dielectric's thickness) is listed under
     <b>Placeholders</b>.</li>
   <li><b>HyperLynx.</b> Open a <code>.hyp</code> file (KiCad writes one with <i>File &rarr;
-    Export &rarr; Hyperlynx</i>). KiPI reads its stackup, pad stacks and each net's pins,
+    Export &rarr; Hyperlynx</i>). KiPI-SI reads its stackup, pad stacks and each net's pins,
     vias, tracks and copper polygons as the file gives them. The file does not say where a
     part sits or how it is turned, so each part is placed in the middle of its pads (listed
     under <b>Placeholders</b>); KiCad's export also leaves out pads with no net. The setup
     is found by the file's name, as for an ODB++ job.</li>
-  <li><b>Standalone setup.</b> Start standalone KiPI with its launcher:
-    double-click <code>kipi_launcher.pyw</code> (Windows) or run <code>python
-    kipi_launcher.py</code>. The first start installs KiPI's packages into an environment
+  <li><b>Standalone setup.</b> Start standalone KiPI-SI with its launcher:
+    double-click <code>kipi_si_launcher.pyw</code> (Windows) or run <code>python
+    kipi_si_launcher.py</code>. The first start installs KiPI-SI's packages into an environment
     of its own. The setup window lists each package with its size and the totals, and
     offers PARDISO on Windows and Linux x86-64; nothing is installed until you click
-    <b>Install</b>. Later starts open KiPI straight away. To add or remove PARDISO later,
-    use <b>About → Manage dependencies…</b>: KiPI closes, the setup opens, and KiPI starts
+    <b>Install</b>. Later starts open KiPI-SI straight away. To add or remove PARDISO later,
+    use <b>About → Manage dependencies…</b>: KiPI-SI closes, the setup opens, and KiPI-SI starts
     again afterwards.
     <figure><img src="images/launcher_setup.png" alt="The launcher's setup window listing packages and the PARDISO option">
 <figcaption>The setup window on a first start.</figcaption></figure></li>
-  <li><b>Pin to the taskbar</b> (Windows): right-click KiPI's taskbar button while it is
-    open, or its Start menu shortcut (<code>python kipi_launcher.py
+  <li><b>Pin to the taskbar</b> (Windows): right-click KiPI-SI's taskbar button while it is
+    open, or its Start menu shortcut (<code>python kipi_si_launcher.py
     --create-shortcut</code>), and choose <i>Pin to taskbar</i>. The pinned button starts
-    standalone KiPI through the launcher, even when it was pinned from the plugin, since
-    only KiCad can start the plugin; a running KiPI of either kind shows on that
+    standalone KiPI-SI through the launcher, even when it was pinned from the plugin, since
+    only KiCad can start the plugin; a running KiPI-SI of either kind shows on that
     button.</li>
-  <li><b>Task Manager</b>: KiPI shows as <i>KiPI</i> with its icon, not as Python, in Windows
+  <li><b>Task Manager</b>: KiPI-SI shows as <i>KiPI-SI</i> with its icon, not as Python, in Windows
     Task Manager, macOS Activity Monitor and Linux System Monitor or <code>top</code>. On
-    Windows it runs on <code>KiPI.exe</code>, a copy of its environment's Python that it makes
+    Windows it runs on <code>KiPI-SI.exe</code>, a copy of its environment's Python that it makes
     in the environment's <code>Scripts</code> folder the first time, with the Python DLLs it
-    needs beside it. Should that copy not start, KiPI runs on <code>pythonw.exe</code> as
-    before and does not try it again until Python or KiPI changes.</li>
-  <li>While KiPI starts it shows a <b>welcome screen</b> with the logo, its version, whether
+    needs beside it. Should that copy not start, KiPI-SI runs on <code>pythonw.exe</code> as
+    before and does not try it again until Python or KiPI-SI changes.</li>
+  <li>While KiPI-SI starts it shows a <b>welcome screen</b> with its version, whether
     it runs as the plugin or standalone, and the versions of Python and its main packages.
-    It closes on its own after one play of the animation, or when you click it.</li>
-  <li><b>One KiPI at a time</b> (one plugin and one standalone). Clicking the KiPI button
+    It closes on its own, or when you click it.</li>
+  <li><b>One KiPI-SI at a time</b> (one plugin and one standalone). Clicking the KiPI-SI button
     while the plugin is already open brings the open window to the front instead of opening
-    a second one; starting standalone KiPI again does the same for the standalone window.
-    The two never take each other's place. A KiPI that crashed does not block the next
+    a second one; starting standalone KiPI-SI again does the same for the standalone window.
+    The two never take each other's place. A KiPI-SI that crashed does not block the next
     one.</li>
-  <li><b>One KiCad at a time.</b> KiPI talks to KiCad through its API, which cannot tell two
-    open KiCads apart, so KiPI will not connect (at start or on <b>Load from KiCad</b>) while
+  <li><b>One KiCad at a time.</b> KiPI-SI talks to KiCad through its API, which cannot tell two
+    open KiCads apart, so KiPI-SI will not connect (at start or on <b>Load from KiCad</b>) while
     more than one KiCad project manager or PCB editor is open. The message names each one
     with its process ID. See <a href="#ts-multiple-kicad">Troubleshooting</a>.</li>
 </ul>
@@ -439,9 +439,9 @@ of decimals, plus more when a small typed value needs them.</p>
   <tr><td><b>Load from KiCad</b><br><small>plugin</small></td><td class="wrap">Re-reads the
     board from the running PCB editor (after you change the layout) and reloads the saved
     setup. The nets you have ticked stay ticked. Save the setup first if you have unsaved
-    changes. Only one KiCad may be open (see <a href="#window">Starting KiPI</a>).</td></tr>
-  <tr><td><b>Refill zones</b><br><small>plugin</small></td><td class="wrap">When ticked, KiPI
-    asks KiCad to refill every zone and waits for it before reading. KiPI only sees
+    changes. Only one KiCad may be open (see <a href="#window">Starting KiPI-SI</a>).</td></tr>
+  <tr><td><b>Refill zones</b><br><small>plugin</small></td><td class="wrap">When ticked, KiPI-SI
+    asks KiCad to refill every zone and waits for it before reading. KiPI-SI only sees
     <em>filled</em> copper, so leave this on unless the fills are already current and the
     refill is slow.</td></tr>
   <tr><td><b>Open snapshot…</b><br><small>plugin</small></td><td class="wrap">Opens a board
@@ -449,14 +449,14 @@ of decimals, plus more when a small typed value needs them.</p>
   <tr><td><b>Open…</b><br><small>standalone</small></td><td class="wrap">Opens a board file:
     a KiCad board (<code>.kicad_pcb</code>), an ODB++ job (<code>.zip</code>,
     <code>.tgz</code>, or its <code>matrix/matrix</code> file), a HyperLynx file
-    (<code>.hyp</code>) or a KiPI snapshot (<code>.kipi.json.gz</code>).
+    (<code>.hyp</code>) or a KiPI-SI snapshot (<code>.kipi_si.json.gz</code>).
     Its saved setup comes with it, as with <b>Load from KiCad</b>. The arrow beside it lists
     the boards opened lately.</td></tr>
   <tr><td><b>Reload</b><br><small>standalone</small></td><td class="wrap">Reads the open board
-    file again. When the file is saved (in KiCad, say), KiPI asks whether to read it again
+    file again. When the file is saved (in KiCad, say), KiPI-SI asks whether to read it again
     by itself. Ticked nets stay ticked.</td></tr>
   <tr><td><b>Save snapshot…</b></td><td class="wrap">Saves the extracted board as
-    <code>.kipi.json.gz</code>, to analyze later, on another machine, or to attach to a bug
+    <code>.kipi_si.json.gz</code>, to analyze later, on another machine, or to attach to a bug
     report.</td></tr>
   <tr><td><b>Top / Bottom / Iso</b></td><td class="wrap">Snap the 3D camera to look down on
     the board, up at its underside, or from an isometric angle (keys <b>Z</b>,
@@ -486,11 +486,11 @@ of decimals, plus more when a small typed value needs them.</p>
   <tr><td><b>About</b></td><td class="wrap">Version, author and project links, and how often
     the project has been cloned and its releases downloaded. Those counts are fetched once a
     session from the project's GitHub repository; offline, the last ones fetched are shown,
-    or none. <b>Copy version info</b> copies the versions of KiPI, Python, its libraries and
+    or none. <b>Copy version info</b> copies the versions of KiPI-SI, Python, its libraries and
     the sparse solver in use, for bug reports. <b>Check for updates</b> asks GitHub for the
-    newest KiPI release and says whether it is newer than yours, with a link to download it;
-    KiPI never checks on its own. In standalone KiPI started by its launcher,
-    <b>Manage dependencies…</b> closes KiPI and opens its setup (for example to add or
+    newest KiPI-SI release and says whether it is newer than yours, with a link to download it;
+    KiPI-SI never checks on its own. In standalone KiPI-SI started by its launcher,
+    <b>Manage dependencies…</b> closes KiPI-SI and opens its setup (for example to add or
     remove PARDISO).</td></tr>
   <tr><td><b>Power Integrity: DC / AC / Noise<br>Signal Integrity: SI</b></td><td class="wrap">
     Chooses the analysis, at the start of the toolbar (<b>Ctrl+1</b> to <b>Ctrl+4</b>). The
@@ -519,7 +519,7 @@ its thickness in the table.</p>
 <p>The solder mask and silkscreen on each side are listed above and below the copper, in
 their color. They come from the board: KiCad's stackup gives the mask's thickness and
 color, an ODB++ job its mask and silkscreen layers. KiCad gives a silkscreen no thickness,
-so KiPI takes 15 µm; a board with no stackup of its own gets KiCad's default, a 10 µm mask
+so KiPI-SI takes 15 µm; a board with no stackup of its own gets KiCad's default, a 10 µm mask
 and a silkscreen on both sides. Unlocked, their thicknesses can be changed. They sit
 outside the board, so they do not add to its thickness or move any layer. Only the
 electro-thermal solve uses them: heat leaving the outer copper for the air crosses them
@@ -541,18 +541,18 @@ electro-thermal solve uses them: heat leaving the outer copper for the air cross
   <tr><td><b>Thickness unit</b></td><td class="wrap">Shows and takes the thicknesses in µm,
     mm, mil or oz (1 oz = 35 µm). Ounces are a copper weight, so in oz the dielectrics show
     in mil. In a µm or mm field a value can also carry its own unit, like <code>35um</code>
-    or <code>0.2mm</code>. KiPI remembers the unit.</td></tr>
+    or <code>0.2mm</code>. KiPI-SI remembers the unit.</td></tr>
   <tr><td><b>Material</b> (dielectrics)</td><td class="wrap">Each dielectric's material, from the list
-    KiPI knows: FR4 core and prepreg, polyimide, Kapton, Rogers RO4350B, RO4003C, RO3003 and
+    KiPI-SI knows: FR4 core and prepreg, polyimide, Kapton, Rogers RO4350B, RO4003C, RO3003 and
     RT/duroid, PTFE, polyolefin, alumina and aluminum nitride ceramics, and an aluminum metal
     core. KiCad's own name for the material is listed too when it is not one of these.
     Choosing a material sets its typical εr (a datasheet value near 1 GHz; type another if
     your laminate's differs) and its in-plane thermal conductivity <b>k</b>, which the
     electro-thermal solve uses. Type over k, unlocked, if your laminate's differs; choosing a
     material again goes back to its typical value. The solve also needs the conductivity
-    through the laminate, from one copper layer to the next: KiPI takes the material's typical
+    through the laminate, from one copper layer to the next: KiPI-SI takes the material's typical
     through-plane value (FR4 core 0.3 W/m·K), and a k you type keeps the material's ratio of
-    the two. A ⚠ beside k means KiPI did not recognize
+    the two. A ⚠ beside k means KiPI-SI did not recognize
     KiCad's name and took the layer as FR4. Setups from before 0.8.0 with a Thermal tab
     <b>Laminate k</b> open with that value as every dielectric's k.</td></tr>
   <tr><td><b>Material</b> (copper layers)</td><td class="wrap">What each copper layer is
@@ -593,8 +593,8 @@ electro-thermal solve uses them: heat leaving the outer copper for the air cross
     or renamed in KiCad since, the log says so and KiCad's stackup is used.</li>
   <li>To compare stackups, solve, edit, and solve again. A stackup change clears the DC
     results, which were for the old stackup; the AC results stay until a rail is solved
-    again. Reports note a stackup edited in KiPI.</li>
-  <li>KiCad's API cannot change a board's stackup yet, so edits stay in KiPI. To keep a
+    again. Reports note a stackup edited in KiPI-SI.</li>
+  <li>KiCad's API cannot change a board's stackup yet, so edits stay in KiPI-SI. To keep a
     stackup you settle on, enter it in KiCad's <i>Board Setup → Board Stackup → Physical
     Stackup</i>.</li>
   <li>A board snapshot (<b>Save snapshot</b>) keeps KiCad's stackup; the edits live in the
@@ -618,7 +618,7 @@ load, series link, capacitor or probe must be ticked first.</p>
   <tr><td>Filter box</td><td class="wrap">Shows only nets whose name contains the text.</td></tr>
   <tr><td><b>Power &amp; ground only</b></td><td class="wrap">Hides signal nets that are not
     ticked. Power nets are shown in orange with <code>[PWR]</code>, grounds in blue with
-    <code>[GND]</code>. KiPI recognizes them by name (<code>+3V3</code>, <code>VCC</code>,
+    <code>[GND]</code>. KiPI-SI recognizes them by name (<code>+3V3</code>, <code>VCC</code>,
     <code>GND</code>…), net class, or a zone with several pads.</td></tr>
   <tr><td><b>All power</b></td><td class="wrap">Ticks every power and ground net, keeping
     any others already ticked.</td></tr>
@@ -690,7 +690,7 @@ Hiding layers does not change the result colors; set the
   <tr><td id="snap"><b>Snap to selected</b></td><td class="wrap">Brings the view to a part
     when it is picked in the setup's lists (ticked to start with). Available only while PI
     Models is ticked, since it goes to the part's marks. Untick it to keep the view where it
-    is; the part is still marked and blinks. KiPI remembers the choice.</td></tr>
+    is; the part is still marked and blinks. KiPI-SI remembers the choice.</td></tr>
   <tr><td id="models"><b>3D Models</b></td><td class="wrap">Shows the KiCad 3D models of every
     part on the board. They start hidden, so a board opens without waiting for them; tick
     <b>3D Models</b> to load and show them. The geometry and the result views each keep
@@ -703,7 +703,7 @@ Hiding layers does not change the result colors; set the
 <figcaption>PI Models, snapped to the selected +3.3V switcher.</figcaption></figure>
 <h4 id="part-models">Part 3D models</h4>
 <ul>
-  <li>KiPI asks KiCad's command-line tool, <code>kicad-cli</code>, to export just the parts it
+  <li>KiPI-SI asks KiCad's command-line tool, <code>kicad-cli</code>, to export just the parts it
     needs, so KiCad finds the model files the same way its own 3D viewer does (STEP and
     VRML). It runs in the background, the first time the models are shown; each part is
     read once per board.</li>
@@ -743,12 +743,12 @@ shown, the voltage, drop, current density, power density and via current at that
 mode it shows the impedance plot's cursor values.</p>
 <p>The summary says where the board came from (for example <i>From KiCad PCB editor
 10.0.7</i>, and the snapshot file it was opened from). Under <b>Placeholders</b> it lists
-anything KiPI had to fill in because the source did not give it, such as a default stackup
+anything KiPI-SI had to fill in because the source did not give it, such as a default stackup
 when the board's own is incomplete. Results that depend on a placeholder are only as good as
 the placeholder.</p>
 <p><b>Select in KiCad</b> selects the picked pad or via in the PCB editor, so you can find it
 in your layout. It needs a live KiCad connection (not a snapshot), so the plugin has it and
-standalone KiPI does not.</p>
+standalone KiPI-SI does not.</p>
 </div>
 </details>
 
@@ -817,10 +817,10 @@ running task (loading, building nets or solving). The log streams every stage wi
 timing, solver residuals and warnings: warnings are amber, errors red, stage headers blue.</p>
 <p>While anything runs, the right end of the status bar shows a turning spinner with the
 operation and how long it has taken so far (part 3D models loading in the background
-included). The spinner keeps turning while KiPI works; a stage that cannot say how far it
+included). The spinner keeps turning while KiPI-SI works; a stage that cannot say how far it
 is moves the progress bar back and forth instead. While the window itself is busy, drawing
 a big solve's results or saving a snapshot, the mouse pointer shows the wait cursor.</p>
-<p>Each session also writes a log file to <code>kipi/</code> in your temporary folder
+<p>Each session also writes a log file to <code>kipi_si/</code> in your temporary folder
 (<code>%TEMP%</code> on Windows, <code>$TMPDIR</code> on macOS, <code>/tmp</code> on Linux).
 See <a href="#troubleshooting">Troubleshooting</a>.</p>
 </div>
@@ -832,12 +832,12 @@ See <a href="#troubleshooting">Troubleshooting</a>.</p>
 <summary>Net groups, the power tree and voltage references</summary>
 <div class="body">
 <h4>Net groups</h4>
-<p>KiPI solves copper one <b>net group</b> at a time. A group is a net plus every net joined
+<p>KiPI-SI solves copper one <b>net group</b> at a time. A group is a net plus every net joined
 to it by a <a href="#dc-links">series link</a>. For example, <code>+3V3</code> and
 <code>+3V3_FILT</code> joined by a ferrite bead are one group. Each group may be driven by at
 most one VRM. Ground nets used by VRM or load ground pins are their own groups.</p>
 <h4>The power tree</h4>
-<p>A VRM's <b>input pins</b> make it a load on its upstream net. KiPI solves the tree from the
+<p>A VRM's <b>input pins</b> make it a load on its upstream net. KiPI-SI solves the tree from the
 leaves back to the source: downstream rails first, then each VRM's input current (from its
 output current, efficiency or quiescent current) is applied as a load upstream. So the
 12 V input rail carries the current of everything it feeds.</p>
@@ -883,12 +883,12 @@ whichever direction.</p>
 <details id="autofill">
 <summary>Pre-filled fields <span class="hint">guesses from the board, always yours to change</span></summary>
 <div class="body">
-<p>As you pick pins, KiPI fills in the fields that usually follow from them. Each guess only
+<p>As you pick pins, KiPI-SI fills in the fields that usually follow from them. Each guess only
 fills a field you have not set yourself (an empty field, or one it filled in for the previous
 part), and when the board does not give an answer the field is left as it was. Change
 anything it fills in: your value is kept.</p>
 <table>
-  <tr><th>When you…</th><th>KiPI fills in</th></tr>
+  <tr><th>When you…</th><th>KiPI-SI fills in</th></tr>
   <tr><td class="wrap">pick a VRM's output net</td><td class="wrap"><b>Target voltage</b> from the
     net's name: <code>+3V3</code>, <code>3.3V</code>, <code>V1P8</code>, <code>VDD_0V75</code>,
     <code>+12V</code>, <code>-5V</code>, <code>VBUS</code> (5 V). A name with no voltage in it
@@ -918,7 +918,7 @@ anything it fills in: your value is kept.</p>
     guesses for its first part. A new series link starts on a two-terminal part between the
     first two ticked nets that are not grounds.</td></tr>
 </table>
-<p><b>How the ground net is found.</b> Ground nets are not always called GND, so KiPI tries, in
+<p><b>How the ground net is found.</b> Ground nets are not always called GND, so KiPI-SI tries, in
 order: ground nets the setup already uses (any VRM, load or probe ground pins), nets named like a
 ground (<code>GND</code>, <code>PGND</code>, <code>AGND</code>, <code>VSS</code>,
 <code>EARTH</code>…), then the board's biggest net (the one with the most pads) if it is not
@@ -966,7 +966,7 @@ change a <b>Type</b>, or, for a source, pick another <b>Part</b> from the list. 
 are guesses to check. The <b>Voltage</b> comes from the part's <code>PI_V</code> field, the
 library, or the rail's name; a rail like <code>VCC</code> gives none, so its cell is red and
 <b>OK</b> waits for a value. A switch has no voltage of its own.</p>
-<p>The rails filled replace their VRMs, loads and links (KiPI asks first), so a wrong source
+<p>The rails filled replace their VRMs, loads and links (KiPI-SI asks first), so a wrong source
 from an earlier Auto-fill rail goes. A part that is a VRM's input is not a load on the rail
 feeding it: the VRM draws its input current from its own load. Parts not fitted (KiCad's DNP)
 are left out, so a 0&nbsp;&Omega; strap option does not join two rails. Ground pins are set
@@ -986,7 +986,7 @@ switching frequency; the edges and the datasheet values are still yours to enter
 <b>Rail</b> and the part it is <b>Driven by</b> (the regulator or connector; the likeliest come
 first: a regulator <a href="#tree-autofill">Auto-fill power tree</a> finds driving the rail,
 even a switcher not on it itself, then other regulators and connectors; a level translator
-and a regulator fed from the rail come last). KiPI walks out from the rail's net and looks
+and a regulator fed from the rail come last). KiPI-SI walks out from the rail's net and looks
 at every part with pads on it:</p>
 <ul>
   <li>the source part becomes a <b>Source</b> VRM on its pads on the rail, or, when it is a
@@ -1004,7 +1004,7 @@ at every part with pads on it:</p>
     unless a <code>PI_ROLE</code> says otherwise) are skipped;</li>
   <li>anything else becomes a load on its pads on the net.</li>
 </ul>
-<p>The rail's existing VRMs, loads and links are replaced (KiPI asks first); other rails and
+<p>The rail's existing VRMs, loads and links are replaced (KiPI-SI asks first); other rails and
 every setting stay as they are. Capacitor models are only added: a capacitor already in a
 model keeps it. The result is not saved until you press <b>Save</b>. Probes are not added:
 place them on the AC Probes tab, where the load matters.</p>
@@ -1041,7 +1041,7 @@ resistance as a short (0&nbsp;&Omega;), and each is named in the log's notes, to
   <tr><td><code>PI_TOL</code></td><td class="wrap">A load's supply tolerance</td>
     <td class="wrap"><code>±5%</code>, <code>+/-5%</code>, <code>-3/+5%</code>,
     <code>±0.1V</code>, <code>±100mV</code></td></tr>
-  <tr><td><code>PI_ROLE</code></td><td class="wrap">What the part is, when KiPI would take it
+  <tr><td><code>PI_ROLE</code></td><td class="wrap">What the part is, when KiPI-SI would take it
     for something else</td><td class="wrap"><code>load</code>, <code>link</code>,
     <code>vrm</code>, <code>ignore</code></td></tr>
   <tr><td><code>PI_ESL</code></td><td class="wrap">A capacitor's ESL, from its datasheet</td>
@@ -1049,7 +1049,7 @@ resistance as a short (0&nbsp;&Omega;), and each is named in the log's notes, to
   <tr><td><code>PI_ESR</code></td><td class="wrap">A capacitor's ESR, from its datasheet</td>
     <td class="wrap"><code>30m</code>, <code>5mΩ</code></td></tr>
   <tr><td><code>PI_VRM</code></td><td class="wrap">A regulator's type, for
-    <a href="#tree-autofill">Auto-fill power tree</a>, when KiPI can't tell from the board</td>
+    <a href="#tree-autofill">Auto-fill power tree</a>, when KiPI-SI can't tell from the board</td>
     <td class="wrap"><code>switcher</code>, <code>ldo</code>, <code>source</code></td></tr>
   <tr><td><code>PI_V</code></td><td class="wrap">A source's or regulator's output
     voltage</td><td class="wrap"><code>12V</code>, <code>3.3</code></td></tr>
@@ -1131,17 +1131,17 @@ model's numbers come from, first found wins:</p>
 notes, and offered as a library stub to fill in.</p>
 
 <h4 id="parts-library">The parts library, pi_parts.yml</h4>
-<p>Numbers for a part kept once, for every copy of it on every board. KiPI reads two files,
-when they exist: the user's, in <code>%APPDATA%\kipi\pi_parts.yml</code> (Windows) or
-<code>~/.config/kipi/pi_parts.yml</code> (Linux and macOS, or
-<code>$XDG_CONFIG_HOME/kipi</code>), then the project's, beside the board. For a part in both,
+<p>Numbers for a part kept once, for every copy of it on every board. KiPI-SI reads two files,
+when they exist: the user's, in <code>%APPDATA%\kipi_si\pi_parts.yml</code> (Windows) or
+<code>~/.config/kipi_si/pi_parts.yml</code> (Linux and macOS, or
+<code>$XDG_CONFIG_HOME/kipi_si</code>), then the project's, beside the board. For a part in both,
 the project's entry wins. The Auto-fill rail dialog shows which files it found.</p>
 <p>A part is looked up by its manufacturer part number: the first of its
 <code>MANUFACTURER PART NUMBER</code>, <code>MPN</code>, <code>Manufacturer_Part_Number</code>,
 <code>Manufacturer Part Number</code>, <code>MFR PART NUMBER</code>, <code>MFN</code> or
 <code>PN</code> fields, else its value. A part's own PI_ fields override its library
 entry.</p>
-<pre>kipi_parts: 1
+<pre>kipi_si_parts: 1
 parts:
   LMH6518SQX/NOPB:                  # MPN, or the value field
     supplies:                       # as in a load model
@@ -1176,7 +1176,7 @@ parts:
 </ul>
 <p>Unlike the fields, the library takes plain numbers in the base unit:
 <code>current_a: 0.23</code>, not <code>230mA</code>.</p>
-<p>After an auto-fill that found parts with no current, resistance or capacitor values, KiPI offers to add
+<p>After an auto-fill that found parts with no current, resistance or capacitor values, KiPI-SI offers to add
 them to the project's <code>pi_parts.yml</code> with empty values, one entry per part
 number, to fill in once for every copy. Run <b>Auto-fill rail…</b> again after filling them.
 When the file's last section is not <code>parts:</code>, they go to
@@ -1332,7 +1332,7 @@ or one from its load step and slew rate, as the target calculator works it out, 
 tighter side of the supply's AC tolerance (without one, of its total tolerance of the rail's
 VRM voltage).
 A model file, by hand:</p>
-<pre>kipi_load_model: 1
+<pre>kipi_si_load_model: 1
 part: XC7A35T-1CSG324C
 supplies:
   - name: VCCINT
@@ -1396,7 +1396,7 @@ notes say which. The DCR and ESL shown are its slope resistance and inductance a
 diode that is reverse biased with a load beyond it and no other supply has no DC solution,
 and says so. The junction is read at 27 °C. Setups from 0.9.2 with a constant forward drop
 load with a diode model of that drop.</p>
-<p><b>What KiPI reads from a SPICE file.</b> A two-pin <code>.SUBCKT</code> of resistors,
+<p><b>What KiPI-SI reads from a SPICE file.</b> A two-pin <code>.SUBCKT</code> of resistors,
 inductors, capacitors and diodes, which is how makers model capacitors, resistors, ferrite
 beads and diodes, or a diode's <code>.model D</code> card. Diodes use IS, N, RS, BV, IBV,
 CJO, VJ, M, FC, TT and an area factor; LTspice's piecewise-linear diode (Ron, Vfwd) is
@@ -1460,7 +1460,7 @@ many groups will be solved, e.g. <b>Solve 3 of 5 net groups</b>.</p>
 <summary>Thermal tab <span class="hint">electro-thermal co-simulation, off by default</span></summary>
 <div class="body">
 <p>Tick <b>Electro-thermal co-simulation</b> to let copper losses heat the board, with warmer
-copper becoming more resistive. KiPI alternates electrical and thermal solves.</p>
+copper becoming more resistive. KiPI-SI alternates electrical and thermal solves.</p>
 <table>
   <tr><th>Field</th><th>Meaning</th></tr>
   <tr><td>Ambient</td><td class="wrap">Air temperature around the board.</td></tr>
@@ -1502,8 +1502,8 @@ limits grade the last solve straight away when you change them.</p>
 It is disabled while there are problems (listed in red). If you click it while the 3D view is
 still building nets, the solve is queued and starts as soon as that finishes.</p>
 <p>Once there are results, after a solve or with saved results opened, click
-<b>Report</b> to write <code>&lt;board&gt;_kipi_report_&lt;date&gt;_&lt;time&gt;.html</code>
-of them in the <code>kipi_reports</code> folder next to the board; the time stamp keeps each report instead of overwriting the
+<b>Report</b> to write <code>&lt;board&gt;_kipi_si_report_&lt;date&gt;_&lt;time&gt;.html</code>
+of them in the <code>kipi_si_reports</code> folder next to the board; the time stamp keeps each report instead of overwriting the
 last one. It opens in your web browser when it is written, and
 <b>Open report</b> opens it again later. The report is a single offline file with every
 table, an interactive 3D view of each net group, per-layer statistics and maps, and the
@@ -1523,7 +1523,7 @@ or double-click the paperclip beside it in Firefox or Okular. It is also in the 
 attachments panel, which Acrobat opens the PDF on; Chrome's and Edge's own viewers and macOS Preview
 mostly don't, so there save the PDF and open it in one that does, or extract the
 attachment with a PDF tool. The static views stay in the PDF either way. It adds about
-1–2 MB to the PDF. Should the page fail to go in, KiPI saves it beside the PDF instead, and the links open
+1–2 MB to the PDF. Should the page fail to go in, KiPI-SI saves it beside the PDF instead, and the links open
 it there.</p>
 <p>The report's <b>Pins</b> section, and <code>_pins.csv</code> in <b>Export ▾ Tables as
 CSV…</b>, list every pin each group was solved with. That covers VRM output, phase, input
@@ -1663,8 +1663,8 @@ a PDF report shows each voltage in all three.</p>
     current.</td></tr>
   <tr><td>3D results for ParaView (.vtm)…</td><td class="wrap">The result meshes, for ParaView
     or other VTK tools.</td></tr>
-  <tr><td>Save results…</td><td class="wrap">A <code>.kipi-dc-results</code> file, or
-    <code>.kipi-dc-thermal-results</code> after an electro-thermal solve, that <b>Open
+  <tr><td>Save results…</td><td class="wrap">A <code>.kipi_si-dc-results</code> file, or
+    <code>.kipi_si-dc-thermal-results</code> after an electro-thermal solve, that <b>Open
     results…</b> reloads without solving, named with the board and the time by default. It holds
     JSON and NumPy arrays in a zip, which open on any computer and cannot run code, so it is safe
     to share; the 3D views are rebuilt when it opens.</td></tr>
@@ -2033,7 +2033,7 @@ setup and runs the sweep; problems that stop it are listed in red above. The log
 field solves as they go.</p>
 <p>Click <b>Report</b> next to <b>Solve rail</b> to write
 <code>&lt;board&gt;_&lt;rail&gt;_ac_report_&lt;date&gt;_&lt;time&gt;.html</code> (or, with
-<b>PDF</b> chosen, <code>.pdf</code>) of the shown rail's results in the <code>kipi_reports</code> folder next to the board, once
+<b>PDF</b> chosen, <code>.pdf</code>) of the shown rail's results in the <code>kipi_si_reports</code> folder next to the board, once
 it is solved or its saved results are opened; the report opens when it is written, and
 <b>Open report</b> opens the shown rail's report again later. See <a href="#ac-report">AC report</a>.</p>
 <p>Each rail keeps its last result: switch <b>Rail</b> to look at another rail's curves
@@ -2091,7 +2091,7 @@ mesh once it is built. The tab comes to the front for the solve; the
     (C, ESL, ESR).</td></tr>
 </table>
 <p>The map belongs to each rail's result, so switching <b>Rail</b> shows that rail's map, and
-saved results keep it. Results saved by KiPI before 0.7.2 have no map.</p>
+saved results keep it. Results saved by KiPI-SI before 0.7.2 have no map.</p>
 <figure><img src="images/ac_board_map.png" alt="Board map of the core rail's mesh with the probe and capacitors">
 <figcaption>The Board map of the multiphase buck's core rail.</figcaption></figure>
 </div>
@@ -2160,7 +2160,7 @@ at every frequency. <b>Export model</b> writes the selected probe as either samp
 Touchstone Z1P or a fitted-pole HyperLynx PLS one-port file. Each probe is exported
 separately because the solve stores driving-point curves, not mutual impedances between probes.
 <b>Save results…</b> writes every rail solved so far to a
-<code>.kipi-ac-results</code> file (named with the board and the time by default);
+<code>.kipi_si-ac-results</code> file (named with the board and the time by default);
 <b>Open results…</b> in AC mode brings them back, each
 under its VRM in <b>Rail</b>. Rails whose VRM is no longer in the setup are left out.</p>
 </div>
@@ -2171,7 +2171,7 @@ under its VRM in <b>Rail</b>. Rails whose VRM is no longer in the setup are left
 <div class="body">
 <p><b>Report</b> writes
 <code>&lt;board&gt;_&lt;rail&gt;_ac_report_&lt;date&gt;_&lt;time&gt;.html</code> of the shown
-rail's results in the <code>kipi_reports</code> folder next to the board; the time stamp keeps every report. Like the DC report, it is a single offline file you can email. It holds:</p>
+rail's results in the <code>kipi_si_reports</code> folder next to the board; the time stamp keeps every report. Like the DC report, it is a single offline file you can email. It holds:</p>
 <ul>
   <li>a summary and the probe table: pins, minimum and worst |Z|, the target, the margin in dB
     at the worst point (positive passes), PASS/FAIL, and an overall verdict;</li>
@@ -2192,7 +2192,7 @@ rail's results in the <code>kipi_reports</code> folder next to the board; the ti
 <p>With <b>PDF</b> chosen, the report is a <code>.pdf</code> with the same sections, the
 impedance plot and board map as images (probes and targets; no hover or per-model curves),
 and the User notes box as a form field to type in and save. If a PDF can't be made,
-KiPI writes the HTML report instead and the log says why.</p>
+KiPI-SI writes the HTML report instead and the log says why.</p>
 <p>If the report can't be written, the log says why; the solve's results are kept either
 way.</p>
 </div>
@@ -2252,7 +2252,7 @@ current is the DC setup's loads on its output rail, unless you enter one.</p>
 <p>The <b>hot loop</b> is the path the switching current takes on every edge: in a buck,
 from the input capacitors through the high-side switch and back from the low-side switch to
 the capacitors' ground; in a boost, the same through the output capacitors. With the board
-model on, KiPI traces each capacitor's loop through the copper itself: a conduction solve
+model on, KiPI-SI traces each capacitor's loop through the copper itself: a conduction solve
 on the rails' and ground's mesh of one ampere from the capacitor's rail pad to the switch's
 pins, and another from its ground pins back to the capacitor, give where the current flows
 in the rail's pours and traces and in the ground's copper, vias and plane. That current
@@ -2280,7 +2280,7 @@ falling one. At light load the current may be too small to carry the node across
 the controller's dead time; the next switch then turns on part way and finishes the edge
 hard. The results notes say which edge is which.</p>
 <p>The <b>inductor</b> is a source too: its winding is a magnetic dipole along its axis,
-and an unshielded (open drum) part's field reaches the board around it. KiPI stands the
+and an unshielded (open drum) part's field reaches the board around it. KiPI-SI stands the
 winding in as a loop of its turns at the body, normal to the winding axis you set, with
 the turns from the inductance and the body's size, carrying the inductor current; it
 couples onto victims like the hot loops. A shielded (or moulded) part keeps most of its
@@ -2454,10 +2454,10 @@ shows how many signal nets are inside; it is the same value as Scan radius in Se
 Scan and a chosen victim
 work together: name the nets you know, scan for the ones you do not.</p>
 <p>Click <b>Report</b> to write <code>&lt;board&gt;_&lt;aggressor&gt;_noise_report_&lt;date&gt;_&lt;time&gt;.html</code>
-(or <code>.pdf</code>) of the shown aggressor's results in the <code>kipi_reports</code> folder next to the board: the victims against their
+(or <code>.pdf</code>) of the shown aggressor's results in the <code>kipi_si_reports</code> folder next to the board: the victims against their
 margins, the aggressor's parasitics, its waveforms, each victim's noise by mechanism, the
 scan's estimates and the notes. <b>Open report</b> opens it again. <b>Save results…</b> writes every solved aggressor to a
-<code>.kipi-noise-results</code> file that <b>Open results…</b> reopens in this mode.</p>
+<code>.kipi_si-noise-results</code> file that <b>Open results…</b> reopens in this mode.</p>
 </div>
 </details>
 
@@ -2590,8 +2590,8 @@ about 2 % (microstrip and stripline impedance) and their loss with Wheeler's rul
 about 3 %. Vias and discontinuities are approximations.</div>
 
 <h2 id="si-primer">Reading SI results: what good and bad look like</h2>
-<p class="lead">A plain-language guide to every Signal Integrity result KiPI shows: what it
-means, how to read it, and what a good and a bad channel look like. The plots are KiPI's own,
+<p class="lead">A plain-language guide to every Signal Integrity result KiPI-SI shows: what it
+means, how to read it, and what a good and a bad channel look like. The plots are KiPI-SI's own,
 from the example board <code>examples/si_demo</code>, which has a deliberately good and a
 deliberately bad version of each kind of channel.</p>
 
@@ -2664,7 +2664,7 @@ most of its length. The short bump at the start and the dip near 720 ps are loca
 receiver's termination.</figcaption></figure>
 <figure><img src="images/si_tdr_bad.png" alt="A TDR that runs at 110 to 140 ohms, far above the target band">
 <figcaption><span class="fail">Bad</span>: PCIe TX1 runs at 110–120 Ω the whole way, above
-the band, with a 140 Ω spike at the start and dips at its discontinuities. KiPI flags it:
+the band, with a 140 Ω spike at the start and dips at its discontinuities. KiPI-SI flags it:
 <i>Zdiff 110–167 Ω, off over 49.8 of 60.6 mm</i>.</figcaption></figure>
 </div>
 <table>
@@ -2674,7 +2674,7 @@ the band, with a 140 Ω spike at the start and dips at its discontinuities. KiPI
     <td class="wrap">Off target over 10 % of the route or more</td></tr>
 </table>
 <p><b>Usual fixes.</b> Off over the whole route: the trace width or pair spacing is wrong for
-the stackup (KiPI's Quick Scan suggests a width). A bump in one place: look there for a
+the stackup (KiPI-SI's Quick Scan suggests a width). A bump in one place: look there for a
 gap in the plane, a layer change with no return via, or a neck-down. A dip: a large pad,
 a via or a connector; shrink the pad or add an anti-pad.</p>
 
@@ -2767,7 +2767,7 @@ for noise and timing error.</p>
     sampling time. Noise smaller than this cannot flip a bit.</li>
   <li><b>Eye width</b> (the horizontal arrow): for how much of the UI the eye stays open.
     Jitter smaller than this cannot make the receiver sample the wrong bit.</li>
-  <li><b>Contours</b>: KiPI's eye is <i>statistical</i>. The colours are how likely the
+  <li><b>Contours</b>: KiPI-SI's eye is <i>statistical</i>. The colours are how likely the
     signal is to be at each point (yellow often, dark rarely). The solid line is where the
     chance of an error reaches the target BER (usually 10<sup>−12</sup>); the dashed ones
     are 10<sup>−3</sup>, 10<sup>−6</sup> and 10<sup>−9</sup>. Height and width are measured on
@@ -2789,7 +2789,7 @@ equaliser. No hole reaches 10<sup>−12</sup>; only a small region at 10<sup>−
 left. This link would not work.</figcaption></figure>
 <figure><img src="images/si_eye_equalised.png" alt="The marginal eye reopened by equalisation to 366 mV by 0.88 UI">
 <figcaption><span class="pass">Rescued by equalisation</span>: the marginal eye above, after
-the best equaliser KiPI found (here using 3 DFE taps): 366 mV × 0.88 UI.</figcaption></figure>
+the best equaliser KiPI-SI found (here using 3 DFE taps): 366 mV × 0.88 UI.</figcaption></figure>
 </div>
 <table>
   <tr><th>Check</th><th>Good (PASS)</th><th>Borderline (WARN)</th><th>Bad (FAIL)</th></tr>
@@ -2822,7 +2822,7 @@ spans about 0.8 UI). <b>Bad</b>: the walls meet, or the floor never gets down to
 (the closed eye above: the bathtub stays at 1).</p>
 
 <h3 id="si-eq-primer">Equalisation</h3>
-<p>Fast receivers and transmitters undo part of the channel's loss themselves. KiPI searches
+<p>Fast receivers and transmitters undo part of the channel's loss themselves. KiPI-SI searches
 the interface's equalisers for the setting that opens the eye most:</p>
 <ul>
   <li><b>FFE</b> (feed-forward equalisation, at the transmitter): pre-shoot and de-emphasis.
@@ -2841,7 +2841,7 @@ see the raw channel.</p>
 <h3 id="si-com-primer">COM (channel operating margin)</h3>
 <p>One number for the whole link: the main cursor's signal over all the noise and
 interference at the target BER, in dB. It folds loss, ISI, crosstalk, jitter and noise
-together. The idea comes from the IEEE 802.3 Ethernet standards; KiPI's is a simplified
+together. The idea comes from the IEEE 802.3 Ethernet standards; KiPI-SI's is a simplified
 form of it.</p>
 <table>
   <tr><th>COM</th><th>Meaning</th></tr>
@@ -2855,7 +2855,7 @@ form of it.</p>
 
 <h3 id="si-skew-primer">Pair skew</h3>
 <p>The difference in arrival time between P and N. Skew turns part of the differential
-signal into common-mode noise (see mode conversion) and slows the differential edge. KiPI
+signal into common-mode noise (see mode conversion) and slows the differential edge. KiPI-SI
 gives it as a share of the UI, since what matters is how it compares to one bit.</p>
 <table>
   <tr><th>Check</th><th>Good (PASS)</th><th>Borderline (WARN)</th><th>Bad (FAIL)</th></tr>
@@ -3013,7 +3013,7 @@ bidirectional bus, add it again with <b>Swap</b> to get the reads.</p>
     terminations, equaliser and the limits checked. Any of them can be overridden below; at
     its lowest, a field shows <i>interface's</i> and uses the interface's value.</li>
   <li><b>Transmitter</b> and <b>Receiver</b>: pick from the parts on the channel's nets
-    (series parts left out), or type a reference. <b>guessed</b> shows the part KiPI would
+    (series parts left out), or type a reference. <b>guessed</b> shows the part KiPI-SI would
     use: the net's two farthest parts, an IC driving, or, with one end set, the part
     farthest from it. <b>Swap</b> turns a bidirectional net round (a DDR read instead of a
     write).</li>
@@ -3052,12 +3052,12 @@ bidirectional bus, add it again with <b>Swap</b> to get the reads.</p>
 then each channel; in HTML a picker at its top shows one channel or all),
 <b>Export Touchstone…</b> (<code>.s2p</code> or <code>.s4p</code>, 50 Ω, ports at the dies),
 <b>Export SPICE…</b>, <b>Save results…</b>, which keeps every solved channel and the
-Quick Scan, and <b>Open results…</b>, which brings a saved <code>.kipi-si-results</code>
+Quick Scan, and <b>Open results…</b>, which brings a saved <code>.kipi_si-si-results</code>
 back for the board without solving again (also <b>File → Open results…</b> in SI mode).</p>
 <p><b>Export SPICE…</b> fits the channel's S-parameters with a rational model (vector
 fitting, common poles, as many as it takes for an RMS error under 0.2 %), makes it passive
 if it is not quite (no singular value over 1 from DC to twice the band), and writes it as a
-SPICE subcircuit, <code>.subckt kipi_&lt;channel&gt; p1 … pN ref</code>, with the port names
+SPICE subcircuit, <code>.subckt kipi_si_&lt;channel&gt; p1 … pN ref</code>, with the port names
 in its comments. It uses only resistors, capacitors and controlled sources, so any SPICE
 (ngspice, LTspice, a vendor's) can run the channel with its own driver and receiver
 models.</p>
@@ -3239,10 +3239,10 @@ them a model or confirm they really do not belong on this rail.</p>
 <summary>8. Sharing a board and its results</summary>
 <div class="body">
 <ul>
-  <li><b>Save snapshot…</b> stores the board; anyone with KiPI can open it with <b>Open
-    snapshot…</b>, or with <b>Open…</b> in standalone KiPI, without KiCad or your design
+  <li><b>Save snapshot…</b> stores the board; anyone with KiPI-SI can open it with <b>Open
+    snapshot…</b>, or with <b>Open…</b> in standalone KiPI-SI, without KiCad or your design
     files.</li>
-  <li>Keep <code>&lt;board&gt;.kipi-setup.yml</code> in version control next to the board.</li>
+  <li>Keep <code>&lt;board&gt;.kipi_si-setup.yml</code> in version control next to the board.</li>
   <li>Click <b>Report</b> with <b>HTML</b> chosen for a single file you can email: it needs
     nothing but a browser.</li>
   <li><b>Export ▾ → Save results…</b> (DC) or <b>Save results…</b> (AC) lets you reopen a
@@ -3252,7 +3252,7 @@ them a model or confirm they really do not belong on this rail.</p>
 </details>
 
 <!-- ================================================================== FILES -->
-<h2 id="files">Files KiPI reads and writes</h2>
+<h2 id="files">Files KiPI-SI reads and writes</h2>
 <details>
 <summary>File reference</summary>
 <div class="body">
@@ -3266,61 +3266,61 @@ them a model or confirm they really do not belong on this rail.</p>
     links) with their DC resistance; and every load with its typical and maximum current and
     the lowest supply voltage its datasheet allows. <b>Import…</b> in the DC setup reads it.
     It saves hours of reading datasheets and typing values in.</td></tr>
-  <tr><td><code>&lt;board&gt;.kipi-setup.yml</code></td><td class="wrap">The setup: ticked nets, VRMs,
+  <tr><td><code>&lt;board&gt;.kipi_si-setup.yml</code></td><td class="wrap">The setup: ticked nets, VRMs,
     loads, series links, mesh, copper and thermal settings, capacitor models, probes and the
     sweep, in YAML. Saved next to the board on <b>Save</b> and on every solve.</td></tr>
-  <tr><td><code>&lt;board&gt;.kipi-setup.json</code></td><td class="wrap">A setup saved by KiPI
+  <tr><td><code>&lt;board&gt;.kipi_si-setup.json</code></td><td class="wrap">A setup saved by KiPI-SI
     before 0.8.0. It still opens, with a warning, when there is no <code>.yml</code> setup;
     the next save writes the <code>.yml</code> and leaves the JSON file alone. JSON setups
-    are deprecated: a future KiPI will stop reading them.</td></tr>
+    are deprecated: a future KiPI-SI will stop reading them.</td></tr>
   <tr><td><code>pi_parts.yml</code></td><td class="wrap">The
     <a href="#parts-library">parts library</a>: currents, resistances, ratings and roles by
-    part number, for <b>Auto-fill rail…</b>. Read from beside the board and from KiPI's
-    folder in the user's config; written to (beside the board) only when you let KiPI add
+    part number, for <b>Auto-fill rail…</b>. Read from beside the board and from KiPI-SI's
+    folder in the user's config; written to (beside the board) only when you let KiPI-SI add
     the parts it had no numbers for, or to <code>pi_parts.missing.yml</code>.</td></tr>
-  <tr><td><code>*.kipi-load.yml</code></td><td class="wrap">A
+  <tr><td><code>*.kipi_si-load.yml</code></td><td class="wrap">A
     <a href="#load-models">load model</a>: one part's supplies, with their currents,
     tolerances and AC targets.</td></tr>
-  <tr><td><code>*.kipi.json.gz</code></td><td class="wrap">A board snapshot (copper, stackup,
+  <tr><td><code>*.kipi_si.json.gz</code></td><td class="wrap">A board snapshot (copper, stackup,
     pads, vias, parts).</td></tr>
-  <tr><td><code>*.kipi-dc-results</code></td><td class="wrap">A saved DC solve: JSON and NumPy
+  <tr><td><code>*.kipi_si-dc-results</code></td><td class="wrap">A saved DC solve: JSON and NumPy
     arrays in a zip.</td></tr>
-  <tr><td><code>*.kipi-dc-thermal-results</code></td><td class="wrap">A saved electro-thermal
+  <tr><td><code>*.kipi_si-dc-thermal-results</code></td><td class="wrap">A saved electro-thermal
     solve (DC with the board temperature), in the same format.</td></tr>
-  <tr><td><code>*.kipi-results</code></td><td class="wrap">DC results saved by KiPI 0.7 and
-    earlier, as Python pickles, which can run code; KiPI asks before it opens one, and they
+  <tr><td><code>*.kipi_si-results</code></td><td class="wrap">DC results saved by KiPI-SI 0.7 and
+    earlier, as Python pickles, which can run code; KiPI-SI asks before it opens one, and they
     are deprecated.</td></tr>
   <tr><td><code>*_noise_report_*.html</code>, <code>.pdf</code></td><td class="wrap">Coupled
-    Noise report, written with the Report button to <code>kipi_reports/</code></td></tr>
-  <tr><td><code>*.kipi-noise-results</code></td><td class="wrap">Saved Coupled Noise results,
+    Noise report, written with the Report button to <code>kipi_si_reports/</code></td></tr>
+  <tr><td><code>*.kipi_si-noise-results</code></td><td class="wrap">Saved Coupled Noise results,
     every solved aggressor (Save results… / Open results… in Coupled Noise mode)</td></tr>
   <tr><td><code>*_si_report_*.html</code>, <code>.pdf</code></td><td class="wrap">Signal
-    Integrity report of a channel, written with the Report button to <code>kipi_reports/</code></td></tr>
-  <tr><td><code>*.kipi-si-results</code></td><td class="wrap">Saved Signal Integrity results:
+    Integrity report of a channel, written with the Report button to <code>kipi_si_reports/</code></td></tr>
+  <tr><td><code>*.kipi_si-si-results</code></td><td class="wrap">Saved Signal Integrity results:
     every solved channel and the Quick Scan</td></tr>
   <tr><td><code>*.s2p</code>, <code>*.s4p</code></td><td class="wrap">A channel's
     S-parameters (Touchstone), from Export Touchstone…</td></tr>
-  <tr><td><code>*.kipi-ac-results</code></td><td class="wrap">Saved AC results, every rail
+  <tr><td><code>*.kipi_si-ac-results</code></td><td class="wrap">Saved AC results, every rail
     solved, in the same format.</td></tr>
-  <tr><td><code>&lt;board&gt;_kipi_report_&lt;date&gt;_&lt;time&gt;.html</code></td><td class="wrap">The DC HTML report.</td></tr>
+  <tr><td><code>&lt;board&gt;_kipi_si_report_&lt;date&gt;_&lt;time&gt;.html</code></td><td class="wrap">The DC HTML report.</td></tr>
   <tr><td><code>&lt;board&gt;_&lt;rail&gt;_ac_report_&lt;date&gt;_&lt;time&gt;.html</code></td><td class="wrap">An AC rail's HTML report.</td></tr>
   <tr><td><code>*.csv</code></td><td class="wrap">DC tables, or an AC rail's impedance.</td></tr>
   <tr><td><code>*.vtm</code></td><td class="wrap">DC 3D results for ParaView.</td></tr>
-  <tr><td>KiPI's environment</td><td class="wrap">Standalone only: the packages the launcher
-    installed, in <code>%LOCALAPPDATA%\KiPI\venv</code> (Windows),
-    <code>~/Library/Application Support/KiPI/venv</code> (macOS) or
-    <code>~/.local/share/kipi/venv</code> (Linux), with the launcher's logs in
-    <code>logs</code> beside it. <code>python kipi_launcher.py --reset</code> deletes
+  <tr><td>KiPI-SI's environment</td><td class="wrap">Standalone only: the packages the launcher
+    installed, in <code>%LOCALAPPDATA%\KiPI-SI\venv</code> (Windows),
+    <code>~/Library/Application Support/KiPI-SI/venv</code> (macOS) or
+    <code>~/.local/share/kipi_si/venv</code> (Linux), with the launcher's logs in
+    <code>logs</code> beside it. <code>python kipi_si_launcher.py --reset</code> deletes
     it.</td></tr>
-  <tr><td><code>kipi-&lt;user&gt;.lock</code>,<br><code>kipi-standalone-&lt;user&gt;.lock</code></td>
-    <td class="wrap">In the temporary folder while the plugin, or standalone KiPI, is open,
+  <tr><td><code>kipi_si-&lt;user&gt;.lock</code>,<br><code>kipi_si-standalone-&lt;user&gt;.lock</code></td>
+    <td class="wrap">In the temporary folder while the plugin, or standalone KiPI-SI, is open,
     so a second one brings the first to the front. It names the owner's process, so one
     left behind by a crash is ignored.</td></tr>
   <tr><td><code>&lt;board&gt;.kicad_prl</code></td><td class="wrap">KiCad's own local project
     settings. <code>kicad-cli</code> may create it next to the board the first time it exports
     <a href="#part-models">part models</a>, if the project has none yet.</td></tr>
-  <tr><td><code>kipi-&lt;date&gt;-&lt;time&gt;-&lt;pid&gt;.log</code></td><td class="wrap">The session
-    log, in <code>kipi/</code> under the temporary folder, with a matching
+  <tr><td><code>kipi_si-&lt;date&gt;-&lt;time&gt;-&lt;pid&gt;.log</code></td><td class="wrap">The session
+    log, in <code>kipi_si/</code> under the temporary folder, with a matching
     <code>.crash.log</code>. The last 15 sessions are kept.</td></tr>
 </table>
 </div>
@@ -3329,7 +3329,7 @@ them a model or confirm they really do not belong on this rail.</p>
 <!-- ================================================================== TROUBLESHOOTING -->
 <h2 id="troubleshooting">Troubleshooting</h2>
 <details>
-<summary>The KiPI button does not appear in KiCad</summary>
+<summary>The KiPI-SI button does not appear in KiCad</summary>
 <div class="body"><p>Enable <b>Preferences → Plugins → Enable KiCad API</b> and restart the PCB
 editor. The first start builds a Python environment and downloads a few hundred MB, which can
 take several minutes. If the button never appears, right-click the action in <i>Preferences →
@@ -3337,30 +3337,30 @@ Plugins</i> and choose <i>Recreate Plugin Environment</i>. On macOS, select a Py
 interpreter there.</p></div>
 </details>
 <details id="ts-multiple-kicad">
-<summary>"KiPI works with one KiCad at a time"</summary>
+<summary>"KiPI-SI works with one KiCad at a time"</summary>
 <div class="body"><p>More than one KiCad project manager or standalone PCB editor is open, and
-KiPI cannot tell which one holds your board. Close the others (the message lists them with their
-process IDs) and start KiPI again from the PCB editor of the board you want. If you know the
-check is wrong, set the environment variable <code>KIPI_ALLOW_MULTIPLE_KICAD=1</code> to skip it.
-If the running programs cannot be listed, KiPI carries on.</p></div>
+KiPI-SI cannot tell which one holds your board. Close the others (the message lists them with their
+process IDs) and start KiPI-SI again from the PCB editor of the board you want. If you know the
+check is wrong, set the environment variable <code>KIPI_SI_ALLOW_MULTIPLE_KICAD=1</code> to skip it.
+If the running programs cannot be listed, KiPI-SI carries on.</p></div>
 </details>
 <details id="ts-launcher">
-<summary>Standalone KiPI does not set up or start</summary>
+<summary>Standalone KiPI-SI does not set up or start</summary>
 <div class="body"><ul>
   <li><b>No suitable Python:</b> the launcher needs Python 3.10 to 3.13 and names the ones
     it found. Install one from python.org (on Linux, also <code>python3-venv</code>).</li>
   <li><b>The setup failed:</b> the message says why, and the launcher's log (in
-    <code>logs</code> next to KiPI's environment) has everything the installer printed.
+    <code>logs</code> next to KiPI-SI's environment) has everything the installer printed.
     Check the network connection and free disk space, then start the launcher again; it
-    picks up where it stopped. <code>python kipi_launcher.py --repair</code> starts over.</li>
+    picks up where it stopped. <code>python kipi_si_launcher.py --repair</code> starts over.</li>
   <li><b>A message box says to use a terminal:</b> that Python has no tkinter for the setup
-    window. Run <code>python kipi_launcher.py</code> in a terminal and answer there.</li>
+    window. Run <code>python kipi_si_launcher.py</code> in a terminal and answer there.</li>
 </ul></div>
 </details>
 <details id="ts-kicad-file">
 <summary>A KiCad board file opens with copper missing, or not at all</summary>
 <div class="body"><ul>
-  <li><b>Zones have no copper:</b> they were saved unfilled, and KiPI does not fill zones.
+  <li><b>Zones have no copper:</b> they were saved unfilled, and KiPI-SI does not fill zones.
     Fill them in KiCad (<b>B</b>), save, and <b>Reload</b>. The board summary lists unfilled
     zones under <b>Placeholders</b>.</li>
   <li><b>Copper looks out of date:</b> KiCad fills zones when asked, not on every edit. Refill
@@ -3375,11 +3375,11 @@ If the running programs cannot be listed, KiPI carries on.</p></div>
   <li><b>"not an ODB++ job":</b> the archive has no <code>matrix/matrix</code> file, e.g. a
     zip of Gerbers. Export ODB++ from the design tool.</li>
   <li><b>"no netlist":</b> the job has no <code>eda/data</code>; export it with its
-    netlist, or KiPI cannot tell which copper is which net.</li>
+    netlist, or KiPI-SI cannot tell which copper is which net.</li>
   <li><b>A net from KiCad has a different name:</b> KiCad's ODB++ export writes spaces in
     net names as underscores. Pick the net again in the setup.</li>
   <li><b>A copper drawing carries no current:</b> some exporters (KiCad among them) do not
-    say which net drawn copper is on. KiPI gives it the net of the copper it touches; on
+    say which net drawn copper is on. KiPI-SI gives it the net of the copper it touches; on
     its own it has none.</li>
 </ul></div>
 </details>
@@ -3398,24 +3398,24 @@ If the running programs cannot be listed, KiPI carries on.</p></div>
 </ul></div>
 </details>
 <details>
-<summary>Clicking the KiPI button does not open a new window</summary>
-<div class="body"><p>KiPI is already open, perhaps minimized or behind KiCad; the button brings it
+<summary>Clicking the KiPI-SI button does not open a new window</summary>
+<div class="body"><p>KiPI-SI is already open, perhaps minimized or behind KiCad; the button brings it
 to the front. If it is not open and still does not start, check the session log for a stale lock
-and delete <code>kipi-&lt;user&gt;.lock</code> (<code>kipi-standalone-&lt;user&gt;.lock</code> for
-standalone KiPI) from the temporary folder.</p></div>
+and delete <code>kipi_si-&lt;user&gt;.lock</code> (<code>kipi_si-standalone-&lt;user&gt;.lock</code> for
+standalone KiPI-SI) from the temporary folder.</p></div>
 </details>
 <details id="ts-models">
 <summary>No part models are drawn</summary>
 <div class="body"><ul>
   <li>Check <b>3D Models</b> is ticked in <a href="#display">Display</a>. It starts
     unticked.</li>
-  <li>The log says why. KiPI needs KiCad's <code>kicad-cli</code>: it looks in the connected
+  <li>The log says why. KiPI-SI needs KiCad's <code>kicad-cli</code>: it looks in the connected
     KiCad, the PATH, the usual install folders and a Flatpak KiCad. Otherwise set the
-    environment variable <code>KIPI_KICAD_CLI</code> to its full path.</li>
+    environment variable <code>KIPI_SI_KICAD_CLI</code> to its full path.</li>
   <li>It also needs the board's <code>.kicad_pcb</code> on disk, next to the project or the
     snapshot. A snapshot opened on another machine usually has none, nor does an ODB++ job:
     click <a href="#guess-models">Guess models</a> to pick models from KiCad's library by
-    footprint name. It needs KiCad's 3D model library installed; if it is somewhere KiPI
+    footprint name. It needs KiCad's 3D model library installed; if it is somewhere KiPI-SI
     does not look, set <code>KICAD10_3DMODEL_DIR</code> (or your KiCad version's) to it.</li>
   <li>A part whose model file KiCad cannot find is named in the log with the missing path;
     KiCad's own 3D viewer shows the same gap. Fix the path in the footprint's 3D model
@@ -3429,7 +3429,7 @@ standalone KiPI) from the temporary folder.</p></div>
 </details>
 <details id="ts-no-path">
 <summary>Loads not connected by copper</summary>
-<div class="body"><p>Before solving, KiPI checks that every load pin has a path to its VRM
+<div class="body"><p>Before solving, KiPI-SI checks that every load pin has a path to its VRM
 through copper or <a href="#dc-links">series links</a>, and its ground pins to the ground
 reference. A pin without one draws nothing, and the Notes tab lists it:</p>
 <ul>
@@ -3447,7 +3447,7 @@ part in series that needs a series link. Show the net in 3D and look for the gap
 <summary>The drop is larger than expected</summary>
 <div class="body"><p>Thermal reliefs, necked traces and too few vias dominate DC drop. Use
 <b>Current density</b> with <b>Arrows</b>, and the Vias table sorted by current. Compare the 3D
-copper with KiCad: KiPI only sees filled copper.</p></div>
+copper with KiCad: KiPI-SI only sees filled copper.</p></div>
 </details>
 <details>
 <summary>NOT CONVERGED</summary>
@@ -3475,7 +3475,7 @@ x86-64).</p></div>
 </details>
 <details>
 <summary>Reporting a bug</summary>
-<div class="body"><p>Open an issue at <a href="https://github.com/drewsum/KiPI/issues">github.com/drewsum/KiPI/issues</a>.
+<div class="body"><p>Open an issue at <a href="https://github.com/MohamoudAli12/KiPI-SI/issues">github.com/MohamoudAli12/KiPI-SI/issues</a>.
 Attach the session's <code>.log</code> and <code>.crash.log</code>, the text from <b>About → Copy
 version info</b>, and if you can, a board snapshot and setup file that show the problem.</p></div>
 </details>
@@ -3483,7 +3483,7 @@ version info</b>, and if you can, a board snapshot and setup file that show the 
 <!-- ================================================================== GLOSSARY -->
 <h2 id="glossary">Glossary</h2>
 <details>
-<summary>Terms used in KiPI</summary>
+<summary>Terms used in KiPI-SI</summary>
 <div class="body">
 <table>
   <tr><th>Term</th><th>Meaning</th></tr>
@@ -3508,8 +3508,8 @@ version info</b>, and if you can, a board snapshot and setup file that show the 
 </div>
 </details>
 
-<p style="margin-top:40px;color:var(--muted);font-size:0.85em">KiPI is free software under the GNU
-GPL v3 or later. Source and issues: <a href="https://github.com/drewsum/KiPI">github.com/drewsum/KiPI</a>.</p>
+<p style="margin-top:40px;color:var(--muted);font-size:0.85em">KiPI-SI is free software under the GNU
+GPL v3 or later. Source and issues: <a href="https://github.com/MohamoudAli12/KiPI-SI">github.com/MohamoudAli12/KiPI-SI</a>.</p>
 </main>
 </div>
 
@@ -3524,7 +3524,7 @@ GPL v3 or later. Source and issues: <a href="https://github.com/drewsum/KiPI">gi
   };
   var root = document.documentElement;
   try {
-    var saved = localStorage.getItem("kipi-help-theme");
+    var saved = localStorage.getItem("kipi_si-help-theme");
     if (saved) root.setAttribute("data-theme", saved);
   } catch (e) {}
   document.getElementById("theme").onclick = function () {
@@ -3532,7 +3532,7 @@ GPL v3 or later. Source and issues: <a href="https://github.com/drewsum/KiPI">gi
       window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
     var next = dark ? "light" : "dark";
     root.setAttribute("data-theme", next);
-    try { localStorage.setItem("kipi-help-theme", next); } catch (e) {}
+    try { localStorage.setItem("kipi_si-help-theme", next); } catch (e) {}
   };
   // Following a link into a closed section opens it and everything around it.
   function reveal() {

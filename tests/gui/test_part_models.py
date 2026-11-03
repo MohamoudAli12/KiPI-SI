@@ -13,7 +13,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from qtpy.QtWidgets import QApplication  # noqa: E402
 
-from kipi.gui.viewer3d import Viewer3D, _merge_models  # noqa: E402
+from kipi_si.gui.viewer3d import Viewer3D, _merge_models  # noqa: E402
 from phase_boards import board, two_phase  # noqa: E402
 
 
@@ -176,9 +176,9 @@ def test_merged_models_keep_colors_and_normals_only_if_all_have_them():
 # --- The window picks the parts ----------------------------------------------------------
 
 def _window(no_3d, monkeypatch, nets=("VOUT",), found=None, cli=("no-such-kicad-cli",)):
-    from kipi.sources.kicad_ipc import models3d
-    from kipi.sources.kicad_ipc.source import InstalledKiCad
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.sources.kicad_ipc import models3d
+    from kipi_si.sources.kicad_ipc.source import InstalledKiCad
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow(tool=InstalledKiCad())
     w.snapshot = board()
     w.solve_panel.setup = two_phase()
@@ -263,7 +263,7 @@ def test_a_closed_window_loads_no_more_models(app, no_3d, monkeypatch):
 def test_models_are_guessed_only_when_asked(app, no_3d, monkeypatch):
     """With no board file, no models are guessed until Guess models is clicked; then only
     the parts with none are guessed (#130)."""
-    from kipi.sources.kicad_ipc import model_guess, models3d
+    from kipi_si.sources.kicad_ipc import model_guess, models3d
     mesh = _part()
     guessed = []
 
@@ -302,7 +302,7 @@ def test_models_are_guessed_only_when_asked(app, no_3d, monkeypatch):
 
 
 def test_a_guess_with_no_library_says_why(app, no_3d, monkeypatch):
-    from kipi.sources.kicad_ipc import model_guess, models3d
+    from kipi_si.sources.kicad_ipc import model_guess, models3d
     w, shown, asked, said = _window(no_3d, monkeypatch)
     monkeypatch.setattr(models3d, "board_file", lambda snap: None)
     monkeypatch.setattr(model_guess, "library_dirs", lambda cli: [])

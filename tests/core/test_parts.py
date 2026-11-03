@@ -2,8 +2,8 @@
 
 import pytest
 
-from kipi.core.model.board import Footprint
-from kipi.core.model.parts import (
+from kipi_si.core.model.board import Footprint
+from kipi_si.core.model.parts import (
     parse_capacitance, parse_resistance, part_value, resistor_ohms, value_fields,
 )
 from synthetic import make_board
@@ -56,8 +56,8 @@ def test_part_value_picks_the_field_its_parser_reads():
 
 
 def test_pdn_capacitors_take_their_value_from_a_val_field():
-    from kipi.ac.checks import capacitor_candidates
-    from kipi.core.model.board import Pad
+    from kipi_si.ac.checks import capacitor_candidates
+    from kipi_si.core.model.board import Pad
     snap = make_board()
     snap.pads += [Pad(id="c1", net="+3V3", footprint="C110", number="1", position=(5, 0),
                       pad_type="smd"),

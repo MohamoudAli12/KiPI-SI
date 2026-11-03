@@ -6,10 +6,10 @@ import numpy as np
 import pytest
 
 from ac_boards import plane_pair, plane_setup
-from kipi.ac.checks import ground_nets, rail_nets, validate_ac
-from kipi.ac.solver import solve_ac
-from kipi.core.model.board import Footprint, Net, Pad, Poly, Track, Via
-from kipi.dc.pi.model import DcLink, PinRef
+from kipi_si.ac.checks import ground_nets, rail_nets, validate_ac
+from kipi_si.ac.solver import solve_ac
+from kipi_si.core.model.board import Footprint, Net, Pad, Poly, Track, Via
+from kipi_si.dc.pi.model import DcLink, PinRef
 from synthetic import F, IN1, rect, square
 
 

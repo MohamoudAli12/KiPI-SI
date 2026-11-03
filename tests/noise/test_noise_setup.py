@@ -3,13 +3,13 @@ checks and the phases guessed from the board."""
 
 import pytest
 
-from kipi.core import yaml_io
-from kipi.core.model.parts import parse_inductance
-from kipi.dc.pi.model import PinRef, PISetup, Vrm
-from kipi.noise.checks import (
+from kipi_si.core import yaml_io
+from kipi_si.core.model.parts import parse_inductance
+from kipi_si.dc.pi.model import PinRef, PISetup, Vrm
+from kipi_si.noise.checks import (
     NoiseError, operating_point, seed_phases, validate_noise,
 )
-from kipi.noise.model import Aggressor, AggressorPhase
+from kipi_si.noise.model import Aggressor, AggressorPhase
 from noise_boards import buck_board, buck_setup
 
 

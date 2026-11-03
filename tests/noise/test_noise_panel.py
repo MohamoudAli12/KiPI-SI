@@ -12,8 +12,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from qtpy.QtCore import Qt  # noqa: E402
 from qtpy.QtWidgets import QApplication, QRadioButton  # noqa: E402
 
-from kipi.ac.model import CapModel  # noqa: E402
-from kipi.dc.pi.model import PinRef  # noqa: E402
+from kipi_si.ac.model import CapModel  # noqa: E402
+from kipi_si.dc.pi.model import PinRef  # noqa: E402
 from noise_boards import buck_board, buck_setup  # noqa: E402
 
 
@@ -24,7 +24,7 @@ def app():
 
 @pytest.fixture
 def panel(app):
-    from kipi.noise.gui.panel import NoisePanel
+    from kipi_si.noise.gui.panel import NoisePanel
     p = NoisePanel()
     setup = buck_setup()
     setup.caps = [CapModel("10u", 10e-6, 0.4e-9, 0.003, ["C1"]),
@@ -106,7 +106,7 @@ def test_the_capacitor_models_are_shared(panel):
 
 
 def test_a_result_shows_its_parasitics(panel):
-    from kipi.noise.solver import solve_noise
+    from kipi_si.noise.solver import solve_noise
     panel.agg_list._add()
     r = solve_noise(panel.snapshot, panel.setup, panel.setup.aggressors[0].name)
     shown = []
@@ -118,7 +118,7 @@ def test_a_result_shows_its_parasitics(panel):
 
 @pytest.fixture
 def window(app, no_3d):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     yield w
     w.close()
@@ -142,14 +142,14 @@ def test_the_mode_shows_its_panel_and_waveforms_tab(window):
 
 
 def test_a_result_is_plotted(window):
-    from kipi.noise.solver import solve_noise
+    from kipi_si.noise.solver import solve_noise
     from noise_boards import buck_board as board
     snap = board()
     setup = buck_setup()
     window.noise_panel.set_board(snap, setup)
     window.noise_panel.agg_list._add()
     window.findChild(QRadioButton, "mode_noise").setChecked(True)
-    from kipi.ac.model import Probe
+    from kipi_si.ac.model import Probe
     setup.probes = [Probe("LOAD", PinRef("U2", "VOUT", ["1"]), PinRef("U2", "GND", ["2"]))]
     setup.aggressors[0].ripple_probes = ["LOAD"]
     setup.noise.board_model = True
@@ -165,7 +165,7 @@ def test_a_result_is_plotted(window):
 
 @pytest.fixture
 def vpanel(app):
-    from kipi.noise.gui.panel import NoisePanel
+    from kipi_si.noise.gui.panel import NoisePanel
     p = NoisePanel()
     setup = buck_setup()
     setup.caps = [CapModel("10u", 10e-6, 0.4e-9, 0.003, ["C1"]),
@@ -204,7 +204,7 @@ def test_another_driver_or_receiver_part_takes_its_own_pin_on_the_net(vpanel):
 
 
 def test_the_scan_radius_slider_sets_the_settings_radius(vpanel):
-    from kipi.noise.gui.panel import RADIUS_STEPS, radius_of_step, step_of_radius
+    from kipi_si.noise.gui.panel import RADIUS_STEPS, radius_of_step, step_of_radius
     assert radius_of_step(0) == 0.5 and radius_of_step(RADIUS_STEPS) == 500.0
     assert all(abs(radius_of_step(step_of_radius(r)) - r) <= 0.05 * r for r in (1, 3.3, 10, 47))
     sld, s = vpanel.sld_radius, vpanel.setup.noise
@@ -236,7 +236,7 @@ def test_a_preset_fills_the_terminations_and_edits_make_it_custom(vpanel):
 
 
 def test_victim_results_fill_the_table_and_plot(vpanel, window):
-    from kipi.noise.solver import solve_noise
+    from kipi_si.noise.solver import solve_noise
     vpanel.victim_list._add()
     r = solve_noise(vpanel.snapshot, vpanel.setup, vpanel.setup.aggressors[0].name)
     picked = []
@@ -254,7 +254,7 @@ def test_victim_results_fill_the_table_and_plot(vpanel, window):
 
 
 def test_the_victim_plot_shows_the_superposition_and_ticked_mechanisms(vpanel, window):
-    from kipi.noise.solver import solve_noise
+    from kipi_si.noise.solver import solve_noise
     vpanel.victim_list._add()
     r = solve_noise(vpanel.snapshot, vpanel.setup, vpanel.setup.aggressors[0].name)
     plot = window.noise_plot
@@ -280,8 +280,8 @@ def test_the_victim_plot_shows_the_superposition_and_ticked_mechanisms(vpanel, w
 
 
 def test_a_curve_is_hidden_by_its_tickbox(vpanel, window):
-    from kipi.ac.gui.plot import COLORS
-    from kipi.noise.solver import solve_noise
+    from kipi_si.ac.gui.plot import COLORS
+    from kipi_si.noise.solver import solve_noise
     r = solve_noise(vpanel.snapshot, vpanel.setup, vpanel.setup.aggressors[0].name)
     plot = window.noise_plot
     plot.set_result(r)
@@ -306,7 +306,7 @@ def test_a_curve_is_hidden_by_its_tickbox(vpanel, window):
 
 
 def test_the_curve_list_shows_p_p_and_rms_as_plotted(vpanel, window):
-    from kipi.noise.solver import solve_noise
+    from kipi_si.noise.solver import solve_noise
     r = solve_noise(vpanel.snapshot, vpanel.setup, vpanel.setup.aggressors[0].name)
     plot = window.noise_plot
     plot.chk_bw.setChecked(False)
@@ -337,8 +337,8 @@ def test_the_curve_list_is_as_wide_as_its_labels(vpanel):
     """#197: the legend kept a narrow width that cut its labels off. It now fits the
     longest label, and one too long for the room it gets is elided with its whole text in
     its tooltip."""
-    from kipi.noise.gui.plot import CURVE_LIST_MAX, NoisePlot
-    from kipi.noise.solver import solve_noise
+    from kipi_si.noise.gui.plot import CURVE_LIST_MAX, NoisePlot
+    from kipi_si.noise.solver import solve_noise
     r = solve_noise(vpanel.snapshot, vpanel.setup, vpanel.setup.aggressors[0].name)
     plot = NoisePlot()
     plot.set_result(r)
@@ -364,7 +364,7 @@ def test_the_curve_list_is_as_wide_as_its_labels(vpanel):
 
 
 def test_the_bandwidth_limit_filters_every_view(vpanel, window):
-    from kipi.noise.solver import solve_noise
+    from kipi_si.noise.solver import solve_noise
     vpanel.victim_list._add()
     r = solve_noise(vpanel.snapshot, vpanel.setup, vpanel.setup.aggressors[0].name)
     plot = window.noise_plot
@@ -385,7 +385,7 @@ def test_the_bandwidth_limit_filters_every_view(vpanel, window):
 
 
 def test_a_20mhz_limit_is_a_single_pole():
-    from kipi.noise.waveforms import Spectrum, bandwidth_limited
+    from kipi_si.noise.waveforms import Spectrum, bandwidth_limited
     sp = Spectrum("x", "V", 1.0, np.ones(40, complex))
     out = bandwidth_limited(sp, 1e6, 20e6)
     assert out.mean == 1.0 and abs(out.c[19]) == pytest.approx(1 / np.sqrt(2))
@@ -394,8 +394,8 @@ def test_a_20mhz_limit_is_a_single_pole():
 
 def test_the_ac_probes_to_show_ripple_at_are_ticked(app):
     """#157: the aggressor lists the AC setup's probes; the ticked ones are kept."""
-    from kipi.ac.model import Probe
-    from kipi.noise.gui.panel import NoisePanel
+    from kipi_si.ac.model import Probe
+    from kipi_si.noise.gui.panel import NoisePanel
     p = NoisePanel()
     setup = buck_setup()
     setup.probes = [Probe("LOAD", PinRef("U2", "VOUT", ["1"]), PinRef("U2", "GND", ["2"])),
@@ -419,7 +419,7 @@ def test_the_ac_probes_to_show_ripple_at_are_ticked(app):
 def test_the_visual_settings_show_a_drawing(panel):
     """Every field whose meaning is easier to see than to read has a drawing under its
     tooltip (#160)."""
-    from kipi.noise.gui.plot import NoisePlot
+    from kipi_si.noise.gui.plot import NoisePlot
     agg = panel.agg_list.editor
     vic = panel.victim_list.editor
     plot = NoisePlot()

@@ -1,20 +1,23 @@
 <p align="center">
-  <img src="resources/kipi.gif" alt="KiPI logo" width="128">
+  <img src="resources/kipi_si_logo_name.svg" alt="KiPI-SI: Power &amp; Signal Integrity" height="128">
 </p>
 
-# KiPI — DC, AC and Coupled Noise Power Integrity Simulator (Standalone or KiCad Plugin)
+# KiPI-SI — DC, AC and Coupled Noise Power Integrity Simulator (Standalone or KiCad Plugin)
 
-[![CI](https://github.com/drewsum/KiPI/actions/workflows/ci.yml/badge.svg)](https://github.com/drewsum/KiPI/actions/workflows/ci.yml)
+[![CI](https://github.com/MohamoudAli12/KiPI-SI/actions/workflows/ci.yml/badge.svg)](https://github.com/MohamoudAli12/KiPI-SI/actions/workflows/ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![KiCad 9.0+](https://img.shields.io/badge/KiCad-9.0%2B-314cb0.svg?logo=kicad&logoColor=white)](#requirements)
 [![Platform: Windows | Linux | macOS](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)](#requirements)
 [![Python 3.10–3.13](https://img.shields.io/badge/python-3.10%E2%80%933.13-3776ab.svg?logo=python&logoColor=white)](#requirements)
 
-**New to power integrity? Read the [Solver Guide](https://drewsum.github.io/KiPI/solver-guide.html)**
-([source](docs/solver-guide.html)): what PI analysis is, why it matters, and how KiPI's mesh
+**New to power integrity? Read the [Solver Guide](https://mohamoudali12.github.io/KiPI-SI/solver-guide.html)**
+([source](docs/solver-guide.html)): what PI analysis is, why it matters, and how KiPI-SI's mesh
 and its DC, thermal, AC and coupled noise solvers work.
 
-KiPI is a power and signal integrity analyzer that runs standalone or as a KiCad 9 and 10 IPC
+> KiPI-SI is a fork of [KiPI](https://github.com/drewsum/KiPI) by Drew Maatman, extended with
+> signal integrity analysis.
+
+KiPI-SI is a power and signal integrity analyzer that runs standalone or as a KiCad 9 and 10 IPC
 plugin. It has four analysis modes:
 
 * **DC: Voltage Drop.** Define voltage regulators (VRMs), loads (current into pins) and series
@@ -28,7 +31,7 @@ plugin. It has four analysis modes:
   vias, mounting and capacitors) over frequency. Check it against a flat or custom target
   impedance, with a calculator that determines the target from the load's transient spec.
 * **Coupled Noise: Switcher Noise on Signal Nets.** Treat a buck or boost regulator as an
-  aggressor: KiPI builds its switch node, inductor and capacitor ripple waveforms from the
+  aggressor: KiPI-SI builds its switch node, inductor and capacitor ripple waveforms from the
   layout, then works out the noise they couple onto the signal nets you name (the victims)
   through capacitance, mutual inductance and shared ground. Each victim's receiver is
   checked against its logic family's noise margin, with the line held high and held low, and
@@ -41,26 +44,26 @@ plugin. It has four analysis modes:
   waveforms with generic or IBIS buffers, each checked against the interface (USB, PCIe,
   SATA, HDMI, LVDS, DDR4 and more).
 
-New to KiPI? The **[user guide](docs/help.html)** (also the **Help** button in KiPI, or
+New to KiPI-SI? The **[user guide](docs/help.html)** (also the **Help** button in KiPI-SI, or
 **F1**) walks through every button, the workflows and what the results mean. Every
-control in KiPI has a tooltip. This README is an overview; the user guide has the details.
+control in KiPI-SI has a tooltip. This README is an overview; the user guide has the details.
 
 ![Current density with flow arrows through the +12V input path and the U201 eFuse, with the Series links table](docs/images/current_density.png)
 
-**Status: 0.9.3 (alpha, in development)** ([changelog](docs/CHANGELOG.md)). KiPI runs on its own too, with an app launcher that handles dependencies, and imports boards from other layout tools. The author wants to add support for more PCB file formats. If you have an example with good complexity which uses a wide variety of your PCB design tool's features that you are willing to share, please open an [issue](https://github.com/drewsum/KiPI/issues) and attach your PCB file there.
+**Status: 0.9.3 (alpha, in development)** ([changelog](docs/CHANGELOG.md)). KiPI-SI runs on its own too, with an app launcher that handles dependencies, and imports boards from other layout tools. The author wants to add support for more PCB file formats. If you have an example with good complexity which uses a wide variety of your PCB design tool's features that you are willing to share, please open an [issue](https://github.com/MohamoudAli12/KiPI-SI/issues) and attach your PCB file there.
 
 ## Install
 
-KiPI runs two ways, from the same folder:
+KiPI-SI runs two ways, from the same folder:
 
-* **As a KiCad plugin**, the main way: click the **KiPI** button in the PCB editor and KiPI
-  reads the board open there. For this, the KiPI folder **must be in KiCad's plugins
+* **As a KiCad plugin**, the main way: click the **KiPI-SI** button in the PCB editor and KiPI-SI
+  reads the board open there. For this, the KiPI-SI folder **must be in KiCad's plugins
   folder**, and KiCad installs its dependencies.
-* **Standalone**: KiPI started on its own, with its launcher, opens board files and needs
+* **Standalone**: KiPI-SI started on its own, with its launcher, opens board files and needs
   no KiCad. The folder can be **anywhere**; the launcher installs the dependencies on the
   first start. It opens KiCad 7 to 10 board files (`.kicad_pcb`), ODB++ jobs, HyperLynx
-  files (`.hyp`) and KiPI snapshots (`.kipi.json.gz`). Reading CCE files is on the way
-  ([#143](https://github.com/drewsum/KiPI/issues/143)).
+  files (`.hyp`) and KiPI-SI snapshots (`.kipi_si.json.gz`). Reading CCE files is on the way
+  ([#143](https://github.com/MohamoudAli12/KiPI-SI/issues/143)).
 
 ### As a KiCad plugin
 
@@ -68,7 +71,7 @@ KiPI runs two ways, from the same folder:
 
 * **KiCad 9.0 or later.** Developed on KiCad 10 and confirmed on KiCad 9. Before 9.0.3,
   KiCad cannot say which layers a plated pad has copper on, so pads are kept on every layer
-  (KiPI warns in its log), and 9.0.0 cannot report net classes.
+  (KiPI-SI warns in its log), and 9.0.0 cannot report net classes.
 * **Python 3.10 to 3.13**, the one KiCad runs plugins with (some dependencies have no
   prebuilt packages for Python 3.14 yet).
   * **Windows:** KiCad's own Python 3.11. Nothing to do.
@@ -88,23 +91,23 @@ KiPI runs two ways, from the same folder:
 
    ```powershell
    $plug = "$([Environment]::GetFolderPath('MyDocuments'))\KiCad\10.0\plugins"
-   New-Item -ItemType Junction -Path "$plug\KiPI" -Target "<path to this repo>"
+   New-Item -ItemType Junction -Path "$plug\KiPI-SI" -Target "<path to this repo>"
    ```
 
    On macOS the folder is `~/Documents/KiCad/10.0/plugins`, and on Linux
    `~/.local/share/kicad/10.0/plugins`:
 
    ```sh
-   ln -s "<path to this repo>" ~/Documents/KiCad/10.0/plugins/KiPI          # macOS
-   ln -s "<path to this repo>" ~/.local/share/kicad/10.0/plugins/KiPI       # Linux
+   ln -s "<path to this repo>" ~/Documents/KiCad/10.0/plugins/KiPI-SI          # macOS
+   ln -s "<path to this repo>" ~/.local/share/kicad/10.0/plugins/KiPI-SI       # Linux
    ```
 
-   Or, without git, download `KiPI-<version>.zip` from the
-   [latest release](https://github.com/drewsum/KiPI/releases/latest) and unzip it into the
-   plugins folder, which gives `plugins/KiPI`.
+   Or, without git, download `KiPI-SI-<version>.zip` from the
+   [latest release](https://github.com/MohamoudAli12/KiPI-SI/releases/latest) and unzip it into the
+   plugins folder, which gives `plugins/KiPI-SI`.
 
 3. Restart the PCB editor. KiCad builds the plugin venv in the background; the first time this
-   downloads PySide6 and VTK, so give it a few minutes. The **KiPI** toolbar button appears
+   downloads PySide6 and VTK, so give it a few minutes. The **KiPI-SI** toolbar button appears
    once the venv is ready. If it never appears, right-click the action in
    *Preferences → Plugins* and choose *Recreate Plugin Environment*.
 
@@ -113,47 +116,47 @@ KiPI runs two ways, from the same folder:
 1. Install **Python 3.10 to 3.13** if you do not have one (from
    [python.org](https://www.python.org/downloads/), or your package manager). On Linux, add
    `python3-venv` (Debian, Ubuntu) and, for the setup window, `python3-tk`.
-2. Put the KiPI folder anywhere: clone this repo, or unzip `KiPI-<version>.zip` from the
-   [latest release](https://github.com/drewsum/KiPI/releases/latest).
-3. Start KiPI with its launcher: double-click **`kipi_launcher.pyw`** (Windows), or run
+2. Put the KiPI-SI folder anywhere: clone this repo, or unzip `KiPI-SI-<version>.zip` from the
+   [latest release](https://github.com/MohamoudAli12/KiPI-SI/releases/latest).
+3. Start KiPI-SI with its launcher: double-click **`kipi_si_launcher.pyw`** (Windows), or run
 
    ```sh
-   python kipi_launcher.py                      # or: python kipi_launcher.py <board>.kipi.json.gz
+   python kipi_si_launcher.py                      # or: python kipi_si_launcher.py <board>.kipi_si.json.gz
    ```
 
-   On Windows the first start leaves a **KiPI** shortcut next to it. On Linux and macOS, run
-   `python3 kipi_launcher.py --create-shortcut` once to add KiPI to the applications menu
+   On Windows the first start leaves a **KiPI-SI** shortcut next to it. On Linux and macOS, run
+   `python3 kipi_si_launcher.py --create-shortcut` once to add KiPI-SI to the applications menu
    (Linux) or `~/Applications` (macOS).
 
-The first start sets up KiPI. The setup window lists every package KiPI will install with
+The first start sets up KiPI-SI. The setup window lists every package KiPI-SI will install with
 its size (about 254 MB to download on Windows), and nothing is installed until you click
 **Install**. On Windows and Linux x86-64 it also offers
 [PARDISO](#optional-faster-solves-on-large-boards-windows-and-linux-x86-64). Everything goes
-into an environment of KiPI's own, outside the KiPI folder (`KIPI_HOME` puts it elsewhere):
+into an environment of KiPI-SI's own, outside the KiPI-SI folder (`KIPI_SI_HOME` puts it elsewhere):
 
-| | KiPI's environment |
+| | KiPI-SI's environment |
 |---|---|
-| Windows | `%LOCALAPPDATA%\KiPI` |
-| macOS | `~/Library/Application Support/KiPI` |
-| Linux | `~/.local/share/kipi` |
+| Windows | `%LOCALAPPDATA%\KiPI-SI` |
+| macOS | `~/Library/Application Support/KiPI-SI` |
+| Linux | `~/.local/share/kipi_si` |
 
 ![The launcher's setup window on a first start: every package with its size, and the optional PARDISO solver](docs/images/launcher_setup.png)
 
 Use **Open…** to open a board and **Reload** to read it again. KiCad boards keep the same
-setup file standalone and in the plugin. KiPI uses the zone fills saved in the file, so
+setup file standalone and in the plugin. KiPI-SI uses the zone fills saved in the file, so
 **fill the zones in KiCad (B) and save** before opening a `.kicad_pcb`. ODB++ jobs and
 HyperLynx files share a board's setup when exported next to it with the same name
 (`Board.zip`, `Board.hyp`). The [user guide](docs/help.html) lists what each format does
 and does not carry.
 
-To change the setup later, use **About → Manage dependencies…** in KiPI, or the launcher:
+To change the setup later, use **About → Manage dependencies…** in KiPI-SI, or the launcher:
 
 ```sh
-python kipi_launcher.py --setup              # the setup window again (add or remove PARDISO)
-python kipi_launcher.py --add-pardiso        # or --remove-pardiso, without questions
-python kipi_launcher.py --repair             # reinstall everything from scratch
-python kipi_launcher.py --reset              # delete KiPI's environment
-python kipi_launcher.py --create-shortcut    # add KiPI to the Start menu / app menu / ~/Applications
+python kipi_si_launcher.py --setup              # the setup window again (add or remove PARDISO)
+python kipi_si_launcher.py --add-pardiso        # or --remove-pardiso, without questions
+python kipi_si_launcher.py --repair             # reinstall everything from scratch
+python kipi_si_launcher.py --reset              # delete KiPI-SI's environment
+python kipi_si_launcher.py --create-shortcut    # add KiPI-SI to the Start menu / app menu / ~/Applications
 ```
 
 If setup fails, the launcher says why; everything the installer printed is in the `logs`
@@ -162,7 +165,7 @@ folder next to the environment.
 ### Optional: faster solves on large boards (Windows and Linux, x86-64)
 
 If the optional [`pypardiso`](https://pypi.org/project/pypardiso/) package is installed,
-KiPI solves with Intel MKL's multithreaded PARDISO solver in place of SciPy's
+KiPI-SI solves with Intel MKL's multithreaded PARDISO solver in place of SciPy's
 single-threaded one. On a 645k-unknown rail one solve drops from about 8 s to 1.2 s. Small
 boards gain little. It costs about 210 MB of download on Windows (320 MB on Linux) and
 there are no MKL packages for macOS or ARM.
@@ -171,20 +174,20 @@ The KiCad plugin gets it with its other requirements, installed by KiCad into th
 environment. Standalone, the launcher's first setup installs it by default, with an
 opt-out. *About → Manage dependencies…* adds or removes it later (in the plugin, removed it
 is also left unused, since KiCad puts it back when it reloads the plugin), and *About → Copy version info* shows which solver is in use. If
-PARDISO cannot load, KiPI falls back to SciPy and says so in the log.
+PARDISO cannot load, KiPI-SI falls back to SciPy and says so in the log.
 
-## Using KiPI
+## Using KiPI-SI
 
 ### 1. Open your board in KiCad
 
-Open your board in the PCB editor and click the **KiPI** toolbar button. KiPI opens in its
+Open your board in the PCB editor and click the **KiPI-SI** toolbar button. KiPI-SI opens in its
 own window and reads the board through the KiCad API; the log at the bottom streams each
 stage as it runs.
 
 * **Load from KiCad** re-reads the board after you edit it in KiCad, and reloads the saved PI setup.
 * **Refill zones** (on by default) refills every zone in KiCad before reading, so the zone
-  fills KiPI sees match your current routing. KiPI analyzes filled copper only.
-* **Save snapshot… / Open snapshot…** store the extracted board as a file that KiPI can open
+  fills KiPI-SI sees match your current routing. KiPI-SI analyzes filled copper only.
+* **Save snapshot… / Open snapshot…** store the extracted board as a file that KiPI-SI can open
   later without KiCad. See example snapshots in the repo to experiment!
 * **Power Integrity: DC / AC / Noise** and **Signal Integrity: SI** (the start of the
   toolbar, or **Ctrl+1** to **Ctrl+4**) pick the analysis mode. Readme sections 2 to 5 are DC, the default;
@@ -227,7 +230,7 @@ Drag to rotate, scroll to zoom and shift-drag (or middle-drag) to pan; the
 
 The **PI setup** panel on the right holds the power tree. Each list has **Add**,
 **Duplicate** and **Remove** buttons, and every field has a tooltip. Pins are chosen with a
-picker: the net, then the part, then optionally the pin numbers. As you pick pins, KiPI
+picker: the net, then the part, then optionally the pin numbers. As you pick pins, KiPI-SI
 pre-fills what usually follows from them (a VRM's target voltage from the net name, ground
 pins, a series link's other side and a resistor's value), and problems are shown in red.
 **Import…** fills the power tree from a Tomachie power-tree file (`<design>.pdn.json`).
@@ -236,11 +239,11 @@ pins, a series link's other side and a resistor's value), and problems are shown
 **LDO**, **Switcher** or **Isolated** converter, with its output pins and target voltage,
 its input pins (which link it to the rail upstream), efficiency or quiescent current, and
 optional remote sense, ground pins, load line, dropout, input range, DC accuracy, current
-limit and multiple **Phases**. KiPI works out each VRM's input current from what it feeds.
+limit and multiple **Phases**. KiPI-SI works out each VRM's input current from what it feeds.
 
 To try it without a design of your own, open the example board in
 [`examples/multiphase_buck`](examples/multiphase_buck): a 4-phase 12 V → 0.9 V, 40 A core rail
-(`python -m kipi --snapshot examples/multiphase_buck/multiphase_buck.kipi.json.gz`).
+(`python -m kipi_si --snapshot examples/multiphase_buck/multiphase_buck.kipi_si.json.gz`).
 
 **Loads tab**: one entry per consumer: its **Supply pins**, **Current** (split evenly or by
 pin group), optional **Ground pins** and a **Tolerance** for PASS/FAIL. **Load models**
@@ -273,7 +276,7 @@ temperature, with heat crossing the laminate and running down vias. Inspired by
 
 ![Thermal settings](docs/images/setup_thermal.png)
 
-The setup is saved as `<board>.kipi-setup.yml` next to the board when you click **Save** and
+The setup is saved as `<board>.kipi_si-setup.yml` next to the board when you click **Save** and
 every time you solve. It travels with the project and can go into version control. AI agents
 can make quick work of power tree modelling by editing this file directly.
 
@@ -360,7 +363,7 @@ screenshots below are the `examples/validation/coupled_noise` example: a 12 V to
 
 * **Aggressors tab**: **Add** makes an aggressor from a switcher VRM and fills it in from the
   board: the switching device, inductor, switch node and capacitors. Give the switching
-  frequency and edge times; datasheet values such as Coss and Qrr are optional. KiPI traces
+  frequency and edge times; datasheet values such as Coss and Qrr are optional. KiPI-SI traces
   each capacitor's hot loop through the copper for its inductance and its coupling.
 * **Victims tab**: each victim is a net with its driver and receiver pins and a **Type**
   (CMOS, open drain, terminated, LVDS, analog input or undriven) and **Logic level**, which
@@ -401,7 +404,7 @@ current's return. **Report** and **Save results…** work as in the other modes.
 ### 8. Signal Integrity
 
 Switch **Mode** to **SI** (**Ctrl+4**). The **Signal Integrity setup** has four tabs. To
-try it, open `examples/signal_integrity/signal_integrity.kipi.json.gz`: a clock net through
+try it, open `examples/signal_integrity/signal_integrity.kipi_si.json.gz`: a clock net through
 a series resistor and a USB pair changing layers through vias, with a channel set up for
 each.
 
@@ -440,31 +443,39 @@ for any circuit simulator; **Report** and **Save results…** work as in the oth
   planes dominate DC drop; the Current density view with Arrows shows the bottleneck.
 * **Slow solves:** raise **Max edge**, or analyze fewer nets at a time. On Intel x86, install
   the PARDISO solver (above).
-* **"KiPI works with one KiCad at a time"** although only one is open: a KiCad that did not
+* **"KiPI-SI works with one KiCad at a time"** although only one is open: a KiCad that did not
   exit cleanly may still be running; end it in the task manager.
-* **Logs:** each session writes to `kipi/kipi-<date>-<time>-<pid>.log` in the temporary
+* **Logs:** each session writes to `kipi_si/kipi_si-<date>-<time>-<pid>.log` in the temporary
   folder, with a matching `.crash.log`. Attach both, and **About → Copy version info**, to
   bug reports. The [user guide](docs/help.html) has more troubleshooting.
 * **Have Fun:** The author asks that you share what projects this package has simulated, and what power integrity issues you have found with it. Conductor simulation gives incredible insight into how PCBs actually function in practice. See what happens when you pump 10 amps into a 5 mil trace with the temperature results view.
 
 ## Development
 
-From a checkout, KiPI runs standalone, or as the plugin against the running PCB editor:
+The project is managed with [uv](https://docs.astral.sh/uv/). From a checkout, KiPI-SI runs
+standalone, or as the plugin against the running PCB editor:
 
-```powershell
-python -m venv --system-site-packages .venv   # use KiCad's bundled python.exe
-.venv\Scripts\pip install -r requirements.txt -r requirements-dev.txt
-.venv\Scripts\python -m kipi tests\data\synthetic.kipi.json   # standalone, opening a board
-$env:KIPI_HOST = "plugin"; .venv\Scripts\python -m kipi        # the plugin: connect to KiCad
-.venv\Scripts\python -m kipi --dump board.kipi.json.gz   # extract from KiCad only, no window
-.venv\Scripts\python -m pytest tests
-.venv\Scripts\ruff check .                    # lint, as CI does (ruff check . --fix fixes most)
+```sh
+uv sync                                        # .venv from uv.lock: the plugin's packages and the dev tools
+uv run python -m kipi_si tests/data/synthetic.kipi_si.json   # standalone, opening a board
+KIPI_SI_HOST=plugin uv run python -m kipi_si   # the plugin: connect to KiCad
+uv run python -m kipi_si --dump board.kipi_si.json.gz        # extract from KiCad only, no window
+uv run pytest tests
+uv run ruff check .                            # lint, as CI does (ruff check . --fix fixes most)
 ```
 
-`requirements.txt` is what KiCad installs into the plugin's venv, and
-`requirements-standalone.txt` what the launcher installs; `tests/core/test_requirements.py`
-keeps them in step with `pyproject.toml`. After changing them, run
-`python .github/scripts/dep_sizes.py`.
+On Windows PowerShell, set the variable first: `$env:KIPI_SI_HOST = "plugin"; uv run python -m kipi_si`.
+`uv sync -p 3.11` builds the environment on another Python, such as the one your KiCad runs.
+
+Dependencies live in `pyproject.toml`: `dependencies` for standalone, the `kicad` extra for the
+plugin, and the `lint`, `test` and `dev` groups for development. Add or change one with
+`uv add` (`uv add --group test ...` for a tool) and commit the updated `uv.lock`; CI fails
+if the lock is out of date. KiCad and the launcher do not use uv: `requirements.txt` is what
+KiCad installs into the plugin's venv and `requirements-standalone.txt` what the launcher
+installs, so update them by hand. `tests/core/test_requirements.py` keeps them in step with
+`pyproject.toml`. After changing them, run `uv run python .github/scripts/dep_sizes.py`.
+CI installs `requirements.txt` as KiCad does, with the newest versions it allows rather than
+the lock's, so a dependency's new release that breaks KiPI-SI shows up there first.
 
 The tests follow the package (`tests/core`, `tests/dc`, `tests/ac`, `tests/noise`,
 `tests/sources`, `tests/gui`, `tests/scripts`). `tests/accuracy` solves the boards in
@@ -494,38 +505,39 @@ CI runs ruff and the test suite for every push and pull request on Windows, Linu
 
 | Path | Purpose |
 |---|---|
-| `kipi_entry.py`, `plugin.json` | KiCad IPC plugin action (runs KiPI as the plugin) |
-| `kipi/__main__.py` | `python -m kipi` / `kipi`: standalone, or the plugin with `KIPI_HOST=plugin` |
-| `kipi_launcher.py`, `.pyw` | Standalone launcher: sets up KiPI's environment on the first start, then starts KiPI in it |
-| `kipi/launcher/` | The launcher itself, standard library only: environment, Python discovery, package list, installer and setup screens |
-| `kipi/host.py` | Plugin or standalone: how KiPI was started |
-| `kipi/core/` | Shared by every analysis: board model, copper geometry, meshing, sparse solvers, 3D meshes, progress reporting |
-| `kipi/sources/` | Where boards come from: the running KiCad (IPC), `.kicad_pcb` files, ODB++, HyperLynx and snapshots |
-| `kipi/dc/` | DC analysis: conduction FEM, power-tree setup and solve, thermal, reports, results views and panel |
-| `kipi/ac/` | AC analysis: PDN impedance over frequency, field solver and sweep, targets, transient, report and panel |
-| `kipi/noise/` | Coupled Noise analysis: waveforms, hot loop parasitics, coupling extraction, victim solves, report and panel |
-| `kipi/si/` | Signal Integrity: 2D cross-section field solver, via models, channel circuit, S-parameters, IBIS, transient, eyes and equalisers, Quick Scan, report and panel |
-| `kipi/gui/` | PySide6 application shell shared by every mode: main window, mode switch, 3D viewer, worker threads, About and Help |
+| `kipi_si_entry.py`, `plugin.json` | KiCad IPC plugin action (runs KiPI-SI as the plugin) |
+| `kipi_si/__main__.py` | `python -m kipi_si` / `kipi_si`: standalone, or the plugin with `KIPI_SI_HOST=plugin` |
+| `kipi_si_launcher.py`, `.pyw` | Standalone launcher: sets up KiPI-SI's environment on the first start, then starts KiPI-SI in it |
+| `kipi_si/launcher/` | The launcher itself, standard library only: environment, Python discovery, package list, installer and setup screens |
+| `kipi_si/host.py` | Plugin or standalone: how KiPI-SI was started |
+| `kipi_si/core/` | Shared by every analysis: board model, copper geometry, meshing, sparse solvers, 3D meshes, progress reporting |
+| `kipi_si/sources/` | Where boards come from: the running KiCad (IPC), `.kicad_pcb` files, ODB++, HyperLynx and snapshots |
+| `kipi_si/dc/` | DC analysis: conduction FEM, power-tree setup and solve, thermal, reports, results views and panel |
+| `kipi_si/ac/` | AC analysis: PDN impedance over frequency, field solver and sweep, targets, transient, report and panel |
+| `kipi_si/noise/` | Coupled Noise analysis: waveforms, hot loop parasitics, coupling extraction, victim solves, report and panel |
+| `kipi_si/si/` | Signal Integrity: 2D cross-section field solver, via models, channel circuit, S-parameters, IBIS, transient, eyes and equalisers, Quick Scan, report and panel |
+| `kipi_si/gui/` | PySide6 application shell shared by every mode: main window, mode switch, 3D viewer, worker threads, About and Help |
 | `docs/help.html` | The user guide opened by **Help**; a single offline HTML file |
 | `docs/solver-guide.html` | The Solver Guide: PI background and how the solvers work |
-| `kipi/compat.py` | Opens results files saved by earlier versions, from before modules moved |
+| `kipi_si/compat.py` | Opens results files saved by earlier versions, from before modules moved |
 | `examples/` | Example boards as snapshots with their PI setups, and the scripts that generate them |
 
 ## License
 
-KiPI is free software: you can redistribute it and/or modify it under the terms of the
+KiPI-SI is free software: you can redistribute it and/or modify it under the terms of the
 [GNU General Public License](LICENSE) as published by the Free Software Foundation, either
 version 3 of the License, or (at your option) any later version. It is distributed WITHOUT
-ANY WARRANTY; see the license for details. Copyright © 2026 Drew Maatman.
+ANY WARRANTY; see the license for details. Copyright © 2026 Drew Maatman (KiPI) and
+the KiPI-SI contributors.
 
-**Note on the mesher.** KiPI meshes copper with Jonathan Shewchuk's
+**Note on the mesher.** KiPI-SI meshes copper with Jonathan Shewchuk's
 [Triangle](https://www.cs.cmu.edu/~quake/triangle.html), through the
 [`triangle`](https://pypi.org/project/triangle/) Python package. Triangle is not open source
 in the OSI sense. Its author's terms allow free use and redistribution, but it **may not be
-sold or included in commercial products without a license from its author**. Using KiPI for
-your own design work is fine. The meshing code is isolated in `kipi/core/mesh/` for this reason.
+sold or included in commercial products without a license from its author**. Using KiPI-SI for
+your own design work is fine. The meshing code is isolated in `kipi_si/core/mesh/` for this reason.
 
 The other dependencies are under permissive licenses, apart from PySide6 (LGPL-3.0). All of
 them are compatible with the GPL.
 
-The author of KiPI prohibits the package from inclusion in commercial software. Use it, fork it, and modify it to your heart's content.
+The author of KiPI-SI prohibits the package from inclusion in commercial software. Use it, fork it, and modify it to your heart's content.

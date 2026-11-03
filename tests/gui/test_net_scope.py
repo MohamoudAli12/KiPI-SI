@@ -14,8 +14,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from qtpy.QtWidgets import QApplication  # noqa: E402
 
-from kipi.core import yaml_io  # noqa: E402
-from kipi.dc.pi.model import PISetup, setup_path  # noqa: E402
+from kipi_si.core import yaml_io  # noqa: E402
+from kipi_si.dc.pi.model import PISetup, setup_path  # noqa: E402
 from phase_boards import board, two_phase  # noqa: E402
 
 pytestmark = pytest.mark.usefixtures("no_3d")
@@ -43,7 +43,7 @@ def _idle(app, w, timeout=30.0):
 
 
 def _window(app, snap):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     w._set_snapshot(snap)
     _idle(app, w)
@@ -117,7 +117,7 @@ def test_reloading_from_kicad_keeps_unsaved_ticks(app, tmp_path):
 def test_a_setup_saved_before_nets_were_stored_ticks_the_nets_it_uses(app, tmp_path):
     d = two_phase(ground=True).to_dict()
     del d["nets"]
-    (tmp_path / "multiphase.kipi-setup.json").write_text(json.dumps(d), encoding="utf-8")
+    (tmp_path / "multiphase.kipi_si-setup.json").write_text(json.dumps(d), encoding="utf-8")
     w = _window(app, _board(tmp_path))
     assert {"VIN", "VOUT", "GND"} <= set(w._checked_nets())
     w.close()
@@ -125,16 +125,16 @@ def test_a_setup_saved_before_nets_were_stored_ticks_the_nets_it_uses(app, tmp_p
 
 def test_a_json_setup_is_read_with_a_warning_and_saved_as_yaml(app, tmp_path):
     # #76: JSON setups still open, are deprecated, and the next save writes YAML only.
-    legacy = tmp_path / "multiphase.kipi-setup.json"
+    legacy = tmp_path / "multiphase.kipi_si-setup.json"
     legacy.write_text(json.dumps(PISetup(nets=["VIN"]).to_dict()), encoding="utf-8")
     w = _window(app, _board(tmp_path))
     assert w._checked_nets() == ["VIN"]
     assert "deprecated" in w.log_view.toPlainText()
-    assert "saved as multiphase.kipi-setup.yml" in w.setup_bar.lbl_file.text()
+    assert "saved as multiphase.kipi_si-setup.yml" in w.setup_bar.lbl_file.text()
     _tick(app, w, {"VIN", "VOUT"})
     w._save_setup()
     w.close()
-    yml = tmp_path / "multiphase.kipi-setup.yml"
+    yml = tmp_path / "multiphase.kipi_si-setup.yml"
     assert set(yaml_io.loads(yml.read_text(encoding="utf-8"))["nets"]) == {"VIN", "VOUT"}
     assert json.loads(legacy.read_text(encoding="utf-8"))["nets"] == ["VIN"]   # untouched
     w = _window(app, _board(tmp_path))         # the YAML wins from then on

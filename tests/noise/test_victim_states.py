@@ -6,13 +6,13 @@ import os
 import numpy as np
 import pytest
 
-from kipi.ac.model import CapModel
-from kipi.core import yaml_io
-from kipi.dc.pi.model import PISetup
-from kipi.noise.checks import seed_phases
-from kipi.noise.model import Aggressor, Victim, logic_levels
-from kipi.noise.report import load_results, save_results
-from kipi.noise.solver import solve_noise
+from kipi_si.ac.model import CapModel
+from kipi_si.core import yaml_io
+from kipi_si.dc.pi.model import PISetup
+from kipi_si.noise.checks import seed_phases
+from kipi_si.noise.model import Aggressor, Victim, logic_levels
+from kipi_si.noise.report import load_results, save_results
+from kipi_si.noise.solver import solve_noise
 from noise_boards import buck_board, buck_setup
 
 
@@ -95,7 +95,7 @@ def test_each_state_is_solved_with_its_own_driver(tmp_path):
     assert lo.excursion_v < 0.25 * hi.excursion_v
     assert od.peak_v == pytest.approx(float(np.max(np.abs(hi.receiver_v.samples(n)))))
     assert any("held low" in line for line in r.summary_lines())
-    back = load_results(save_results(tmp_path / "s.kipi-noise-results", {r.aggressor: r},
+    back = load_results(save_results(tmp_path / "s.kipi_si-noise-results", {r.aggressor: r},
                                      "b", setup))["results"]["U1 buck"].victims[1]
     assert [st.name for st in back.states] == ["high", "low"]
     assert np.allclose(back.states[1].receiver_v.c, lo.receiver_v.c)
@@ -114,7 +114,7 @@ def app():
 
 
 def test_the_plot_shows_the_line_held_high_and_low(app):
-    from kipi.noise.gui.plot import NoisePlot
+    from kipi_si.noise.gui.plot import NoisePlot
     snap = buck_board(victim_gap=0.2)
     od = Victim("SIG")
     od.apply_preset("open_drain")
@@ -138,8 +138,8 @@ def test_the_plot_shows_the_line_held_high_and_low(app):
 
 
 def test_the_editor_sets_the_driving_low_resistance(app):
-    from kipi.noise.gui.panel import NoisePanel
-    from kipi.noise.gui.panel import _get_optional
+    from kipi_si.noise.gui.panel import NoisePanel
+    from kipi_si.noise.gui.panel import _get_optional
     p = NoisePanel()
     setup = _setup(buck_board(victim_gap=0.2), [])
     p.set_board(buck_board(victim_gap=0.2), setup)

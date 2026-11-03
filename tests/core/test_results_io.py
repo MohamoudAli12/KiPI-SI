@@ -1,5 +1,5 @@
 """Results files (#99): JSON and NumPy arrays in a zip, which open on any machine and cannot
-run code, and the safer reading of the pickles KiPI wrote before."""
+run code, and the safer reading of the pickles KiPI-SI wrote before."""
 
 import gzip
 import io
@@ -16,15 +16,15 @@ from typing import List
 import numpy as np
 import pytest
 
-from kipi import compat
-from kipi.core import results_io
-from kipi.core.model.board import CopperLayer, Stackup
-from kipi.dc.solver.post import SeriesResult, TerminalResult
-from kipi.dc.solver.setup import NetProblem, VoltageSource
+from kipi_si import compat
+from kipi_si.core import results_io
+from kipi_si.core.model.board import CopperLayer, Stackup
+from kipi_si.dc.solver.post import SeriesResult, TerminalResult
+from kipi_si.dc.solver.setup import NetProblem, VoltageSource
 
 
 def _round_trip(tmp_path, data):
-    path = results_io.write(tmp_path / "r.kipi-results", {"format": 2}, data)
+    path = results_io.write(tmp_path / "r.kipi_si-results", {"format": 2}, data)
     return results_io.read(path)["data"]
 
 
@@ -64,7 +64,7 @@ def test_fields_added_later_get_their_defaults(tmp_path):
     _rewrite(path, lambda doc: [doc["data"]["f"].pop(k) for k in ("pad_ids", "i_pads")])
     back = results_io.read(path)["data"]
     assert back.pad_ids == [] and back.i_pads == [] and back.name == "U1"
-    # A field this KiPI no longer has is dropped.
+    # A field this KiPI-SI no longer has is dropped.
     _rewrite(path, lambda doc: doc["data"]["f"].update(gone=1))
     assert not hasattr(results_io.read(path)["data"], "gone")
     # A class whose __setstate__ fills in what older files lack still gets to.
@@ -85,13 +85,13 @@ def test_the_file_is_a_zip_of_strict_json_and_plain_arrays(tmp_path):
 
 
 @pytest.mark.parametrize("name", [
-    "os.system",                                    # not KiPI at all
+    "os.system",                                    # not KiPI-SI at all
     "builtins.eval",
-    "kipi.gui.main_window.MainWindow",              # KiPI, but not results
-    "kipi.launcher.install.Installer",
-    "kipi.core.progress.ProgressReporter",          # results package, but not a dataclass
-    "kipi.dc.pi.report.save_results",               # a function
-    "kipi.core._private.X",
+    "kipi_si.gui.main_window.MainWindow",              # KiPI-SI, but not results
+    "kipi_si.launcher.install.Installer",
+    "kipi_si.core.progress.ProgressReporter",          # results package, but not a dataclass
+    "kipi_si.dc.pi.report.save_results",               # a function
+    "kipi_si.core._private.X",
 ])
 def test_only_kipis_result_classes_are_built(tmp_path, name):
     path = results_io.write(tmp_path / "r", {}, None)
@@ -101,7 +101,7 @@ def test_only_kipis_result_classes_are_built(tmp_path, name):
 
 
 def test_things_results_never_hold_are_refused_when_saving(tmp_path):
-    old = tmp_path / "r.kipi-results"
+    old = tmp_path / "r.kipi_si-results"
     old.write_bytes(b"earlier results")
     with pytest.raises(TypeError):
         results_io.write(old, {}, {"x": object()})
@@ -119,16 +119,16 @@ def test_things_results_never_hold_are_refused_when_saving(tmp_path):
 
 def test_not_a_results_file(tmp_path):
     (tmp_path / "x").write_bytes(b"PK\x03\x04 not really")
-    with pytest.raises(ValueError, match="Not a KiPI results file"):
+    with pytest.raises(ValueError, match="Not a KiPI-SI results file"):
         results_io.read(tmp_path / "x")
     with zipfile.ZipFile(tmp_path / "y", "w") as z:
         z.writestr("other.txt", "x")
-    with pytest.raises(ValueError, match="Not a KiPI results file"):
+    with pytest.raises(ValueError, match="Not a KiPI-SI results file"):
         results_io.read(tmp_path / "y")
 
 
 # ---------------------------------------------------------------------------
-# Pickles from KiPI 0.7 and earlier
+# Pickles from KiPI-SI 0.7 and earlier
 # ---------------------------------------------------------------------------
 
 class _Evil:
@@ -143,7 +143,7 @@ def _legacy(path, payload):
 
 
 def test_legacy_pickles_cannot_name_functions(tmp_path):
-    path = _legacy(tmp_path / "r.kipi-results", {"format": 1, "tree": _Evil()})
+    path = _legacy(tmp_path / "r.kipi_si-results", {"format": 1, "tree": _Evil()})
     assert results_io.is_legacy(path)
     with gzip.open(path) as fh, pytest.raises(pickle.UnpicklingError, match="system"):
         compat.Unpickler(fh).load()

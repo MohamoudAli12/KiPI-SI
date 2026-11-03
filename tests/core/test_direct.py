@@ -4,9 +4,9 @@ import numpy as np
 import pytest
 import scipy.sparse as sp
 
-from kipi.core.progress import NULL
-from kipi.core.solver import direct, spd
-from kipi.dc.solver.setup import SolveSettings
+from kipi_si.core.progress import NULL
+from kipi_si.core.solver import direct, spd
+from kipi_si.dc.solver.setup import SolveSettings
 
 
 def _poisson(n=60, scale=None):
@@ -61,7 +61,7 @@ def test_missing_pardiso_is_detected_once(monkeypatch):
 def test_environment_variable_forces_superlu(monkeypatch):
     monkeypatch.setattr(direct, "_pardiso", None)
     monkeypatch.setattr(direct, "_pardiso_problem", None)
-    monkeypatch.setenv("KIPI_DIRECT_SOLVER", "superlu")
+    monkeypatch.setenv("KIPI_SI_DIRECT_SOLVER", "superlu")
     assert direct.backend() == "superlu"
 
 

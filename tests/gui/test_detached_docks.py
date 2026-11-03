@@ -12,7 +12,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from qtpy.QtCore import Qt  # noqa: E402
 from qtpy.QtWidgets import QApplication, QDockWidget, QLabel, QMainWindow  # noqa: E402
 
-from kipi.gui import docks  # noqa: E402
+from kipi_si.gui import docks  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -80,7 +80,7 @@ def test_f11_toggles_full_screen(window):
 
 
 def test_the_main_window_docks_are_detachable(app, no_3d):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     try:
         for dock in w.findChildren(QDockWidget):

@@ -3,8 +3,8 @@
 import importlib.util
 from pathlib import Path
 
-from kipi.core.model.snapshot_io import load
-from kipi.dc.pi.model import PISetup
+from kipi_si.core.model.snapshot_io import load
+from kipi_si.dc.pi.model import PISetup
 
 ROOT = Path(__file__).resolve().parents[2]
 _spec = importlib.util.spec_from_file_location(

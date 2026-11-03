@@ -9,7 +9,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from qtpy.QtWidgets import QApplication, QDialog  # noqa: E402
 
-from kipi.dc.pi.accuracy import feedback_divider_accuracy  # noqa: E402
+from kipi_si.dc.pi.accuracy import feedback_divider_accuracy  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -42,8 +42,8 @@ def test_invalid_feedback_divider_inputs_have_no_result(args):
 
 
 def test_calculator_updates_vrm_nominal_and_absolute_limits(app, monkeypatch):
-    from kipi.dc.gui import accuracy_calc
-    from kipi.dc.gui.pi_panel import PIPanel
+    from kipi_si.dc.gui import accuracy_calc
+    from kipi_si.dc.gui.pi_panel import PIPanel
     from phase_boards import board, two_phase
 
     setup = two_phase(kind="smps")

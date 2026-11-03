@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from glb_writer import TRI, glb, kicad_like, prim
-from kipi.core.viz.glb import node_matrix, read_glb
+from kipi_si.core.viz.glb import node_matrix, read_glb
 
 
 def test_parts_are_keyed_by_their_named_node():

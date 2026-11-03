@@ -2,8 +2,8 @@
 
 import pytest
 
-from kipi.dc.pi.model import Load, PinRef, PISetup, SensePoint, validate
-from kipi.dc.pi.tree import solve_tree
+from kipi_si.dc.pi.model import Load, PinRef, PISetup, SensePoint, validate
+from kipi_si.dc.pi.tree import solve_tree
 
 from test_tree import board_two_pin
 from tree_boards import R, board, by_name, setup
@@ -67,5 +67,5 @@ def test_validation_and_round_trip(tmp_path):
     assert any("mesh sense point 2 has no sense pins" in e for e in errors)
     assert any("(sense point 3): sense pins must be on" in e for e in errors)
     s = _two_points()
-    path = s.save(tmp_path / "x.kipi-setup.yml")
+    path = s.save(tmp_path / "x.kipi_si-setup.yml")
     assert PISetup.load(path) == s

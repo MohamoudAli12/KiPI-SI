@@ -3,8 +3,8 @@
 import re
 from datetime import datetime
 
-from kipi.core.naming import stamped, timestamp
-from kipi.dc.report.html import report_name
+from kipi_si.core.naming import stamped, timestamp
+from kipi_si.dc.report.html import report_name
 
 WHEN = datetime(2026, 10, 15, 9, 5, 7)
 
@@ -20,4 +20,4 @@ def test_stamped():
 
 
 def test_dc_report_name():
-    assert report_name("board", WHEN) == "board_kipi_report_2026-10-15_090507.html"
+    assert report_name("board", WHEN) == "board_kipi_si_report_2026-10-15_090507.html"

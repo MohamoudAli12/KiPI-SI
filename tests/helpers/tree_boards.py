@@ -2,11 +2,11 @@
 
 from shapely.geometry import box
 
-from kipi.core.model.board import (
+from kipi_si.core.model.board import (
     BoardSnapshot, CopperLayer, DielectricLayer, Net, Pad, Poly, Stackup, Zone,
 )
-from kipi.dc.pi.model import Load, PinRef, PISetup, Vrm
-from kipi.dc.solver.setup import RHO_CU_OHM_MM as RHO, SolveSettings
+from kipi_si.dc.pi.model import Load, PinRef, PISetup, Vrm
+from kipi_si.dc.solver.setup import RHO_CU_OHM_MM as RHO, SolveSettings
 
 F, B = 3, 34
 T = 0.035

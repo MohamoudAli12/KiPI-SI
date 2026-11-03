@@ -7,15 +7,15 @@ import numpy as np
 import pytest
 
 from helpers.si_boards import make_board
-from kipi.si import closed_form as cf
-from kipi.si import sparams
-from kipi.si.board import SIBoard
-from kipi.si.extract import (
+from kipi_si.si import closed_form as cf
+from kipi_si.si import sparams
+from kipi_si.si.board import SIBoard
+from kipi_si.si.extract import (
     BuildOptions, build_channel, follow_series, parse_value, part_value, series_parts,
     via_stack,
 )
-from kipi.si.pairs import diff_target, find_pairs
-from kipi.si.scan import FAIL, PASS, WARN, ScanSettings, scan
+from kipi_si.si.pairs import diff_target, find_pairs
+from kipi_si.si.scan import FAIL, PASS, WARN, ScanSettings, scan
 
 
 @pytest.fixture(scope="module")
@@ -36,7 +36,7 @@ def test_pairs_by_name():
 
 
 def test_an_interface_is_guessed_from_the_nets_own_name():
-    from kipi.si.model import new_channel
+    from kipi_si.si.model import new_channel
     guess = {n: new_channel(n, n.replace("_P", "_N")).protocol for n in (
         "/TS-USB4 Components/M2_PER0_P", "/TS-USB4 Components/M2_PET3_P",
         "/TS-PCIe Components/PCIe_PER0_P", "/USB/D_P", "/Dock/USB4_TX1_P", "/SATA_A_P",
@@ -49,7 +49,7 @@ def test_an_interface_is_guessed_from_the_nets_own_name():
 
 
 def test_matched_generic_buffers_take_the_interfaces_pad_capacitance():
-    from kipi.si.model import new_channel
+    from kipi_si.si.model import new_channel
     serdes, cmos = new_channel("PCIE_TX0_P", "PCIE_TX0_N"), new_channel("CLK")
     assert serdes.driver.c_pf == serdes.receiver.c_pf == pytest.approx(0.5)
     assert cmos.driver.c_pf == cmos.receiver.c_pf == pytest.approx(3.0)
@@ -116,7 +116,7 @@ def test_a_pair_keeps_its_zdiff_beside_an_aggressor():
     """Sections with an aggressor in them still give the pair's Zdiff (the aggressor held
     at 0 V), and a section of P with the aggressor alone gives none."""
     import dataclasses
-    from kipi.core.model.board import Net, Track
+    from kipi_si.core.model.board import Net, Track
     from helpers.si_boards import F
     snap = make_board()
     snap = dataclasses.replace(
@@ -136,8 +136,8 @@ def test_a_pair_keeps_its_zdiff_beside_an_aggressor():
 def test_a_bend_is_a_few_sections():
     """A 90° arc is cut into 30° chords (each a field solve), not the 3D view's 5.6°."""
     import dataclasses
-    from kipi.core.model.board import Track
-    from kipi.si.extract import net_segments
+    from kipi_si.core.model.board import Track
+    from kipi_si.si.extract import net_segments
     from helpers.si_boards import F
     snap = make_board()
     r = 0.5
@@ -155,7 +155,7 @@ def test_a_pair_stays_coupled_round_a_bend():
     coupled over the inner's length with the outer going on alone for the rest, so each
     leg keeps its own length."""
     import dataclasses
-    from kipi.core.model.board import Track
+    from kipi_si.core.model.board import Track
     from helpers.si_boards import F
     c45 = math.cos(math.pi / 4)
 
@@ -182,7 +182,7 @@ def test_offset_legs_pair_all_along():
     middle of the other's segments: the second leg is cut where the first's are, and none
     of either runs alone."""
     import dataclasses
-    from kipi.core.model.board import Track
+    from kipi_si.core.model.board import Track
     from helpers.si_boards import F
     snap = dataclasses.replace(make_board(), tracks=[
         Track("USB_P", F, 0.2, (5.0, 15.0), (20.0, 15.0)),
@@ -199,7 +199,7 @@ def test_a_tight_bend_with_the_reference_inside_stays_coupled():
     chords still pair with them (the rest of each is its tail), as does P's chord beside
     the end of N's straight."""
     import dataclasses
-    from kipi.core.model.board import Track
+    from kipi_si.core.model.board import Track
     from helpers.si_boards import F
     c45 = math.cos(math.pi / 4)
 
@@ -265,8 +265,8 @@ def test_quick_scan(board):
 
 
 def test_plane_pair_matrix():
-    from kipi.si.cavity import cavity_impedance, plane_pair_z, shorted, stitched_impedance
-    from kipi.si.materials import Dielectric
+    from kipi_si.si.cavity import cavity_impedance, plane_pair_z, shorted, stitched_impedance
+    from kipi_si.si.materials import Dielectric
     m = Dielectric(4.2, 0.02)
     f = np.array([1e7, 1e9, 5e9])
     sig = [(30.0, 14.6, 0.15), (31.0, 15.75, 0.15)]
@@ -294,8 +294,8 @@ def test_a_decoupling_capacitor_ends_a_post_in_its_impedance():
     # Planes of two nets (GND and a supply) joined only by a decoupling capacitor: two
     # signal vias share the floating pair's capacitance, 1/(jωC), coupled ever more
     # strongly as the frequency falls, until the capacitor ties the planes together.
-    from kipi.si.cavity import plane_pair_z, shorted
-    from kipi.si.materials import Dielectric
+    from kipi_si.si.cavity import plane_pair_z, shorted
+    from kipi_si.si.materials import Dielectric
     m = Dielectric(4.2, 0.02)
     f = np.array([1e7, 1e8, 1e9])
     sig = [(30.0, 14.6, 0.15), (32.0, 14.6, 0.15)]
@@ -316,8 +316,8 @@ def test_plane_pairs_of_two_nets_take_their_decoupling_capacitors():
     # not-fitted ones and other parts left out.
     import dataclasses
 
-    from kipi.core.model.board import Footprint, Pad
-    from kipi.si.extract import decaps_between
+    from kipi_si.core.model.board import Footprint, Pad
+    from kipi_si.si.extract import decaps_between
     snap = make_board()
     extra_fp, extra_pads = [], []
     for ref, value, x, nets in (("C90", "100n", 10.0, ("GND", "VCC")),
@@ -345,7 +345,7 @@ def test_channel_vias_are_coupled(board):
 
 
 def test_slow_control_nets_by_name():
-    from kipi.si.scan import is_slow
+    from kipi_si.si.scan import is_slow
     for n in ("/ACQ and FE Voltage Regs/FE_EN", "nRESET", "PGOOD", "/Power/3V3_PG", "LED2",
               "I2C_SDA", "SCL", "JTAG_TCK", "FPGA_INIT_B", "/IO/GPIO12", "~{RST}"[2:-1]):
         assert is_slow(n), n
@@ -355,8 +355,8 @@ def test_slow_control_nets_by_name():
 
 
 def test_cuts_alike_share_a_solve():
-    from kipi.si.board import dielectric_bands
-    from kipi.si.xsection import Cache, Conductor
+    from kipi_si.si.board import dielectric_bands
+    from kipi_si.si.xsection import Cache, Conductor
     bands = dielectric_bands(make_board().stackup)
     box = (-1.5, 1.5, -2.0, 3.6)
 
@@ -375,7 +375,7 @@ def test_cuts_alike_share_a_solve():
 
 def test_quick_scan_in_parallel_matches_serial(board):
     one = scan(board.snap, settings=ScanSettings(workers=1), board=SIBoard(board.snap))
-    import kipi.si.scan as sc
+    import kipi_si.si.scan as sc
     old = sc.PARALLEL_MIN
     sc.PARALLEL_MIN = 1
     try:
@@ -392,8 +392,8 @@ def test_quick_scan_in_parallel_matches_serial(board):
 
 
 def test_screened_cut_keeps_what_bears_on_the_trace():
-    from kipi.si.scan import screened
-    from kipi.si.xsection import GROUND, Conductor
+    from kipi_si.si.scan import screened
+    from kipi_si.si.xsection import GROUND, Conductor
     # A trace 0.1 mm over a plane, another plane 1 mm above, a far trace and copper on a
     # layer beyond the lower plane.
     conds = [Conductor.rect(-0.1, 0.1, 1.0, 1.035, "S"),
@@ -432,7 +432,7 @@ def test_partner_missing_from_the_cut_goes_on_alone(monkeypatch):
 def test_the_builds_dnp_parts_are_not_followed():
     # KiCad's DNP (or the chosen assembly variant's) leaves R1 off for every channel,
     # with the channel's own Not fitted list; a variant the board lacks: its own DNP.
-    from kipi.si.model import SISettings, new_channel, not_fitted
+    from kipi_si.si.model import SISettings, new_channel, not_fitted
     snap = make_board()
     r1 = next(f for f in snap.footprints if f.reference == "R1")
     ch = new_channel("CLK")

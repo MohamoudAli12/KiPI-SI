@@ -4,7 +4,7 @@ import dataclasses
 
 import pytest
 
-from kipi.dc.solver import SolveError, pads_for
+from kipi_si.dc.solver import SolveError, pads_for
 from tree_boards import board
 
 

@@ -6,8 +6,8 @@ import os
 import numpy as np
 import pytest
 
-from kipi.dc.pi.model import PinRef
-from kipi.noise.markers import noise_markers
+from kipi_si.dc.pi.model import PinRef
+from kipi_si.noise.markers import noise_markers
 from validation_boards import open_board
 
 
@@ -25,8 +25,8 @@ def test_each_victim_marks_its_driver_and_receiver():
 
 
 def test_ac_probes_are_not_shown():
-    from kipi.ac.model import Probe
-    from kipi.ac.viz.markers import ac_markers
+    from kipi_si.ac.model import Probe
+    from kipi_si.ac.viz.markers import ac_markers
     snap, setup = open_board("coupled_noise")
     setup.probes.append(Probe("U2", PinRef("U2", "VOUT", ["1"]), PinRef("U2", "GND", ["2"])))
     nets = ["VIN", "VOUT", "GND"]
@@ -49,7 +49,7 @@ def test_the_panel_names_the_selected_victim():
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from qtpy.QtWidgets import QApplication
     QApplication.instance() or QApplication([])
-    from kipi.noise.gui.panel import NoisePanel
+    from kipi_si.noise.gui.panel import NoisePanel
     snap, setup = open_board("coupled_noise")
     p = NoisePanel()
     p.set_board(snap, setup)

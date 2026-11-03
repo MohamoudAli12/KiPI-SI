@@ -20,7 +20,7 @@ def app():
 
 @pytest.fixture
 def window(app, no_3d):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     yield w
     w.close()
@@ -55,7 +55,7 @@ def test_power_tree_buttons_are_pi_only(window):
 
 def test_pi_plots_tab_comes_with_a_dc_result_in_dc_mode_only(window):
     from phase_boards import board, two_phase
-    from kipi.dc.pi.tree import solve_tree
+    from kipi_si.dc.pi.tree import solve_tree
     _mode(window, "dc").setChecked(True)
     window._set_tree(solve_tree(board(), two_phase()), {})
     tab = window.views.indexOf(window._pi_plot)

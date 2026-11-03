@@ -2,12 +2,12 @@
 
     python examples/validation/make_boards.py
 
-writes ``<name>/<name>.kipi.json.gz`` and ``<name>/<name>.kipi-setup.yml`` for every board
+writes ``<name>/<name>.kipi_si.json.gz`` and ``<name>/<name>.kipi_si-setup.yml`` for every board
 below. ``tests/accuracy`` solves each one and compares the results with the engineering
 formulas they were designed around, so a change that moves the solvers' answers fails CI.
 Open any of them without KiCad:
 
-    python -m kipi --snapshot examples/validation/planes/planes.kipi.json.gz
+    python -m kipi_si --snapshot examples/validation/planes/planes.kipi_si.json.gz
 
 The dimensions live in this module (the classes below), so the tests and the boards
 always agree on them.
@@ -51,14 +51,14 @@ from shapely.geometry import MultiPolygon, Point, box
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1]))
 
-from kipi.ac.model import CapModel, Probe  # noqa: E402
-from kipi.core.model.snapshot_io import save  # noqa: E402
-from kipi.core.model.board import (  # noqa: E402
+from kipi_si.ac.model import CapModel, Probe  # noqa: E402
+from kipi_si.core.model.snapshot_io import save  # noqa: E402
+from kipi_si.core.model.board import (  # noqa: E402
     BoardSnapshot, CopperLayer, DielectricLayer, Footprint, Net, Pad, Poly, Stackup, Track, Via,
     Zone,
 )
-from kipi.dc.pi.model import DcLink, Load, PinRef, PISetup, Vrm  # noqa: E402
-from kipi.dc.solver.setup import SolveSettings  # noqa: E402
+from kipi_si.dc.pi.model import DcLink, Load, PinRef, PISetup, Vrm  # noqa: E402
+from kipi_si.dc.solver.setup import SolveSettings  # noqa: E402
 
 F, IN1, IN2, B = 3, 4, 5, 34
 OZ1, OZ_HALF, OZ2 = 0.035, 0.0175, 0.070
@@ -467,7 +467,7 @@ class CoupledNoise:
 
 
 def coupled_noise():
-    from kipi.noise.model import Aggressor, AggressorPhase, Victim
+    from kipi_si.noise.model import Aggressor, AggressorPhase, Victim
     g = CoupledNoise
     b = Board("coupled_noise", stackup())
 
@@ -530,7 +530,7 @@ BOARDS = {f.__name__: f for f in (skinny_traces, right_angle, layer_change, plan
 def paths(name: str):
     """The snapshot and setup file of board ``name``."""
     d = HERE / name
-    return d / f"{name}.kipi.json.gz", d / f"{name}.kipi-setup.yml"
+    return d / f"{name}.kipi_si.json.gz", d / f"{name}.kipi_si-setup.yml"
 
 
 def write(name: str):

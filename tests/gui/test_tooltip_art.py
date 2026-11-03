@@ -1,4 +1,4 @@
-"""Drawings in tooltips (#116): SVG templates in kipi/gui/graphics, coloured from the
+"""Drawings in tooltips (#116): SVG templates in kipi_si/gui/graphics, coloured from the
 palette, rendered once and shown under the tooltip text, or the text alone without them."""
 
 import os
@@ -12,7 +12,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from qtpy.QtGui import QColor, QImage, QPalette  # noqa: E402
 from qtpy.QtWidgets import QApplication, QWidget  # noqa: E402
 
-from kipi.gui import tooltip_art as ta  # noqa: E402
+from kipi_si.gui import tooltip_art as ta  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -87,7 +87,7 @@ def test_without_svg_support_the_tooltip_is_its_text(app, monkeypatch):
 def test_every_drawing_shows_in_a_tooltip(app, no_3d):
     """Each drawing in the folder is used, so the folder holds no strays."""
     pytest.importorskip("pyvistaqt")
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     w._build_modes()                # the AC and Coupled Noise panels: built when first wanted
     tips = " ".join(c.toolTip() for c in w.findChildren(QWidget))
@@ -107,8 +107,8 @@ def test_pin_pickers_show_their_drawing_once_under_all_their_text(app, no_3d):
     """Each box of a pin picker shows the row's text, the box's own line and any
     'used by' note above one drawing, in the DC and AC VRM editors alike (#116)."""
     pytest.importorskip("pyvistaqt")
-    from kipi.dc.gui.pi_panel import LinkEditor, VrmEditor
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.dc.gui.pi_panel import LinkEditor, VrmEditor
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     w._build_modes()                # built when first wanted
     vrms = w.findChildren(VrmEditor)

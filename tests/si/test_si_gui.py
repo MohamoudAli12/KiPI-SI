@@ -11,8 +11,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from qtpy.QtWidgets import QApplication, QFormLayout  # noqa: E402
 
 from helpers.si_boards import make_board  # noqa: E402
-from kipi.dc.pi.model import PISetup  # noqa: E402
-from kipi.si.model import new_channel  # noqa: E402
+from kipi_si.dc.pi.model import PISetup  # noqa: E402
+from kipi_si.si.model import new_channel  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -22,9 +22,9 @@ def app():
 
 @pytest.fixture(scope="module")
 def solved():
-    from kipi.si.model import new_channel
-    from kipi.si.scan import scan, settings_of
-    from kipi.si.solver import solve_channel
+    from kipi_si.si.model import new_channel
+    from kipi_si.si.scan import scan, settings_of
+    from kipi_si.si.solver import solve_channel
     snap = make_board()
     setup = PISetup()
     setup.si_channels = [new_channel("USB_P", "USB_N")]
@@ -35,7 +35,7 @@ def solved():
 
 @pytest.fixture
 def panel(app):
-    from kipi.si.gui.panel import SIPanel
+    from kipi_si.si.gui.panel import SIPanel
     p = SIPanel()
     p.set_board(make_board(), PISetup())
     yield p
@@ -90,7 +90,7 @@ def test_the_editor_writes_overrides(panel):
 
 
 def test_a_result_shows_its_checks_and_plots(app, panel, solved):
-    from kipi.si.gui.plot import VIEWS, SIPlot
+    from kipi_si.si.gui.plot import VIEWS, SIPlot
     snap, setup, result, _ = solved
     panel.set_board(snap, setup)
     shown = []
@@ -111,7 +111,7 @@ def test_a_result_shows_its_checks_and_plots(app, panel, solved):
 
 
 def test_the_solved_channels_compared(app, solved):
-    from kipi.si.gui.plot import SIPlot
+    from kipi_si.si.gui.plot import SIPlot
     results = _two_results(solved[2])
     plot = SIPlot()
     plot.set_result(results[0])
@@ -126,7 +126,7 @@ def test_the_solved_channels_compared(app, solved):
 
 
 def test_the_pdf_report(app, solved, tmp_path):
-    from kipi.si.html_report import write_si_report
+    from kipi_si.si.html_report import write_si_report
     snap, setup, result, sc = solved
     out = write_si_report(tmp_path / "r.pdf", result, snap, setup, sc)
     assert out.stat().st_size > 10_000
@@ -144,7 +144,7 @@ def _two_results(result):
 
 
 def test_one_report_of_several_channels(app, solved, tmp_path):
-    from kipi.si.html_report import multi_report_name, write_si_reports
+    from kipi_si.si.html_report import multi_report_name, write_si_reports
     snap, setup, result, sc = solved
     results = _two_results(result)
     html = write_si_reports(tmp_path / "r.html", results, snap, setup, sc)
@@ -163,7 +163,7 @@ def test_one_report_of_several_channels(app, solved, tmp_path):
 
 def test_the_panel_asks_for_a_report_of_the_ticked_channels(panel, solved, monkeypatch):
     from qtpy.QtCore import Qt
-    from kipi.si.gui.report_dialog import ReportChannelsDialog
+    from kipi_si.si.gui.report_dialog import ReportChannelsDialog
     _, _, result, _ = solved
     results = _two_results(result)
     panel.setup.si_channels = [r.channel for r in results]
@@ -187,7 +187,7 @@ def test_the_panel_asks_for_a_report_of_the_ticked_channels(panel, solved, monke
 def test_the_channels_dialog_needs_one_ticked(app, solved):
     from qtpy.QtCore import Qt
     from qtpy.QtWidgets import QDialogButtonBox
-    from kipi.si.gui.report_dialog import ReportChannelsDialog
+    from kipi_si.si.gui.report_dialog import ReportChannelsDialog
     results = _two_results(solved[2])
     dlg = ReportChannelsDialog(results)
     ok = dlg.buttons.button(QDialogButtonBox.Ok)
@@ -198,9 +198,9 @@ def test_the_channels_dialog_needs_one_ticked(app, solved):
 
 
 def test_results_round_trip(solved, tmp_path):
-    from kipi.si import report
+    from kipi_si.si import report
     snap, setup, result, sc = solved
-    f = report.save_results(tmp_path / "x.kipi-si-results", {result.channel.name: result}, sc,
+    f = report.save_results(tmp_path / "x.kipi_si-si-results", {result.channel.name: result}, sc,
                             "b", setup)
     d = report.load_results(f)
     r = d["results"][result.channel.name]
@@ -215,7 +215,7 @@ def test_the_3d_view_settings(panel, solved):
     """Settings' 3D view: the Quick Scan's and a result's impedance and the channel's TX
     and RX labels,
     each stored in the setup, redrawing the view, and loaded with the board."""
-    from kipi.si.model import settings_from_dict
+    from kipi_si.si.model import settings_from_dict
     _, _, _, sc = solved
     panel.show_scan(sc)
     redraws = []
@@ -261,7 +261,7 @@ def test_solve_is_under_the_channel_settings(panel):
 def test_not_fitted_parts_round_trip(panel):
     import dataclasses
 
-    from kipi.si.model import channel_from_dict, new_channel
+    from kipi_si.si.model import channel_from_dict, new_channel
     setup = PISetup()
     ch = new_channel("CLK")
     ch.name = "CLK"

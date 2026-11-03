@@ -4,9 +4,9 @@ import json
 
 import pytest
 
-from kipi.sources.kicad_ipc import colors
-from kipi.core.model.board import CopperLayer
-from kipi.core.viz import layer_colors
+from kipi_si.sources.kicad_ipc import colors
+from kipi_si.core.model.board import CopperLayer
+from kipi_si.core.viz import layer_colors
 
 
 @pytest.fixture
@@ -128,7 +128,7 @@ def test_no_kicad_settings_gives_the_default_theme(kicad_home):
 
 
 def test_meshes_use_the_colors_given():
-    from kipi.core.viz import meshes
+    from kipi_si.core.viz import meshes
     top = CopperLayer(id=3, name="F.Cu", index=0, thickness_mm=0.035, z_bottom_mm=1.6)
     inner = CopperLayer(id=5, name="In2.Cu", index=1, thickness_mm=0.035, z_bottom_mm=1.0)
     try:

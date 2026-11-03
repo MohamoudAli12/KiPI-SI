@@ -1,6 +1,6 @@
 """A stand-in for a running KiCad, speaking the IPC API's own protobuf messages.
 
-KiPI's extractor talks to kipy's real ``Board``. Here the transport is replaced by
+KiPI-SI's extractor talks to kipy's real ``Board``. Here the transport is replaced by
 :class:`FakeKiCad`, which answers each command the way a given KiCad version does: a
 command that version did not have yet is refused with ``AS_UNHANDLED``, as KiCad does
 for any request it has no handler for. kipy's own parsing therefore runs unchanged, so a
@@ -13,7 +13,7 @@ The board is a 4-layer test board (all coordinates in mm):
 * ``GND``: pad U1.2, a plated slot (2.0 x 0.8 mm drill, pad turned 90 degrees), and a
   filled zone on In1.Cu. In1.Cu is named "GND_PLANE" by the user.
 * A rule area (not copper), and a 30 x 20 mm Edge.Cuts outline.
-* Silkscreen: a line on F.SilkS, U1's reference on F.SilkS, and the text "KiPI" on
+* Silkscreen: a line on F.SilkS, U1's reference on F.SilkS, and the text "KiPI-SI" on
   B.SilkS. KiCad draws each text as one 2 mm stroke through its position.
 """
 
@@ -41,7 +41,7 @@ NAMES = {L.BL_F_Cu: "F.Cu", L.BL_In1_Cu: "GND_PLANE", L.BL_In2_Cu: "In2.Cu",
 CU_UM = {L.BL_F_Cu: 35, L.BL_In1_Cu: 17.5, L.BL_In2_Cu: 17.5, L.BL_B_Cu: 35}
 DIELECTRICS = [("PP 2116", 4.3, 0.2), ("Core FR4", 4.6, 1.065), ("PP 2116", 4.3, 0.2)]
 
-# The KiCad release that added each command KiPI uses (older ones have no handler).
+# The KiCad release that added each command KiPI-SI uses (older ones have no handler).
 ADDED = {
     "GetNetClassForNets": (9, 0, 1),
     "CheckPadstackPresenceOnLayers": (9, 0, 3),
@@ -50,7 +50,7 @@ ADDED = {
 }
 GROUPS_ADDED = (10, 0, 0)          # KOT_PCB_GROUP in GetItems
 
-# Versions worth testing: each is the first with something KiPI uses, the latest, and
+# Versions worth testing: each is the first with something KiPI-SI uses, the latest, and
 # 9.0.7 (the last without GetBoardLayerName, as reported by a user).
 # CI's KiCad versions job has a step for each (tests/core/test_ci.py checks).
 VERSIONS = ["9.0.0", "9.0.1", "9.0.3", "9.0.5", "9.0.7", "9.0.8", "10.0.0", "10.0.1", "10.0.6"]
@@ -212,7 +212,7 @@ class FakeBoardData:
         t = bt.BoardText()
         t.id.value = "silk-text"
         t.layer = L.BL_B_SilkS
-        t.text.text = "KiPI"
+        t.text.text = "KiPI-SI"
         _v(t.text.position, 15, 10)
         self.texts.append(_pack(t))
 

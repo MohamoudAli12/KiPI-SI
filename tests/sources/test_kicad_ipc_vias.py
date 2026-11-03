@@ -8,7 +8,7 @@ pytest.importorskip("kipy")
 
 from kipy.proto.board import board_types_pb2 as b  # noqa: E402
 
-from kipi.sources.kicad_ipc.vias import _filled, _pad_sizes  # noqa: E402
+from kipi_si.sources.kicad_ipc.vias import _filled, _pad_sizes  # noqa: E402
 
 NM = 1_000_000
 F, IN1, IN2, B = b.BL_F_Cu, b.BL_In1_Cu, b.BL_In2_Cu, b.BL_B_Cu

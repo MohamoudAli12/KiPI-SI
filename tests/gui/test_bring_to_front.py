@@ -1,4 +1,4 @@
-"""KiPI's window comes to the front when it opens (#112)."""
+"""KiPI-SI's window comes to the front when it opens (#112)."""
 
 import os
 import sys
@@ -10,7 +10,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from qtpy.QtWidgets import QApplication, QMainWindow  # noqa: E402
 
-from kipi.gui import single_instance as si  # noqa: E402
+from kipi_si.gui import single_instance as si  # noqa: E402
 
 
 @pytest.fixture(scope="module")

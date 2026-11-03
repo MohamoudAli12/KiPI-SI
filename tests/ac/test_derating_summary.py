@@ -6,12 +6,12 @@ import os
 import pytest
 
 from ac_boards import plane_pair, plane_setup
-from kipi.ac.bias import apply_derating
-from kipi.ac.html_report import _srf_text, write_ac_report
-from kipi.ac.model import CapModel
-from kipi.ac.solver import solve_ac
-from kipi.ac.solver.fem import PortDef
-from kipi.dc.pi.model import PinRef, PISetup, Vrm
+from kipi_si.ac.bias import apply_derating
+from kipi_si.ac.html_report import _srf_text, write_ac_report
+from kipi_si.ac.model import CapModel
+from kipi_si.ac.solver import solve_ac
+from kipi_si.ac.solver.fem import PortDef
+from kipi_si.dc.pi.model import PinRef, PISetup, Vrm
 
 VRM = Vrm("VRM1", PinRef("U1", "+3V3", ["1"]), 3.3)
 
@@ -74,7 +74,7 @@ def test_the_sweep_tab_groups_the_deratings():
     pytest.importorskip("qtpy")
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from qtpy.QtWidgets import QApplication
-    from kipi.ac.gui.panel import ACPanel
+    from kipi_si.ac.gui.panel import ACPanel
     app = QApplication.instance() or QApplication([])   # noqa: F841
     p = ACPanel()
     try:

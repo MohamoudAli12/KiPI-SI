@@ -13,7 +13,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from qtpy.QtWidgets import QApplication, QRadioButton  # noqa: E402
 
 from helpers.si_boards import make_board, make_setup  # noqa: E402
-from kipi.core.progress import NULL  # noqa: E402
+from kipi_si.core.progress import NULL  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -22,12 +22,12 @@ def app():
 
 
 def test_scan_solve_and_report(app, no_3d, tmp_path, opened_in_browser):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     snap, setup = make_board(), make_setup()
     w = MainWindow()
     w._run = lambda fn, done, name, **k: done(fn(NULL))      # no background thread here
     try:
-        w.snapshot, w._setup_path = snap, tmp_path / "board.kipi-setup.yml"
+        w.snapshot, w._setup_path = snap, tmp_path / "board.kipi_si-setup.yml"
         w.solve_panel.set_board(snap, setup)
         w.findChild(QRadioButton, "mode_si").setChecked(True)
         panel = w.si_panel
@@ -42,7 +42,7 @@ def test_scan_solve_and_report(app, no_3d, tmp_path, opened_in_browser):
         assert w.si_plot.result is r
         assert w.views.currentWidget() is w.si_plot
         panel.report_option.btn.click()
-        written, = (tmp_path / "kipi_reports").glob("*_si_report_*.html")
+        written, = (tmp_path / "kipi_si_reports").glob("*_si_report_*.html")
         assert r.report_path == written or Path(r.report_path) == written
         assert [Path(p) for p in opened_in_browser] == [written]
     finally:
@@ -51,7 +51,7 @@ def test_scan_solve_and_report(app, no_3d, tmp_path, opened_in_browser):
 
 def test_nets_list_follows_the_mode(app, no_3d, tmp_path):
     from qtpy.QtCore import Qt
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     snap, setup = make_board(), make_setup()
     w = MainWindow()
     w._run = lambda fn, done, name, **k: None          # no meshing (the 3D view is off)
@@ -87,7 +87,7 @@ def test_nets_list_follows_the_mode(app, no_3d, tmp_path):
 
 
 def test_selected_nets_are_picked_out(app, no_3d, tmp_path):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     snap, setup = make_board(), make_setup()
     w = MainWindow()
     w._run = lambda fn, done, name, **k: None
@@ -118,7 +118,7 @@ def test_solve_the_ticked_channels(app, no_3d, tmp_path):
     """Ticked channels are solved together, each one's status on its row; with none
     ticked, Solve solves the channel picked."""
     from qtpy.QtCore import Qt
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     snap, setup = make_board(), make_setup()
     w = MainWindow()
     asked = []
@@ -130,7 +130,7 @@ def test_solve_the_ticked_channels(app, no_3d, tmp_path):
         done(out)
     w._run = run
     try:
-        w.snapshot, w._setup_path = snap, tmp_path / "board.kipi-setup.yml"
+        w.snapshot, w._setup_path = snap, tmp_path / "board.kipi_si-setup.yml"
         w.solve_panel.set_board(snap, setup)
         w.findChild(QRadioButton, "mode_si").setChecked(True)
         panel = w.si_panel
@@ -162,15 +162,15 @@ def test_reopen_saved_results(app, no_3d, tmp_path, monkeypatch):
     """Save results… then Open results… in the panel brings the solved channel and the
     Quick Scan back, shown as after the solve, without solving again."""
     from qtpy.QtWidgets import QFileDialog
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     snap, setup = make_board(), make_setup()
     w = MainWindow()
     w._run = lambda fn, done, name, **k: done(fn(NULL))
-    saved = tmp_path / "board.kipi-si-results"
+    saved = tmp_path / "board.kipi_si-si-results"
     monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *a, **k: (str(saved), ""))
     monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **k: (str(saved), ""))
     try:
-        w.snapshot, w._setup_path = snap, tmp_path / "board.kipi-setup.yml"
+        w.snapshot, w._setup_path = snap, tmp_path / "board.kipi_si-setup.yml"
         w.solve_panel.set_board(snap, setup)
         w.findChild(QRadioButton, "mode_si").setChecked(True)
         panel = w.si_panel
@@ -200,7 +200,7 @@ def test_picking_another_channel_keeps_the_view(app, no_3d, tmp_path):
     """A solve brings its plots to the front; picking another solved channel then leaves
     the view in front (3D or the plots) and the panel's tab as they are."""
     from qtpy.QtCore import Qt
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     snap, setup = make_board(), make_setup()
     w = MainWindow()
 
@@ -211,7 +211,7 @@ def test_picking_another_channel_keeps_the_view(app, no_3d, tmp_path):
         done(out)
     w._run = run
     try:
-        w.snapshot, w._setup_path = snap, tmp_path / "board.kipi-setup.yml"
+        w.snapshot, w._setup_path = snap, tmp_path / "board.kipi_si-setup.yml"
         w.solve_panel.set_board(snap, setup)
         w.findChild(QRadioButton, "mode_si").setChecked(True)
         panel = w.si_panel
@@ -238,7 +238,7 @@ def test_picking_another_channel_keeps_the_view(app, no_3d, tmp_path):
 
 def test_si_nets_fold_into_sections(app, no_3d, tmp_path):
     from qtpy.QtCore import Qt
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     snap, setup = make_board(), make_setup()
     w = MainWindow()
     w._run = lambda fn, done, name, **k: None
@@ -282,7 +282,7 @@ def test_si_nets_fold_into_sections(app, no_3d, tmp_path):
 def test_right_click_sets_a_net_single_ended_or_paired(app, no_3d, tmp_path):
     from qtpy.QtCore import Qt
     from qtpy.QtWidgets import QMenu
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     snap, setup = make_board(), make_setup()
     w = MainWindow()
     w._run = lambda fn, done, name, **k: None

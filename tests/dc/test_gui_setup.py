@@ -10,7 +10,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from qtpy.QtWidgets import QApplication  # noqa: E402
 
-from kipi.dc.gui.pi_panel import PIPanel  # noqa: E402
+from kipi_si.dc.gui.pi_panel import PIPanel  # noqa: E402
 from phase_boards import board, two_phase  # noqa: E402
 
 
@@ -36,7 +36,7 @@ def test_ticking_nets_does_not_edit_the_selected_items(app):
 
 
 def test_vrm_current_limit_edits_and_shows_in_results(app):
-    from kipi.dc.pi.tree import solve_tree
+    from kipi_si.dc.pi.tree import solve_tree
     setup = two_phase()
     panel = PIPanel()
     panel.set_board(board(), setup)
@@ -67,7 +67,7 @@ def test_vrm_current_limit_edits_and_shows_in_results(app):
 
 
 def _board_with_bridges():
-    from kipi.core.model.board import Footprint, Net, Pad
+    from kipi_si.core.model.board import Footprint, Net, Pad
     from synthetic import make_board
     snap = make_board()
     snap.nets.append(Net(4, "VSNS"))
@@ -80,7 +80,7 @@ def _board_with_bridges():
 
 
 def test_dc_connection_takes_a_resistors_value(app):
-    from kipi.dc.pi.model import PISetup
+    from kipi_si.dc.pi.model import PISetup
     setup = PISetup()
     panel = PIPanel()
     panel.set_board(_board_with_bridges(), setup)
@@ -109,7 +109,7 @@ def test_dc_connection_takes_a_resistors_value(app):
 
 
 def test_add_puts_a_vrm_on_the_net_selected_in_the_nets_list(app):
-    from kipi.dc.pi.model import PISetup
+    from kipi_si.dc.pi.model import PISetup
     setup = PISetup()
     panel = PIPanel()
     panel.set_board(_board_with_bridges(), setup)
@@ -126,7 +126,7 @@ def test_add_puts_a_vrm_on_the_net_selected_in_the_nets_list(app):
 def test_solve_tab_excludes_unticked_groups(app):
     from qtpy.QtCore import Qt
 
-    from kipi.dc.pi.model import Load, PinRef
+    from kipi_si.dc.pi.model import Load, PinRef
     setup = two_phase(ground=True, sense=True)
     setup.loads.append(Load("U9", PinRef("U9", "+5V"), 0.5))   # no VRM drives +5V
     panel = PIPanel()
@@ -165,7 +165,7 @@ def test_mesh_sense_points_edit_one_at_a_time(app):
 def test_an_isolated_converter_edits_its_input_ground(app):
     from tree_boards import isolated_board, isolated_setup
 
-    from kipi.dc.pi.model import PinRef
+    from kipi_si.dc.pi.model import PinRef
     setup = isolated_setup()
     panel = PIPanel()
     panel.set_board(isolated_board(), setup)
@@ -207,7 +207,7 @@ def test_removing_a_vrm_offers_to_remove_its_rails_loads(app, monkeypatch, answe
 
 def test_removing_a_vrm_offers_to_remove_its_rails_capacitor_models(app, monkeypatch):
     from qtpy.QtWidgets import QMessageBox
-    from kipi.ac.model import CapModel
+    from kipi_si.ac.model import CapModel
     from test_rail_autofill import CAP_PACKAGES, CAP_PARTS, CAP_PINS, board as cap_board, \
         cap_fill
     setup = cap_fill().setup

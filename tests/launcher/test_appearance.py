@@ -1,7 +1,7 @@
-"""The setup window's theme and scale (kipi.launcher.appearance), without a display."""
+"""The setup window's theme and scale (kipi_si.launcher.appearance), without a display."""
 
-from kipi.launcher import appearance
-from kipi.launcher.appearance import DARK, LIGHT, saved_theme, ui_scale
+from kipi_si.launcher import appearance
+from kipi_si.launcher.appearance import DARK, LIGHT, saved_theme, ui_scale
 
 
 def _no_xft():
@@ -10,8 +10,8 @@ def _no_xft():
 
 def test_theme_follows_kipis_setting(tmp_path):
     env = {"XDG_CONFIG_HOME": str(tmp_path)}
-    assert saved_theme(env, "linux", tmp_path) == DARK          # never chosen: KiPI's default
-    conf = tmp_path / "KiPI" / "KiPI.conf"
+    assert saved_theme(env, "linux", tmp_path) == DARK          # never chosen: KiPI-SI's default
+    conf = tmp_path / "KiPI-SI" / "KiPI-SI.conf"
     conf.parent.mkdir()
     conf.write_text('[about]\nstats="{\\"a\\": 1}"\n\n[appearance]\ntheme=light\n')
     assert saved_theme(env, "linux", tmp_path) == LIGHT
@@ -23,17 +23,17 @@ def test_theme_follows_kipis_setting(tmp_path):
 
 def test_theme_from_the_macos_plist(tmp_path):
     import plistlib
-    path = tmp_path / "Library" / "Preferences" / "com.kipi.KiPI.plist"
+    path = tmp_path / "Library" / "Preferences" / "com.kipi-si.KiPI-SI.plist"
     path.parent.mkdir(parents=True)
     path.write_bytes(plistlib.dumps({"appearance.theme": "light"}, fmt=plistlib.FMT_BINARY))
     assert saved_theme({}, "darwin", tmp_path) == LIGHT
 
 
 def test_scale_by_hand_wins_and_is_clamped():
-    assert ui_scale(96, 2160, {"KIPI_UI_SCALE": "1.5"}, "linux", _no_xft) == 1.5
-    assert ui_scale(96, 1080, {"KIPI_UI_SCALE": "9"}, "linux", _no_xft) == appearance.MAX_SCALE
-    assert ui_scale(96, 2160, {"KIPI_UI_SCALE": "0.5"}, "linux", _no_xft) == 1.0
-    assert ui_scale(96, 2160, {"KIPI_UI_SCALE": "big"}, "linux", _no_xft) == 2.0
+    assert ui_scale(96, 2160, {"KIPI_SI_UI_SCALE": "1.5"}, "linux", _no_xft) == 1.5
+    assert ui_scale(96, 1080, {"KIPI_SI_UI_SCALE": "9"}, "linux", _no_xft) == appearance.MAX_SCALE
+    assert ui_scale(96, 2160, {"KIPI_SI_UI_SCALE": "0.5"}, "linux", _no_xft) == 1.0
+    assert ui_scale(96, 2160, {"KIPI_SI_UI_SCALE": "big"}, "linux", _no_xft) == 2.0
 
 
 def test_scale_from_the_desktop_on_linux():

@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 
-from kipi.dc.pi.results import GroupResult, TreeResult, merge
+from kipi_si.dc.pi.results import GroupResult, TreeResult, merge
 
 
 def tree(*groups, thermal=None):

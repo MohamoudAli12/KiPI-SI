@@ -7,7 +7,7 @@ inductor L1, output capacitor C2 and load U2, joined by tracks; a GND plane fill
 
 from typing import Optional
 
-from kipi.core.model.board import Footprint, Net, Pad, Poly, Track, Via, Zone
+from kipi_si.core.model.board import Footprint, Net, Pad, Poly, Track, Via, Zone
 from synthetic import F, IN1, make_board, rect, square  # noqa: F401
 
 
@@ -84,7 +84,7 @@ def buck_board(sw_area: float = 4.0, victim_gap: Optional[float] = None,
 def buck_setup(load_a: float = 5.0, board_model: bool = False):
     """The buck's VRMs and load. The board model is off unless asked for: it takes about
     a second per solve, and most tests are about something else."""
-    from kipi.dc.pi.model import Load, PinRef, PISetup, Vrm
+    from kipi_si.dc.pi.model import Load, PinRef, PISetup, Vrm
     setup = PISetup()
     setup.noise.board_model = board_model
     setup.vrms.append(Vrm("J1", PinRef("J1", "VIN", ["1"]), 12.0,

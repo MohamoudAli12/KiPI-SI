@@ -14,12 +14,12 @@ from matplotlib.backend_bases import MouseEvent  # noqa: E402
 from qtpy.QtWidgets import QApplication  # noqa: E402
 
 from ac_boards import plane_pair, plane_setup  # noqa: E402
-from kipi.ac.board_map import ACMap  # noqa: E402
-from kipi.ac.gui.board_map import ALL_LAYERS, EMPTY, BoardMap  # noqa: E402
-from kipi.ac.model import CapModel  # noqa: E402
-from kipi.ac.report import load_results, save_results  # noqa: E402
-from kipi.ac.solver import solve_ac  # noqa: E402
-from kipi.core.progress import ProgressReporter  # noqa: E402
+from kipi_si.ac.board_map import ACMap  # noqa: E402
+from kipi_si.ac.gui.board_map import ALL_LAYERS, EMPTY, BoardMap  # noqa: E402
+from kipi_si.ac.model import CapModel  # noqa: E402
+from kipi_si.ac.report import load_results, save_results  # noqa: E402
+from kipi_si.ac.solver import solve_ac  # noqa: E402
+from kipi_si.core.progress import ProgressReporter  # noqa: E402
 
 
 class _Partials(ProgressReporter):
@@ -64,7 +64,7 @@ def test_solve_hands_over_the_map_as_it_fills(solved):
 
 def test_saved_results_keep_the_map(solved, tmp_path):
     snap, setup, result, _ = solved
-    path = save_results(tmp_path / "r.kipi-ac-results", {"VRM1": result}, "b", setup)
+    path = save_results(tmp_path / "r.kipi_si-ac-results", {"VRM1": result}, "b", setup)
     m = load_results(path)["results"]["VRM1"].board_map
     assert m.models.keys() == result.board_map.models.keys()
     assert np.array_equal(m.mesh.tris, result.board_map.mesh.tris)
@@ -105,7 +105,7 @@ def test_meshing_map_is_drawn_without_a_mesh(app):
 
 
 def test_main_window_tab(app, no_3d, solved):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     _snap, _setup, result, _ = solved
     w = MainWindow()
     tab = w.views.indexOf(w.board_map)

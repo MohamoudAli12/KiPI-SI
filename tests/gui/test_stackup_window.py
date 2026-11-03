@@ -13,9 +13,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from qtpy.QtWidgets import QApplication  # noqa: E402
 
-from kipi.core.model.stackup import dielectric_er, thicknesses  # noqa: E402
-from kipi.dc.pi.model import PISetup  # noqa: E402
-from kipi.gui.stackup_window import (  # noqa: E402
+from kipi_si.core.model.stackup import dielectric_er, thicknesses  # noqa: E402
+from kipi_si.dc.pi.model import PISetup  # noqa: E402
+from kipi_si.gui.stackup_window import (  # noqa: E402
     C_K, UOHM_CM, StackupWindow, row_unit,
 )
 from phase_boards import board  # noqa: E402
@@ -28,8 +28,8 @@ def app():
 
 @pytest.fixture
 def unit_setting(monkeypatch):
-    """Keep the chosen unit out of this machine's KiPI settings."""
-    from kipi.gui import stackup_window
+    """Keep the chosen unit out of this machine's KiPI-SI settings."""
+    from kipi_si.gui import stackup_window
     store = {}
 
     class Settings:
@@ -167,14 +167,14 @@ def test_loss_tangent_and_default_er_edit_the_ac_setup(app, unit_setting):
 
 
 def test_ac_mesh_tab_has_no_dielectric_settings(app, no_3d):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     assert not hasattr(w.ac_panel, "spin_tand") and not hasattr(w.ac_panel, "spin_er")
     w.close()
 
 
 def test_toolbar_opens_the_window_and_the_copper_tab_is_gone(app, no_3d):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     names = [a.text() for a in w.findChildren(type(w.act_stackup)) if a.text()]
     assert names.index("Open results…") < names.index("Stackup") < names.index("Help")
@@ -186,7 +186,7 @@ def test_toolbar_opens_the_window_and_the_copper_tab_is_gone(app, no_3d):
 
 
 def test_edited_stackup_drives_the_board_and_is_saved(app, no_3d, tmp_path, unit_setting):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     snap = board()
     snap.project_dir = str(tmp_path)
     kicad = snap.stackup
@@ -202,7 +202,7 @@ def test_edited_stackup_drives_the_board_and_is_saved(app, no_3d, tmp_path, unit
     _idle(app, w)
     assert w.snapshot.stackup.edited
     assert w.snapshot.stackup.board_thickness_mm == pytest.approx(2 * kicad.board_thickness_mm)
-    assert "edited in KiPI" in w.info.toPlainText()
+    assert "edited in KiPI-SI" in w.info.toPlainText()
     win.spin_rho.setValue(2.0)
     w._save_setup()
     saved = PISetup.load(w._setup_path)
@@ -228,8 +228,8 @@ def test_edited_stackup_drives_the_board_and_is_saved(app, no_3d, tmp_path, unit
 
 
 def test_a_change_during_a_task_waits_for_it(app, no_3d, monkeypatch, tmp_path):
-    from kipi.core.model.stackup import restack
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.core.model.stackup import restack
+    from kipi_si.gui.main_window import MainWindow
     snap = board()
     snap.project_dir = str(tmp_path)
     w = MainWindow()
@@ -247,8 +247,8 @@ def test_a_change_during_a_task_waits_for_it(app, no_3d, monkeypatch, tmp_path):
 
 
 def test_choosing_a_material_sets_its_er_and_k(app, unit_setting):
-    from kipi.core.model.stackup import dielectric_materials
-    from kipi.dc.thermal.materials import laminate_conductance
+    from kipi_si.core.model.stackup import dielectric_materials
+    from kipi_si.dc.thermal.materials import laminate_conductance
     st = board().stackup
     win = StackupWindow()
     got = []
@@ -328,8 +328,8 @@ def test_choosing_a_conductor_sets_rho_tcr_and_k(app, unit_setting):
 # --- Dielectric k edited in the window (#90) --------------------------------------------------
 
 def test_dielectric_k_can_be_typed_over_and_reset(app, unit_setting):
-    from kipi.core.model.stackup import dielectric_k, from_setup, to_setup
-    from kipi.dc.thermal.materials import laminate_conductance, lookup
+    from kipi_si.core.model.stackup import dielectric_k, from_setup, to_setup
+    from kipi_si.dc.thermal.materials import laminate_conductance, lookup
     st = board().stackup
     win = StackupWindow()
     got = []
@@ -357,9 +357,9 @@ def test_dielectric_k_can_be_typed_over_and_reset(app, unit_setting):
 
 def test_old_setup_laminate_k_moves_to_the_stackup(app, no_3d, tmp_path, unit_setting):
     import json
-    from kipi.core.model.stackup import dielectric_k
-    from kipi.dc.pi.model import setup_path
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.core.model.stackup import dielectric_k
+    from kipi_si.dc.pi.model import setup_path
+    from kipi_si.gui.main_window import MainWindow
     snap = board()
     snap.project_dir = str(tmp_path)
     path = setup_path(snap.board_name, snap.project_dir)
@@ -377,7 +377,7 @@ def test_old_setup_laminate_k_moves_to_the_stackup(app, no_3d, tmp_path, unit_se
 
 
 def test_snapshots_leave_out_an_unset_k():
-    from kipi.core.model import snapshot_io
+    from kipi_si.core.model import snapshot_io
     snap = board()
     d = snapshot_io.to_dict(snap)
     assert all("k_w_mk" not in x for x in d["stackup"]["dielectrics"])
@@ -389,8 +389,8 @@ def test_snapshots_leave_out_an_unset_k():
 def test_solder_masks_and_silkscreens_are_listed_and_editable(app, unit_setting):
     """The coatings sit above and below the copper; a thickness typed while unlocked
     changes them and not the board (#82)."""
-    from kipi.core.model.board import MASK, SILK, Coating
-    from kipi.core.model.stackup import coating_thicknesses
+    from kipi_si.core.model.board import MASK, SILK, Coating
+    from kipi_si.core.model.stackup import coating_thicknesses
     st = board().stackup
     st.coatings = [Coating(SILK, "top", 0.015), Coating(MASK, "top", 0.01),
                    Coating(MASK, "bottom", 0.01), Coating(SILK, "bottom", 0.015)]

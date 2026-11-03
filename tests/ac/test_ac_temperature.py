@@ -10,10 +10,10 @@ import numpy as np
 import pytest
 
 from ac_boards import plane_pair, plane_setup
-from kipi.ac.html_report import write_ac_report
-from kipi.ac.model import TEMP_CURVES, CapModel
-from kipi.ac.solver import solve_ac
-from kipi.dc.pi.model import PISetup
+from kipi_si.ac.html_report import write_ac_report
+from kipi_si.ac.model import TEMP_CURVES, CapModel
+from kipi_si.ac.solver import solve_ac
+from kipi_si.dc.pi.model import PISetup
 
 # A small board with a coarse mesh: these tests are about the capacitor models, and the
 # field solve on a bigger one takes ~20 s without PARDISO.
@@ -121,7 +121,7 @@ def panel():
     pytest.importorskip("qtpy")
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from qtpy.QtWidgets import QApplication
-    from kipi.ac.gui.panel import ACPanel
+    from kipi_si.ac.gui.panel import ACPanel
     app = QApplication.instance() or QApplication([])   # noqa: F841
     p = ACPanel()
     p.set_board(plane_pair(), PISetup())

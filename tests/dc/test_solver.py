@@ -6,12 +6,12 @@ import numpy as np
 import pytest
 from shapely.geometry import Point, box
 
-from kipi.core.model.board import (
+from kipi_si.core.model.board import (
     BoardSnapshot, CopperLayer, DielectricLayer, Net, Pad, Poly, Stackup, Via, Zone,
 )
-from kipi.dc.solver import CurrentLoad, NetProblem, SolveError, SolveSettings, VoltageSource, run
-from kipi.dc.solver.setup import RHO_CU_OHM_MM as RHO
-from kipi.dc.solver.via_barrel import ViaRule
+from kipi_si.dc.solver import CurrentLoad, NetProblem, SolveError, SolveSettings, VoltageSource, run
+from kipi_si.dc.solver.setup import RHO_CU_OHM_MM as RHO
+from kipi_si.dc.solver.via_barrel import ViaRule
 
 F, B = 3, 34
 T_CU = 0.035
@@ -143,7 +143,7 @@ def test_multi_pad_load_splits_current_and_amg_path_agrees(monkeypatch):
     direct = run(snap, prob)
     va, vb = direct.fields.terminals[1].v_pads
     assert va == pytest.approx(vb, rel=1e-6)            # mirror symmetry (mesh is not exactly)
-    import kipi.core.solver.spd as spd
+    import kipi_si.core.solver.spd as spd
     monkeypatch.setattr(spd, "DIRECT_SOLVE_MAX_UNKNOWNS", 0)
     monkeypatch.setattr(spd, "DIRECT_SOLVE_MAX_UNKNOWNS_PARDISO", 0)
     amg = run(snap, prob)
@@ -160,7 +160,7 @@ def test_plated_hole_shorts_its_ring_even_when_other_layers_are_dead_copper():
     still be treated as equipotential, so the result must not depend on whether the
     dead ring exists. Adding a stub on B.Cu (still a dead end) must not change anything.
     """
-    from kipi.core.model.board import Track
+    from kipi_si.core.model.board import Track
 
     hole = Point(5, 0).buffer(0.8, quad_segs=16)
     pth = Pad("pth", "N", "J1", "1", (5.0, 0.0), "pth", drill_mm=(1.0, 1.0),
@@ -191,7 +191,7 @@ def test_plated_hole_shorts_its_ring_even_when_other_layers_are_dead_copper():
 
 
 def test_result_scene_carries_fields_and_probes():
-    from kipi.dc.viz.results import build_result_scene
+    from kipi_si.dc.viz.results import build_result_scene
 
     L, W = 20.0, 1.0
     snap = two_layer([(F, box(0, -W / 2, L, W / 2))],
@@ -213,7 +213,7 @@ def test_result_scene_carries_fields_and_probes():
 
 
 def test_current_arrows_follow_the_current():
-    from kipi.dc.viz.results import build_result_scene
+    from kipi_si.dc.viz.results import build_result_scene
     L, W = 20.0, 1.0
     snap = two_layer([(F, box(0, -W / 2, L, W / 2))],
                      [pad("src", "U1", F, box(0, -W / 2, 1, W / 2)),
@@ -230,7 +230,7 @@ def test_current_arrows_follow_the_current():
 
 
 def test_current_arrows_drawn_on_both_copper_faces():
-    from kipi.dc.viz.results import ARROW_LIFT, build_result_scene
+    from kipi_si.dc.viz.results import ARROW_LIFT, build_result_scene
     L, W = 20.0, 1.0
     snap = two_layer([(F, box(0, -W / 2, L, W / 2))],
                      [pad("src", "U1", F, box(0, -W / 2, 1, W / 2)),
@@ -244,7 +244,7 @@ def test_current_arrows_drawn_on_both_copper_faces():
 
 
 def test_flat_arrows_shape():
-    from kipi.dc.viz.results import (
+    from kipi_si.dc.viz.results import (
         ARROW_HEAD_HALF_WIDTH, ARROW_HEAD_LENGTH, flat_arrows,
     )
     pts = np.array([[1.0, 2.0, 0.0], [5.0, 5.0, 0.0]])

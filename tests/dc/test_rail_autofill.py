@@ -4,17 +4,17 @@ from types import SimpleNamespace
 
 import pytest
 
-from kipi.core.model import snapshot_io
-from kipi.core.model.board import Footprint, Net, Pad
-from kipi.dc.pi.importers.rail_autofill import (
+from kipi_si.core.model import snapshot_io
+from kipi_si.core.model.board import Footprint, Net, Pad
+from kipi_si.dc.pi.importers.rail_autofill import (
     AutofillError, MissingPart, PartsLibrary, autofill_rail, parse_pin_currents,
     parse_quantity, parse_tolerance, rail_caps, rail_parts, rating_checks,
     source_candidates, write_stubs,
 )
-from kipi.dc.pi.model import PERCENT, DcLink, Load, PinRef, PISetup, Vrm, validate
-from kipi.dc.solver.post import SeriesResult
-from kipi.sources.kicad_pcb.reader import _fields
-from kipi.sources.kicad_pcb.sexpr import parse
+from kipi_si.dc.pi.model import PERCENT, DcLink, Load, PinRef, PISetup, Vrm, validate
+from kipi_si.dc.solver.post import SeriesResult
+from kipi_si.sources.kicad_pcb.reader import _fields
+from kipi_si.sources.kicad_pcb.sexpr import parse
 from synthetic import make_board
 
 PARTS = {  # ref: (value, fields)
@@ -48,7 +48,7 @@ PINS = [  # (ref, pin, net)
     ("U9", "1", "+3V3"), ("U9", "2", "GND"),
 ]
 LIBRARY = {
-    "kipi_parts": 1,
+    "kipi_si_parts": 1,
     "parts": {
         "LDO-5": {"vrm": {"out_pins": ["1", "2"], "current_limit_a": 1.0}},
         "BEAD-1": {"link": {"resistance_ohm": 0.055, "current_max_a": 2.0}},
@@ -223,16 +223,16 @@ def test_source_candidates_put_the_regulator_first():
 # ---------------------------------------------------------------------------
 
 def test_library_errors_and_lookup(tmp_path):
-    with pytest.raises(AutofillError, match="kipi_parts"):
+    with pytest.raises(AutofillError, match="kipi_si_parts"):
         PartsLibrary.from_dict({"parts": {}})
     with pytest.raises(AutofillError, match="role"):
-        PartsLibrary.from_dict({"kipi_parts": 1, "parts": {"X": {"role": "boss"}}})
+        PartsLibrary.from_dict({"kipi_si_parts": 1, "parts": {"X": {"role": "boss"}}})
     with pytest.raises(AutofillError, match="number"):
-        PartsLibrary.from_dict({"kipi_parts": 1, "parts": {"X": {"link": {"resistance_ohm": "a"}}}})
+        PartsLibrary.from_dict({"kipi_si_parts": 1, "parts": {"X": {"link": {"resistance_ohm": "a"}}}})
     user, proj = tmp_path / "user.yml", tmp_path / "proj.yml"
-    user.write_text("kipi_parts: 1\nparts:\n  A: {link: {resistance_ohm: 1.0}}\n"
+    user.write_text("kipi_si_parts: 1\nparts:\n  A: {link: {resistance_ohm: 1.0}}\n"
                     "  B: {link: {resistance_ohm: 2.0}}\n")
-    proj.write_text("kipi_parts: 1\nparts:\n  B: {link: {resistance_ohm: 3.0}}\n")
+    proj.write_text("kipi_si_parts: 1\nparts:\n  B: {link: {resistance_ohm: 3.0}}\n")
     lib = PartsLibrary.load([user, proj, tmp_path / "missing.yml"])
     assert lib.files == [user, proj]
     assert lib.parts["A"].link.resistance_ohm == 1.0
@@ -254,12 +254,12 @@ def test_write_stubs_new_append_and_reread(tmp_path):
     assert lib.parts["MYS-1"].supplies[0].current_a is None
     assert lib.parts["BEAD-X"].link.resistance_ohm is None
     assert write_stubs(path, missing) == (path, 0)                  # nothing new
-    path.write_text("# mine\nkipi_parts: 1\nparts:\n  OLD: {link: {resistance_ohm: 1.0}}\n")
+    path.write_text("# mine\nkipi_si_parts: 1\nparts:\n  OLD: {link: {resistance_ohm: 1.0}}\n")
     assert write_stubs(path, missing) == (path, 2)
     text = path.read_text()
     assert text.startswith("# mine") and set(PartsLibrary.load([path]).parts) == {
         "OLD", "MYS-1", "BEAD-X"}
-    path.write_text("parts:\n  OLD: {link: {resistance_ohm: 1.0}}\nkipi_parts: 1\n")
+    path.write_text("parts:\n  OLD: {link: {resistance_ohm: 1.0}}\nkipi_si_parts: 1\n")
     written, n = write_stubs(path, missing)
     assert written.name == "pi_parts.missing.yml" and n == 2
 
@@ -374,7 +374,7 @@ def test_autofill_gives_the_rails_capacitors_ac_models():
 
 
 def test_autofill_keeps_capacitor_models_set_by_hand():
-    from kipi.ac.model import CapModel
+    from kipi_si.ac.model import CapModel
     mine = CapModel("my 100n", 100e-9, 0.25e-9, 0.02, ["C2"])
     setup = cap_fill(PISetup(caps=[mine])).setup
     assert setup.caps[0].refs == ["C2"] and setup.caps[0].esl_h == 0.25e-9

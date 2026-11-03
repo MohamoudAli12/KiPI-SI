@@ -1,10 +1,31 @@
 # Changelog
 
-All notable changes to KiPI, newest first. Each minor version is one development milestone.
+All notable changes to KiPI-SI, newest first. Each minor version is one development milestone.
 The code's version number went from 0.1.0 straight to 0.5.0, so 0.2.0 to 0.4.0 name
 milestones rather than versions that were ever set.
 
 ## 0.9.3 (in development)
+
+### Changed
+- **Renamed to KiPI-SI.** This fork of [KiPI](https://github.com/drewsum/KiPI) is now
+  KiPI-SI throughout: the app and plugin name, the Python package (`kipi_si`), the file
+  extensions (`.kipi_si-setup.yml`, `.kipi_si.json.gz`, `.kipi_si-*-results`), the
+  environment variables (`KIPI_SI_*`), the settings and app data folders and the report
+  folder (`kipi_si_reports`). Files, settings and environment variables from KiPI are not
+  read: rename them to the new names to keep using them.
+- **Managed with uv.** `uv sync` makes the development environment from the committed
+  `uv.lock`, with the plugin's packages and the tools. The dev tools moved from the `dev`
+  extra and `requirements-dev.txt` to `pyproject.toml`'s `lint`, `test` and `dev` dependency
+  groups. CI installs with uv and checks that `uv.lock` is up to date. `requirements.txt`
+  and `requirements-standalone.txt` stay, for KiCad and the launcher. The package builds
+  with `uv build` (the `uv_build` backend instead of setuptools); its version is now written
+  in `pyproject.toml` as well as `kipi_si/__init__.py`, and a test keeps the two equal.
+- **A KiPI-SI logo.** KiPI's logo is replaced by one for power and signal integrity: a
+  lightning bolt in the opening of an eye diagram, drawn in an oscilloscope's colour-graded
+  persistence on a scope screen. It is the KiCad toolbar button, the window, taskbar, Dock and
+  shortcut icon, and the About box's icon, which no longer animates.
+  `resources/kipi_si_logo.svg` is the logo and `resources/kipi_si_logo_name.svg` the logo
+  with the name, coloured to read on light and dark pages alike (the README shows it).
 
 ### Added
 - **Auto-fill power tree.** A new button on the setup bar finds every regulator on the
@@ -37,7 +58,7 @@ milestones rather than versions that were ever set.
   parts library: where it is read from, how parts are looked up, and its entries.
 - **User guide: reading SI results.** A new section explains every Signal Integrity
   result in plain terms (the basics, TDR, S-parameters, crosstalk, pulse response, the eye,
-  BER and bathtubs, equalisation, COM, skew and waveforms) with KiPI's own plots of a good
+  BER and bathtubs, equalisation, COM, skew and waveforms) with KiPI-SI's own plots of a good
   and a bad channel from `examples/si_demo` side by side, each check's PASS, WARN and FAIL
   limits, the usual fixes, and a one-table cheat sheet.
 - **SI plots: a voltage bathtub and the solved channels compared.**
@@ -119,7 +140,7 @@ milestones rather than versions that were ever set.
     bathtub curve, and PRBS eyes drawn as continuous traces, alike in the app and the
     report.
   - HTML and PDF reports (with the channel's Touchstone file), Touchstone export, a
-    passive SPICE macromodel by vector fitting, and saved results (`.kipi-si-results`),
+    passive SPICE macromodel by vector fitting, and saved results (`.kipi_si-si-results`),
     reopened with **Open results…** beside **Save results…** (or File → Open results…).
 - **Dielectric loss tangents from the board's stackup.** KiCad boards' layer loss
   tangents are now read and kept with stackup edits; the SI mode uses them.
@@ -212,8 +233,8 @@ milestones rather than versions that were ever set.
   vias, zone copper, outline and DC solve match the board file's.
 
 ### Changed
-- **Reports go in a `kipi_reports` folder.** DC, AC, Coupled Noise and Signal Integrity
-  reports are written to a `kipi_reports` folder next to the setup (made when the first
+- **Reports go in a `kipi_si_reports` folder.** DC, AC, Coupled Noise and Signal Integrity
+  reports are written to a `kipi_si_reports` folder next to the setup (made when the first
   report is written) instead of the project folder itself; Export Touchstone and Export
   SPICE model start there too.
 - **AC board map: Mesh edges toggles at once.** The box restyles the drawn mesh instead
@@ -230,13 +251,13 @@ milestones rather than versions that were ever set.
   each signal net ticked in Board's Nets list, a pair's two legs as one channel (positive
   leg first), and skips nets that already have one.
 - **The openEMS 3D check is removed.** The Results tab's 3D check, its settings and the
-  `kipi.si.openems` and `kipi.si.verify` modules are gone; channel solves use KiPI's own
+  `kipi_si.si.openems` and `kipi_si.si.verify` modules are gone; channel solves use KiPI-SI's own
   models only. Older setup files with the 3D check's settings still open.
-- **The launcher's setup window is dark, and sized for the display.** It follows KiPI's
+- **The launcher's setup window is dark, and sized for the display.** It follows KiPI-SI's
   Dark mode choice (dark unless you picked light), and on a high-resolution display it is
   enlarged by the desktop's scale (`Xft.dpi`, `QT_FONT_DPI`, `QT_SCALE_FACTOR`,
   `GDK_SCALE`, or Windows' display scaling), else by the screen's size: twice as large on
-  a 4K screen. `KIPI_UI_SCALE` sets the scale by hand.
+  a 4K screen. `KIPI_SI_UI_SCALE` sets the scale by hand.
 - **Diodes are biased by the DC solve.** An AC or Coupled Noise solve made after a DC
   solve takes each diode link's small-signal model at the current the DC solve found
   through it, the copper's own split, in place of the estimate from the loads beyond it
@@ -325,7 +346,7 @@ milestones rather than versions that were ever set.
   kept a narrow width and cut its curve names short. It now widens to its longest name, up
   to 360 px, and a name still too long for the room (on a small screen) is shortened with
   an ellipsis, its whole text in the tooltip.
-- **KiPI froze when a field was shown in 3D** after a Coupled Noise solve. With the board
+- **KiPI-SI froze when a field was shown in 3D** after a Coupled Noise solve. With the board
   model on, each hot loop is traced through the copper in hundreds or thousands of
   pieces, and the field of them all was worked out on the UI thread, twice for every
   change (and again on unrelated changes such as picking a victim). The field is now
@@ -712,7 +733,7 @@ milestones rather than versions that were ever set.
   **switch node's capacitance** to ground (Coss plus its copper to the neighbouring
   planes), and from them the **ringing** on the switch node's edges. They are shown in
   the results and on a new **Waveforms** tab beside the 3D view, in time or as spectra,
-  and save to `.kipi-noise-results`. Coupling onto signal nets comes next. The Solver
+  and save to `.kipi_si-noise-results`. Coupling onto signal nets comes next. The Solver
   Guide's further reading now lists the literature the mode is built on.
 - **Solder mask and silkscreen** (#82). The stackup now has the solder mask and
   silkscreen over each outer copper layer, read from KiCad (its stackup's mask thickness
@@ -726,7 +747,7 @@ milestones rather than versions that were ever set.
   their usual thickness they hold heat in only slightly: a 25 µm mask adds 0.1 K mm²/W
   against 100 for still air. What each silkscreen prints is read from the board: its
   drawings and text on F.SilkS and B.SilkS, off the pads and the board's edge. The
-  running KiCad draws the text in its own font; from a board file KiPI draws it in a
+  running KiCad draws the text in its own font; from a board file KiPI-SI draws it in a
   similar one, in the same place and turned upright as KiCad turns it; ODB++ gives it as
   strokes. The 3D view draws them, the mask in its color and open over the pads, the
   silkscreen as printed, under **Mask** and **Silkscreen** in Display, both off to start
@@ -741,7 +762,7 @@ milestones rather than versions that were ever set.
   unit against the nominal voltage (load tolerance, VRM input range and DC accuracy); a
   load's current split (equal or per pin group); a series link's side A and B pins, DCR
   and ESL; a probe's target (flat up to a frequency, or custom points); and the mesh's max
-  edge, via grading and min edge. The drawings live in one folder, `kipi/gui/graphics/`,
+  edge, via grading and min edge. The drawings live in one folder, `kipi_si/gui/graphics/`,
   as SVG templates; where Qt cannot render them, the tooltip is its text alone.
 - **3D views in DC PDF reports** (#133). A PDF can't show the interactive 3D views, so
   they go inside it as an attached web page of their own, `<report>_3d.html` (Plotly and
@@ -762,14 +783,14 @@ milestones rather than versions that were ever set.
   all), applies a model to any number of loads or probes at once (each from the supply
   chosen beside it; matches by pins or name come ticked), and adds a model's loads or
   probes on every part ticked that has its pins.
-- **KiPI in Task Manager** (#124). KiPI shows as *KiPI* with its icon, not as *Python*, in
+- **KiPI-SI in Task Manager** (#124). KiPI-SI shows as *KiPI-SI* with its icon, not as *Python*, in
   Windows Task Manager, macOS Activity Monitor and Linux System Monitor / top / ps. Task
-  Manager names an app by the program that owns its window, so on Windows KiPI (plugin or
-  standalone) starts again at once on `KiPI.exe`: a copy of its venv's base Python with
-  KiPI's icon and version information, made in the venv's `Scripts` folder with the Python
-  DLLs beside it, and remade when Python or KiPI changes. A copy that does not start is
-  remembered, and KiPI runs on `pythonw.exe` as before. On Linux the process is renamed
-  (`prctl`); on macOS LaunchServices is given KiPI's name.
+  Manager names an app by the program that owns its window, so on Windows KiPI-SI (plugin or
+  standalone) starts again at once on `KiPI-SI.exe`: a copy of its venv's base Python with
+  KiPI-SI's icon and version information, made in the venv's `Scripts` folder with the Python
+  DLLs beside it, and remade when Python or KiPI-SI changes. A copy that does not start is
+  remembered, and KiPI-SI runs on `pythonw.exe` as before. On Linux the process is renamed
+  (`prctl`); on macOS LaunchServices is given KiPI-SI's name.
 - **Ranges in volts from nominal** (#131). A load's tolerance and a VRM's input range and
   DC accuracy take a third unit, **±V**, beside V and %: volts below and above the nominal
   voltage (e.g. min -0.1 V, max +0.15 V), shown as "±0.1 V" or "-0.1 / +0.15 V". Switching
@@ -779,7 +800,7 @@ milestones rather than versions that were ever set.
   material, each labelled with its thickness in the window's unit. The drawing follows
   thicknesses as they are typed. Layers too thin to see are drawn 3 px tall (the label
   gives the real thickness), and clicking a layer goes to its thickness in the table.
-- **Signs of life while KiPI works** (#111). The status bar shows a turning spinner with
+- **Signs of life while KiPI-SI works** (#111). The status bar shows a turning spinner with
   the operation's name and the time it has taken while any task runs, part 3D models
   loading included. Each new stage moves the progress bar until it reports how far it is,
   instead of leaving the last stage's full bar still. The window shows the wait cursor
@@ -796,29 +817,29 @@ milestones rather than versions that were ever set.
   itself, so the notes are kept in the browser as they are typed (per file, restored when it is opened again),
   and *Save a copy with notes* downloads the report with them written in, plots and all, to
   keep or share. The box is left out of a printout while it is empty.
-- **The standalone launcher has the KiPI icon** instead of Python's (#127). A `.py` file
+- **The standalone launcher has the KiPI-SI icon** instead of Python's (#127). A `.py` file
   cannot carry an icon of its own, so:
-  - Windows: the launcher keeps a `KiPI.lnk` shortcut with the KiPI icon in the KiPI
+  - Windows: the launcher keeps a `KiPI-SI.lnk` shortcut with the KiPI-SI icon in the KiPI-SI
     folder (made on the first start, and again only if the folder or Python moves), and
-    the folder itself shows the KiPI icon (`desktop.ini` now points at the icon relative
+    the folder itself shows the KiPI-SI icon (`desktop.ini` now points at the icon relative
     to the folder, and the launcher sets the attributes Explorer needs, which git and
-    unzipping drop). The setup window has the KiPI icon and shares KiPI's taskbar button;
+    unzipping drop). The setup window has the KiPI-SI icon and shares KiPI-SI's taskbar button;
     pinning it pins the launcher.
-  - macOS: `--create-shortcut` now makes `~/Applications/KiPI.app`, with the KiPI icon,
+  - macOS: `--create-shortcut` now makes `~/Applications/KiPI-SI.app`, with the KiPI-SI icon,
     that runs the launcher, instead of saying it is not supported.
   - Linux: the setup window and the `--create-shortcut` menu entry match, so the panel
-    shows the KiPI icon; KiPI no longer replaces that menu entry with its hidden one.
+    shows the KiPI-SI icon; KiPI-SI no longer replaces that menu entry with its hidden one.
 - **PDF reports** (#119). The DC and AC panels' *HTML report* tick is now *Report*, with a
   choice of HTML or PDF beside it (saved with the setup; older setups keep HTML). The PDF
-  has the same tables and maps, printed by Qt (already one of KiPI's packages), with
+  has the same tables and maps, printed by Qt (already one of KiPI-SI's packages), with
   images of the AC impedance plot and board map. It leaves out the sortable columns, and
   the DC 3D views go in it as an attachment (#133, below). Its User notes box is a fillable form field: type in
   it in any PDF viewer that fills forms (Acrobat, web browsers, Preview)
   and save the PDF to keep the notes; printed, it is a box to write in. Qt cannot make
-  form fields, so KiPI adds the field to Qt's file as an incremental update, and should
+  form fields, so KiPI-SI adds the field to Qt's file as an incremental update, and should
   that fail the box stays without it. A heading that would end a page starts the next
   one instead, with the table or text it heads. It opens in the PDF viewer. Where a
-  PDF cannot be made, KiPI writes the HTML report instead and the log says why. The
+  PDF cannot be made, KiPI-SI writes the HTML report instead and the log says why. The
   *Report* button is now *Open report*.
 - **Guess models** (#130), beside *3D Models*: for a board with no KiCad board file to
   read models from (an ODB++ job, a snapshot opened away from its board), or parts whose
@@ -826,12 +847,12 @@ milestones rather than versions that were ever set.
   footprint name. It looks for the whole name, a name the part's ends with (ODB++ from
   KiCad names parts `Capacitor_SMD_C_0402_1005Metric`), the name it starts with (a
   `_HandSolder` variant), a chip resistor, capacitor or inductor's size code
-  (`CAPC1005X55N`, `C0402`, `R0805`), and last the closest name. KiPI writes a board of just
+  (`CAPC1005X55N`, `C0402`, `R0805`), and last the closest name. KiPI-SI writes a board of just
   those parts, each turned and on its side as on the board, and kicad-cli places the models
   as it does for a KiCad board. It is a guess, so it runs only when clicked: a model not
   found by the whole name is left out if it is far larger or smaller than the part's pads,
   and the log names each one kept. Opening or reloading a board drops them. Standalone
-  KiPI now shows part 3D models too when KiCad is installed. Footprints now record their
+  KiPI-SI now shows part 3D models too when KiCad is installed. Footprints now record their
   rotation (ODB++ and KiCad boards, and snapshots); older snapshots take it from the pads.
   Importing a STEP file of the whole board is not done yet.
 
@@ -884,13 +905,13 @@ milestones rather than versions that were ever set.
 - **PARDISO is installed by default** where Intel MKL exists (Windows and Linux on x86-64),
   with an opt-out (#129).
   - Plugin: KiCad installs `requirements.txt` on every reload without asking, so PARDISO
-    stays out of it. The first time KiPI opens it shows what PARDISO would add (each
+    stays out of it. The first time KiPI-SI opens it shows what PARDISO would add (each
     package and its size), ticked, and installs it with the plugin environment's pip
     (wheels only, as KiCad does) behind a progress dialog that can be canceled. Unticking
     is remembered outside the environment. *About → Manage dependencies…* now appears in
     the plugin too, to add or remove it; a removal waits for the next start, before MKL is
-    loaded, and KiPI stops using it meanwhile. After *Recreate Plugin Environment* KiPI asks
-    again unless it was turned down. A failed or canceled install leaves KiPI on SciPy's
+    loaded, and KiPI-SI stops using it meanwhile. After *Recreate Plugin Environment* KiPI-SI asks
+    again unless it was turned down. A failed or canceled install leaves KiPI-SI on SciPy's
     solver and is not asked again on every start.
   - Standalone: the launcher's first setup has PARDISO ticked; later setups keep what was
     chosen.
@@ -905,7 +926,7 @@ milestones rather than versions that were ever set.
 
 ## 0.8.0: plugin and standalone modes
 
-First milestone of running KiPI on its own, outside KiCad (#45). The plugin works as before.
+First milestone of running KiPI-SI on its own, outside KiCad (#45). The plugin works as before.
 
 ### Added
 - The part selected in the setup, or by clicking its name in 3D, **blinks** red and amber
@@ -939,26 +960,26 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
   takes the tighter side of the regulator's input range (in volts, or in % of its input
   rail), and **Copy current** and **Subtract DC drop** take its input current and the drop
   at its input pins from the last power-tree solve.
-- **Standalone mode.** Started from KiCad's toolbar, KiPI runs as the plugin and reads the
-  board open in the PCB editor. Started any other way (`python -m kipi`, or the `kipi`
+- **Standalone mode.** Started from KiCad's toolbar, KiPI-SI runs as the plugin and reads the
+  board open in the PCB editor. Started any other way (`python -m kipi_si`, or the `kipi_si`
   command of an installed package), it runs standalone: it opens board files and needs no
   KiCad.
-  - `python -m kipi [board]` opens that board; a file KiPI cannot read stops it with a
+  - `python -m kipi_si [board]` opens that board; a file KiPI-SI cannot read stops it with a
     message.
   - The toolbar has **Open…** and **Reload** in place of *Load from KiCad*, *Refill zones*
     and *Open snapshot…*. *Select in KiCad* and the part *Models* box are hidden, and the
-    copper uses KiPI's default layer colors.
-  - Standalone opens KiPI snapshots (`.kipi.json.gz`), KiCad board files and ODB++ jobs
+    copper uses KiPI-SI's default layer colors.
+  - Standalone opens KiPI-SI snapshots (`.kipi_si.json.gz`), KiCad board files and ODB++ jobs
     (below). Reading HYP files comes next.
   - The title bar says *(standalone)*, and the welcome screen and About show the mode.
-  - The plugin and standalone KiPI each allow one window of their own, so an open
-    standalone KiPI never takes over KiCad's KiPI button.
-  - `KIPI_HOST=plugin` (or `standalone`) overrides how KiPI tells the two apart, e.g. to run
+  - The plugin and standalone KiPI-SI each allow one window of their own, so an open
+    standalone KiPI-SI never takes over KiCad's KiPI-SI button.
+  - `KIPI_SI_HOST=plugin` (or `standalone`) overrides how KiPI-SI tells the two apart, e.g. to run
     the plugin workflow from a terminal.
-- **Standalone launcher** (`kipi_launcher.py`; double-click `kipi_launcher.pyw` on
-  Windows). The KiPI folder can be anywhere: the first start sets up an environment of
-  KiPI's own (`%LOCALAPPDATA%\KiPI`, `~/Library/Application Support/KiPI` or
-  `~/.local/share/kipi`), and later starts open KiPI straight away.
+- **Standalone launcher** (`kipi_si_launcher.py`; double-click `kipi_si_launcher.pyw` on
+  Windows). The KiPI-SI folder can be anywhere: the first start sets up an environment of
+  KiPI-SI's own (`%LOCALAPPDATA%\KiPI-SI`, `~/Library/Application Support/KiPI-SI` or
+  `~/.local/share/kipi_si`), and later starts open KiPI-SI straight away.
   - The setup window lists every package that will be installed, with its version and
     download size as PyPI gives them for this computer, and the totals to download and on
     disk. Nothing is installed until you click *Install*. Offline, it shows the list saved
@@ -970,15 +991,15 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
     `python3-venv`. It installs with uv when uv is on the PATH, else venv and pip, and with
     pip again if uv fails. Progress, the installer's output and Cancel are in the window.
   - A setup that was canceled or failed is picked up on the next start, and so is a new
-    KiPI that needs different packages. The launcher keeps its own logs.
+    KiPI-SI that needs different packages. The launcher keeps its own logs.
   - With no tkinter (KiCad's bundled Python has none) or `--console`, setup runs in the
     terminal; with neither a window nor a terminal, a message says how to start it.
   - `--setup`, `--add-pardiso`, `--remove-pardiso`, `--repair` and `--reset` manage the
-    environment, and `--create-shortcut` adds KiPI to the Start menu (Windows) or the
+    environment, and `--create-shortcut` adds KiPI-SI to the Start menu (Windows) or the
     applications menu (Linux).
-  - **About → Manage dependencies…** in standalone KiPI closes KiPI, opens the setup, and
-    starts KiPI again afterwards.
-  - `python -m kipi` in a Python without KiPI's packages says which are missing and to use
+  - **About → Manage dependencies…** in standalone KiPI-SI closes KiPI-SI, opens the setup, and
+    starts KiPI-SI again afterwards.
+  - `python -m kipi_si` in a Python without KiPI-SI's packages says which are missing and to use
     the launcher, instead of a traceback.
 - **Solver Guide** (#92, `docs/solver-guide.html`, served by GitHub Pages): a page
   for newcomers on what power integrity analysis is and why it matters. It covers what
@@ -989,9 +1010,9 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
   problems PI simulation finds. It is linked at the top of the README, from the About
   window and from the user guide.
 - **About → Check for updates** (#97) asks GitHub for the newest tagged release and says
-  whether it is newer than the KiPI running, with a link to its release page. It only asks
+  whether it is newer than the KiPI-SI running, with a link to its release page. It only asks
   when clicked; offline (or rate-limited) it says it could not reach GitHub.
-- **KiCad board files without KiCad.** Standalone **Open…** (and `python -m kipi
+- **KiCad board files without KiCad.** Standalone **Open…** (and `python -m kipi_si
   board.kicad_pcb`) reads KiCad 7 to 10 `.kicad_pcb` files directly, giving the same board as
   the plugin reads from the running KiCad: the same stackup, copper, pad shapes and item ids,
   so a setup made in the plugin opens with the file and the other way round.
@@ -1002,7 +1023,7 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
   - Net classes come from the project's `.kicad_pro` (assigned nets and patterns).
   - Zones are read as KiCad last filled them. A zone saved unfilled has no copper, and the
     board summary's *Placeholders* says so; fill zones in KiCad (B) and save first.
-  - When the open board file is saved (in KiCad or anywhere), KiPI offers to read it again.
+  - When the open board file is saved (in KiCad or anywhere), KiPI-SI offers to read it again.
   - **Open…** has a menu of the boards opened lately.
   - Checked against the KiCad API on real boards: identical copper, and identical DC results.
 - **ODB++ jobs.** Standalone **Open…** reads ODB++ as a `.zip`, `.tgz` or `.tar.gz`, or an
@@ -1021,11 +1042,11 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
     track, via and pad the same, and DC drops within 3 parts per million.
 - **Where the board came from, and its placeholders.** The board summary in the Info box
   names the source ("From KiCad PCB editor 10.0.7") and the snapshot file it was opened from,
-  and lists under *Placeholders* each value KiPI had to fill in because the source did not
+  and lists under *Placeholders* each value KiPI-SI had to fill in because the source did not
   give it: a default stackup, a 2-layer guess from a KiCad too old to list its layers, or
   pads kept on every layer when KiCad cannot say which layers plated pads are on. Snapshots
   keep both; older snapshots read as coming from KiCad.
-- Loads not connected by copper (#88). Before a DC solve, KiPI checks each load pin for a path
+- Loads not connected by copper (#88). Before a DC solve, KiPI-SI checks each load pin for a path
   to its VRM (or ground reference) through copper or series links, instead of stopping at
   the first one without. Unconnected pins draw nothing and the load's current goes through
   its other pins; a load with no supply pin, or no ground pin, connected is left out of the
@@ -1066,11 +1087,11 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
   temperature, or **From DC thermal co-simulation**, from the copper temperatures of the
   last DC solve with thermal co-simulation or of DC results opened from a file. The Results
   notes and the HTML report give the temperatures used.
-- KiPI can be **pinned to the Windows taskbar**. Its taskbar button used to refuse
-  pinning, as only KiCad could start KiPI; a pinned button now starts standalone KiPI
+- KiPI-SI can be **pinned to the Windows taskbar**. Its taskbar button used to refuse
+  pinning, as only KiCad could start KiPI-SI; a pinned button now starts standalone KiPI-SI
   through the launcher (from the plugin too). The launcher's Start menu shortcut carries
-  KiPI's taskbar ID, so pinning it and the open KiPI share one button. Without the
-  launcher next to KiPI, pinning stays off.
+  KiPI-SI's taskbar ID, so pinning it and the open KiPI-SI share one button. Without the
+  launcher next to KiPI-SI, pinning stays off.
 - The Target Impedance/Frequency Calculator has a **Copy current from DC load** button
   beside the load step. It fills the load step from the current of a DC load on the
   probe's rail, the probe's own part first, with a menu when there are several.
@@ -1091,7 +1112,7 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
   and input range; load switches as DC connections with their on-resistance; series parts
   with their datasheet DC resistance; each load's current, and a tolerance from its rail's
   stated range, raised to the datasheet's minimum supply voltage where that is higher.
-  Schematic nets are matched to board nets through the pads. KiPI takes one current per load
+  Schematic nets are matched to board nets through the pads. KiPI-SI takes one current per load
   and one resistance per DC connection, so the typical is used; the log lists each minimum
   and maximum left out, each current the file does not know (imported as 0 A) and whatever
   could not be placed on the board. Settings, thermal and the AC setup are kept.
@@ -1146,11 +1167,11 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
 - The Target Impedance/Frequency Calculator's slew rate starts at 10 A/µs instead of
   empty, and the calculator no longer cites the target impedance paper (the help still
   does).
-- `python -m kipi` with no arguments starts standalone instead of connecting to the running
-  KiCad. Use `KIPI_HOST=plugin python -m kipi` for the old behavior; `--dump` still
+- `python -m kipi_si` with no arguments starts standalone instead of connecting to the running
+  KiCad. Use `KIPI_SI_HOST=plugin python -m kipi_si` for the old behavior; `--dump` still
   extracts from the running KiCad.
 - `kicad-python` is now the `kicad` extra of the Python package
-  (`pip install -e "<KiPI folder>[kicad]"`), since standalone KiPI does not need it. `requirements.txt`, which KiCad installs for the
+  (`pip install -e "<KiPI-SI folder>[kicad]"`), since standalone KiPI-SI does not need it. `requirements.txt`, which KiCad installs for the
   plugin, still includes it.
 - **Laminate k** is gone from the thermal settings (#90). Each dielectric's thermal
   conductivity is now edited in the Stackup window's k column instead: choosing a material
@@ -1164,43 +1185,43 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
   view (#103).
 - Hiding copper layers no longer rescales the result colors: the scale covers every layer
   until you set its limits (#101).
-- KiPI answers its toolbar button at once (#55). The welcome screen now comes up first and
-  says what KiPI is doing (connecting to KiCad, loading its packages, opening the window)
+- KiPI-SI answers its toolbar button at once (#55). The welcome screen now comes up first and
+  says what KiPI-SI is doing (connecting to KiCad, loading its packages, opening the window)
   until the window is open, instead of appearing only after everything has loaded. The
   packages load on a thread, so it keeps animating. The first start after a reboot or
   after KiCad starts can still take a while, since thousands of files are read from a
   cold disk (16 s on one Windows machine, 1 s once cached), and the log records how long
   each part took.
-- KiPI's window comes to the front when it opens, instead of behind KiCad (#112). On
+- KiPI-SI's window comes to the front when it opens, instead of behind KiCad (#112). On
   Windows it takes the foreground from KiCad, and, if Windows refuses, it still opens on top
   of the other windows. It stays in front after the welcome screen closes, unless you have
   switched to another app in the meantime.
-- The standalone launcher installs KiPI's packages with uv even when uv is not on the PATH
+- The standalone launcher installs KiPI-SI's packages with uv even when uv is not on the PATH
   (#113). It uses uvx or pipx to fetch uv, and falls back to venv and pip as before when
   none of them is available. The setup log names the route taken, for example *uv (pipx)*.
-- Setups are saved as YAML, `<board>.kipi-setup.yml`, which is easier to read, diff and
-  edit by hand (#76). A `.kipi-setup.json` from an earlier KiPI still opens when there is no
+- Setups are saved as YAML, `<board>.kipi_si-setup.yml`, which is easier to read, diff and
+  edit by hand (#76). A `.kipi_si-setup.json` from an earlier KiPI-SI still opens when there is no
   `.yml` setup, with a log warning that JSON setups are deprecated and will stop being
   read in a future version. The next save writes the `.yml` file and leaves the JSON file
-  as it was. KiPI now needs PyYAML. In an environment that does not have it yet, setups
+  as it was. KiPI-SI now needs PyYAML. In an environment that does not have it yet, setups
   stay JSON. The example and validation setups are now YAML.
-- Results files (`.kipi-results`, `.kipi-ac-results`) hold JSON and NumPy arrays in a zip
+- Results files (`.kipi_si-results`, `.kipi_si-ac-results`) hold JSON and NumPy arrays in a zip
   instead of a Python pickle (#99). They open on any computer and cannot run code, so they
-  are safe to share. Opening one builds only KiPI's own result classes, and arrays are read
+  are safe to share. Opening one builds only KiPI-SI's own result classes, and arrays are read
   without pickled objects.
   - Saving is about 4x faster and the files about 3x smaller, because the 3D views are no
     longer saved: they are rebuilt from the solution when the file opens. On the multiphase
     example, saving takes 0.7 s instead of 2.8 s, for 30 MB instead of 92 MB. Saving and
     opening DC results run in the background with progress, like a solve.
   - A failed save leaves an earlier file of the same name as it was.
-  - Results saved by KiPI 0.7 and earlier still open, but KiPI first warns that a pickle
+  - Results saved by KiPI-SI 0.7 and earlier still open, but KiPI-SI first warns that a pickle
     can run code and asks whether to open it. It then reads the pickle with an allowlist of
     the classes results hold, and logs that the format is deprecated. Saving again writes
     the new format.
   - Electro-thermal results save and reopen in the new format too (#50).
-  - DC results files are named for what was solved: `.kipi-dc-results`, or
-    `.kipi-dc-thermal-results` after an electro-thermal solve. **Open results…** in DC mode
-    takes both, and `.kipi-results` files from earlier versions.
+  - DC results files are named for what was solved: `.kipi_si-dc-results`, or
+    `.kipi_si-dc-thermal-results` after an electro-thermal solve. **Open results…** in DC mode
+    takes both, and `.kipi_si-results` files from earlier versions.
 - The via current limit starts at 1 A rather than none, a placeholder that marks vias PASS or
   FAIL from the first solve (#114). Set your fab's rating, or 0 for none. A setup saved
   with no limit keeps none.
@@ -1218,31 +1239,31 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
   voltages; thinning also runs about ten times faster.
 
 ### Internal
-- Board sources are kept apart from the rest of KiPI. `kipi/sources/` holds where boards
-  come from: `kicad_ipc/` (the running KiCad, moved from `kipi/core/kicad_io/`), the
+- Board sources are kept apart from the rest of KiPI-SI. `kipi_si/sources/` holds where boards
+  come from: `kicad_ipc/` (the running KiCad, moved from `kipi_si/core/kicad_io/`), the
   snapshot file, and a registry of the file formats Open reads. The window sees only a
   `BoardSource` (read, re-read, refill, select) and an `InstalledTool` (layer colors and
   part models). `tests/core/test_layering.py` fails if kipy is imported outside the KiCad
   source, or if core, DC, AC or the GUI import a source directly.
-- What any board reader shares moved into `kipi/core`: KiPI's copper layer ids
+- What any board reader shares moved into `kipi_si/core`: KiPI-SI's copper layer ids
   (`core/model/layers.py`, equal to KiCad's), stackup building and the default stackup
   (`core/model/stackup.py`), snapshot I/O (`core/model/snapshot_io.py`), arc discretization
   (`core/geometry/arcs.py`) and the default layer colors (`core/viz/layer_colors.py`).
   Results saved by earlier versions still open.
-- `kipi/host.py` says how KiPI was started; the entry points set it.
-- `kipi/sources/kicad_pcb/` is the board-file reader. Its tests compare it item by item with
+- `kipi_si/host.py` says how KiPI-SI was started; the entry points set it.
+- `kipi_si/sources/kicad_pcb/` is the board-file reader. Its tests compare it item by item with
   the KiCad API's reading of a fixture board KiCad saved (`tests/data/kicad_pcb/`, made by
   `make_fixtures.py`). The stroke, bezier and outline helpers both KiCad readers use moved
   to `core/geometry/shapes.py`, and the pad shapes cut as KiCad cuts them to
   `core/geometry/pad_shapes.py`. Sources say which files they read
   (`BoardSource.files()`), which the window watches.
-- `kipi/sources/odbpp/` is the ODB++ reader, tested against KiCad's ODB++ exports of the
+- `kipi_si/sources/odbpp/` is the ODB++ reader, tested against KiCad's ODB++ exports of the
   same fixture board (`tests/data/odbpp/`, also made by `make_fixtures.py`). The registry
   lets a format be a folder as well as a file.
-- `kipi/launcher/` is the launcher, standard library only (a test checks).
+- `kipi_si/launcher/` is the launcher, standard library only (a test checks).
   `requirements-standalone.txt` is what it installs, and
   `.github/scripts/dep_sizes.py` writes the package list it shows offline
-  (`kipi/launcher/deps_manifest.json`), for Windows, Linux and macOS; a test fails when
+  (`kipi_si/launcher/deps_manifest.json`), for Windows, Linux and macOS; a test fails when
   that list is stale. Linux on ARM is left out: Triangle has no prebuilt package there, so
   pip builds it.
 - The board heat model's log line names its direct solver, as the copper solves' lines
@@ -1256,7 +1277,7 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
   and every job a limit of its own, a new push cancels that branch's older run, and pushes
   that change only Markdown files skip CI. The tests themselves take about a minute; the
   rest of a job is installing packages.
-- CI has a **KiCad versions** job with a step for each KiCad release KiPI is tested against
+- CI has a **KiCad versions** job with a step for each KiCad release KiPI-SI is tested against
   (9.0.0 to 10.0.6, through the fake KiCad that answers as each one does) and for board
   files saved by KiCad 9 and 10, so the pipeline shows which versions pass (#106).
   `tests/core/test_ci.py` fails if the steps and the tested versions drift apart.
@@ -1273,7 +1294,7 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
   (thin and arc tracks, right-angle routes, a layer change through vias, planes, a power
   chain with a series link, and AC plane, decoupling-capacitor and ferrite boards), each
   solved and compared with hand calculations. They run in `tests/accuracy`, as a separate
-  final CI job on pull requests into `main`, and open in KiPI like any snapshot.
+  final CI job on pull requests into `main`, and open in KiPI-SI like any snapshot.
 - **Click-to-sort tables everywhere** (#85): the capacitor parts table, a probe's custom
   target points and a load's pin groups sort by a clicked column header, as do every table
   in the DC and AC HTML reports. Values with SI prefixes sort by value (100 nF before
@@ -1303,13 +1324,13 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
   in-plane thermal conductivity, and each copper layer's resistivity. Thicknesses show in
   µm, mm, mil or oz. The stackup is locked to KiCad's values by default. Untick **Lock to
   imported values** to try other thicknesses, materials and εr. Each dielectric's material
-  is a drop-down of the materials KiPI knows; choosing one sets its typical εr and thermal
+  is a drop-down of the materials KiPI-SI knows; choosing one sets its typical εr and thermal
   conductivity. Each copper layer has a conductor drop-down too (annealed, electrodeposited
   or rolled-annealed copper, silver, gold, aluminum, nickel or tin), which sets that
   layer's resistivity, TCR and thermal conductivity; the DC solve and the electro-thermal
   model use a TCR and a thermal conductivity per layer. The layers restack, and every DC and AC analysis, the 3D view and the reports use the
   edited stackup. The PI setup keeps it. KiCad's API cannot change a board's stackup yet, so
-  edits stay in KiPI.
+  edits stay in KiPI-SI.
 - **AC Board map tab** (#67). In AC mode a **Board map** tab beside **Impedance** shows the
   report's board map in the GUI: the solver's mesh of the rail and its ground (all layers,
   or one layer at a time, with or without the triangle edges), the board outline, the
@@ -1328,10 +1349,10 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
 
 ### Changed
 - HTML report file names carry the date and time of the solve
-  (`<board>_kipi_report_<date>_<time>.html`,
+  (`<board>_kipi_si_report_<date>_<time>.html`,
   `<board>_<rail>_ac_report_<date>_<time>.html`), so a new solve no longer overwrites the
-  last report, and **Save results…** suggests a time-stamped `.kipi-results` /
-  `.kipi-ac-results` name (#66).
+  last report, and **Save results…** suggests a time-stamped `.kipi_si-results` /
+  `.kipi_si-ac-results` name (#66).
 - The DC setup's **Copper** tab is gone. Its resistivity, TCR and per-layer resistivity
   moved to the Stackup window, since the AC solve uses them too.
 - The **Cut** plane (axis, slider and **Flip**) is gone from the Display options.
@@ -1358,18 +1379,18 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
   other test files. CI shows each folder's results in its own log group.
 
 ### Fixed
-- **Online user guide link**: when the local guide is missing, KiPI now points to the
-  guide on GitHub Pages (https://drewsum.github.io/KiPI/help.html) rather than to the
+- **Online user guide link**: when the local guide is missing, KiPI-SI now points to the
+  guide on GitHub Pages (https://mohamoudali12.github.io/KiPI-SI/help.html) rather than to the
   file's HTML source on GitHub.
 - Clicking a results table's column header a second time now reverses the sort; it used
   to sort ascending every time, because Qt flips its own sort indicator before the click
-  reaches KiPI (#85).
+  reaches KiPI-SI (#85).
 - The AC HTML report no longer leaves a large blank space between the board map and the
   capacitor models. The map's plot shared its id with the section heading, so Plotly drew
   the map inside the heading and left the map's own space empty. The map's height now also
   follows the page width, so a narrow window doesn't leave blank bands above and below the
   board.
-- When KiPI cannot read the board's stackup, its default stackup no longer fixes εr at 4.5.
+- When KiPI-SI cannot read the board's stackup, its default stackup no longer fixes εr at 4.5.
   The AC *Default εr* setting now applies there, as it does for any dielectric the stackup
   gives no value for.
 
@@ -1377,7 +1398,7 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
 
 ### Added
 - **Save and open AC results** (#56). *Save results…* in the AC panel writes every rail
-  solved so far to a `.kipi-ac-results` file. In AC mode, the toolbar's *Open results…*
+  solved so far to a `.kipi_si-ac-results` file. In AC mode, the toolbar's *Open results…*
   (DC only before) reopens it without solving again: each rail's curves and table come
   back under its VRM, and the HTML report link where the report still exists. Rails
   whose VRM is no longer in the setup are left out and logged.
@@ -1387,7 +1408,7 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
   the last 14 days, and release downloads. A daily workflow publishes them to the repo's
   `stats` branch, so no token ships with the plugin; the dialog fetches them in the
   background once a session and shows the last ones fetched when offline.
-- Each release gets a `KiPI-<version>.zip` to unzip into KiCad's plugins folder, which is
+- Each release gets a `KiPI-SI-<version>.zip` to unzip into KiCad's plugins folder, which is
   also what makes its downloads countable. The README's install steps mention it as the
   way to install without git.
 - The *Open results…* tooltip and the user guide describe what it opens in each mode, and
@@ -1429,7 +1450,7 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
     statistics.
 - **User guide and tooltips.** *Help* in the toolbar (or F1) opens `docs/help.html`, an
   offline guide to every button, the workflows and the results, with collapsible sections.
-  Every button, box and table in KiPI now has a tooltip.
+  Every button, box and table in KiPI-SI now has a tooltip.
 - **Pre-filled setup fields.** Picking pins fills in what usually follows from them, and
   every guess can be overwritten:
   - The ground pins of a VRM, load or probe, from the same part. The ground net is a
@@ -1456,12 +1477,12 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
   - Ground pins on an excluded ground are ignored.
   - The Notes tab lists what was left out and these substitutions.
 - **Optional multithreaded solver.** If `pypardiso` is installed (Windows and Linux on
-  x86-64), KiPI solves with Intel MKL's PARDISO, and directly for rails of up to 1M
+  x86-64), KiPI-SI solves with Intel MKL's PARDISO, and directly for rails of up to 1M
   unknowns. A 645k-unknown rail solves in 1.2 s instead of about 8 s.
   - It is opt-in because of its size. MKL and its libraries are about 210 MB to download
-    on Windows (about 320 MB on Linux) and about 630 MB on disk. That takes KiPI's plugin
+    on Windows (about 320 MB on Linux) and about 630 MB on disk. That takes KiPI-SI's plugin
     environment from about 860 MB to about 1.5 GB. The README explains how to add it.
-  - Without it, or if it fails on a system, KiPI falls back to SciPy.
+  - Without it, or if it fails on a system, KiPI-SI falls back to SciPy.
   - *Copy version info* names the solver in use.
 - **All and None buttons for the copper layers.** They show or hide every layer at once.
 - **Layer opacity slider.** *Display → Opacity* draws the copper layers and pads see-through
@@ -1471,16 +1492,16 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
   (`pcbnew.json` and `colors/<theme>.json`) on every load. A built-in, missing or unreadable
   theme, or a layer the theme leaves out, gets KiCad's default theme color; the log names
   the theme used.
-- **Welcome screen.** KiPI shows the animated logo, its version, the plugin identifier and
+- **Welcome screen.** KiPI-SI shows the animated logo, its version, the plugin identifier and
   the versions of Python and its main packages while it starts. It closes on its own after
-  a few seconds (or on a click); if it cannot be shown, KiPI starts without it.
-- **One KiPI at a time.** Starting KiPI while one is open brings the open one to the front
-  instead of opening a second. A KiPI that crashed does not block the next one, and if the
-  lock cannot be written KiPI starts anyway.
-- **One KiCad at a time.** KiPI refuses to connect, at start or on *Load from KiCad*, while
+  a few seconds (or on a click); if it cannot be shown, KiPI-SI starts without it.
+- **One KiPI-SI at a time.** Starting KiPI-SI while one is open brings the open one to the front
+  instead of opening a second. A KiPI-SI that crashed does not block the next one, and if the
+  lock cannot be written KiPI-SI starts anyway.
+- **One KiCad at a time.** KiPI-SI refuses to connect, at start or on *Load from KiCad*, while
   more than one KiCad (project manager or standalone PCB editor) is open for this user, and
   names them with their PIDs. If the processes cannot be listed it carries on;
-  `KIPI_ALLOW_MULTIPLE_KICAD=1` skips the check.
+  `KIPI_SI_ALLOW_MULTIPLE_KICAD=1` skips the check.
 - **3D models of the modeled parts.** The geometry view draws the KiCad 3D models of the
   parts named in the setup (VRMs, loads, series links and capacitor models) that have a
   pad on a net shown, like the copper. *Display → Models* hides them. Over results they
@@ -1493,8 +1514,8 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
   - The Z scale stretches the board but not the parts; top-side parts sit on the stretched
     board. Clicks go through the models to the copper.
   - Fallbacks: kicad-cli is found through the connected KiCad, the PATH, the usual install
-    folders or KiCad's Flatpak (or `KIPI_KICAD_CLI`); an older kicad-cli is asked again
-    without the options it does not know. With no kicad-cli or no board file on disk, KiPI
+    folders or KiCad's Flatpak (or `KIPI_SI_KICAD_CLI`); an older kicad-cli is asked again
+    without the options it does not know. With no kicad-cli or no board file on disk, KiPI-SI
     says so once and draws no models.
 
 ### Changed
@@ -1531,10 +1552,10 @@ First milestone of running KiPI on its own, outside KiCad (#45). The plugin work
 - CI also runs the tests on Windows with PARDISO installed.
 - **Package restructured for more than one analysis.** Code shared by every analysis
   (board model and extraction, geometry, meshing, sparse solvers, copper views) moved to
-  `kipi.core`; the DC analysis (power tree, conduction solver, thermal, reports, result
-  views, setup panel) moved to `kipi.dc`; the AC analysis is in `kipi.ac`. The
-  direct / AMG-CG solver moved out of the DC FEM into `kipi.core.solver.spd`. Results
-  files saved by earlier versions still open (`kipi.compat` maps the old module paths).
+  `kipi_si.core`; the DC analysis (power tree, conduction solver, thermal, reports, result
+  views, setup panel) moved to `kipi_si.dc`; the AC analysis is in `kipi_si.ac`. The
+  direct / AMG-CG solver moved out of the DC FEM into `kipi_si.core.solver.spd`. Results
+  files saved by earlier versions still open (`kipi_si.compat` maps the old module paths).
 
 ## Merged after 0.6.5 (2026-10-14): Regulation checks and copper shapes
 
@@ -1599,14 +1620,14 @@ it ships with 0.7.0.
   when the board is next opened. **Load from KiCad** on a board that is already open keeps
   the current ticks. Only a board with no saved choice starts with a guess.
 - **About dialog** (toolbar), with the version, author, project links and the versions of
-  the libraries KiPI is running on, ready to copy into a bug report.
-- **KiPI's own taskbar entry.** On Windows, macOS and Linux, KiPI shows with its name and
+  the libraries KiPI-SI is running on, ready to copy into a bug report.
+- **KiPI-SI's own taskbar entry.** On Windows, macOS and Linux, KiPI-SI shows with its name and
   icon instead of as the Python interpreter that KiCad starts it with.
 - **Progress messages** before long steps: meshing large planes, joining layers through
   many plated holes, mapping copper for the thermal model, and solving the board
   temperature.
 - **KiCad 9 support**, confirmed on KiCad 9.0.7. Boards are read from KiCad 9.0.0 onwards.
-  Where a KiCad 9 release lacks a request, KiPI takes the layers and their names from the
+  Where a KiCad 9 release lacks a request, KiPI-SI takes the layers and their names from the
   stackup instead, and zone refills wait on a request KiCad 9 answers. Before 9.0.3, plated pads are kept on
   every layer, because KiCad cannot say which layers have their copper.
 - **README badges** for the supported KiCad versions, platforms and Python versions.
@@ -1629,7 +1650,7 @@ it ships with 0.7.0.
 
 ### Fixed
 - **Refill zones** could return before KiCad had finished filling, so the reads that followed
-  failed with `AS_BUSY` or timed out. KiPI now waits until the fill has finished.
+  failed with `AS_BUSY` or timed out. KiPI-SI now waits until the fill has finished.
 - **Electro-thermal and large solves could hang or crash.**
   - The faulthandler timer could kill a solve that was still running. Stack dumps now come
     from a Python thread instead.
@@ -1722,8 +1743,8 @@ it ships with 0.7.0.
 - **HTML report.** A single offline file containing the summary and every results table, an
   interactive 3D view per net group, per-layer statistics with top-down voltage and
   current-density maps, and the thermal map.
-- Package metadata in `pyproject.toml`, a `kipi` command-line entry point, the GPL-3.0-or-later
-  license, the README user guide with screenshots, and the KiPI logo.
+- Package metadata in `pyproject.toml`, a `kipi_si` command-line entry point, the GPL-3.0-or-later
+  license, the README user guide with screenshots, and the KiPI-SI logo.
 
 ### Changed
 - Repeated solves warm-start the AMG solver and reuse cached meshes.
@@ -1740,7 +1761,7 @@ it ships with 0.7.0.
 - **Exports.**
   - CSV tables.
   - ParaView `.vtm` files per group.
-  - Saving and reopening `.kipi-results` files without solving again.
+  - Saving and reopening `.kipi_si-results` files without solving again.
 - **Load pin groups.** A load can split its current unevenly across groups of pins.
   Results report the worst pin, and PASS/FAIL judges it.
 
@@ -1751,7 +1772,7 @@ it ships with 0.7.0.
   - VRMs can be sources, LDOs or switchers, with efficiency and quiescent current.
   - VRMs can have remote sense pins and ground pins.
   - Loads have supply and ground pins, a current and a drop tolerance.
-  - The setup is saved next to the board as `<board>.kipi-setup.json` and reloaded with it.
+  - The setup is saved next to the board as `<board>.kipi_si-setup.json` and reloaded with it.
   - Live validation keeps **Solve all** disabled until the setup is valid.
 - **Power-tree solver.** Rails are solved downstream first, and each VRM's input current
   becomes a load on the rail that feeds it. Switcher input current is iterated until it
@@ -1793,7 +1814,7 @@ it ships with 0.7.0.
 - **KiCad 10 IPC plugin** (`plugin.json`) that extracts the stackup, nets, tracks, arcs,
   vias, pads, footprints, zone fills and board outline.
 - **Snapshots.** JSON and gzip board snapshots for working without KiCad. Open one with
-  `python -m kipi --snapshot`.
+  `python -m kipi_si --snapshot`.
 - **3D copper viewer.**
   - Copper is drawn at its true heights, with via barrels, pads and the board body.
   - Layer and net toggles, Z exaggeration, and picking with select-in-KiCad.

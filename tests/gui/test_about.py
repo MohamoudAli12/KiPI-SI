@@ -12,8 +12,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from qtpy.QtWidgets import QApplication, QLabel  # noqa: E402
 
-from kipi import __version__  # noqa: E402
-from kipi.gui import about  # noqa: E402
+from kipi_si import __version__  # noqa: E402
+from kipi_si.gui import about  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -32,25 +32,15 @@ def test_dialog_names_the_version_and_repo(app):
 
 
 
-def test_dialog_icon_is_animated(app):
-    assert about.animated_icon_path() is not None
+def test_dialog_shows_the_icon(app):
     d = about.AboutDialog()
-    assert d.movie is not None and d.movie.frameCount() > 1
-    assert any(lb.movie() is d.movie for lb in d.findChildren(QLabel))
-
-
-def test_dialog_falls_back_to_the_still_icon_without_gif_support(app, monkeypatch):
-    # As on a Qt build without the GIF image plugin: QMovie cannot read the file.
-    monkeypatch.setattr(about.QMovie, "isValid", lambda self: False)
-    d = about.AboutDialog()
-    assert d.movie is None
     assert any(lb.pixmap() is not None and not lb.pixmap().isNull()
                for lb in d.findChildren(QLabel))
 
 
 def test_toolbar_has_stackup_help_and_about_after_open_results(app, no_3d):
     from qtpy.QtWidgets import QToolBar
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     names = [a.text() for a in w.findChild(QToolBar).actions() if a.text()]
     assert names[-6:] == ["Open results…", "Stackup", "Power tree", "Help", "About",
@@ -72,7 +62,7 @@ _real_fetch_stats = about.fetch_stats
 @pytest.fixture(autouse=True)
 def offline(monkeypatch, tmp_path):
     from qtpy.QtCore import QSettings
-    ini = str(tmp_path / "kipi.ini")
+    ini = str(tmp_path / "kipi_si.ini")
     monkeypatch.setattr(about, "_settings", lambda: QSettings(ini, QSettings.IniFormat))
     monkeypatch.setattr(about, "fetch_stats", lambda *a, **k: None)
     monkeypatch.setattr(about, "_fetched_this_session", False)
@@ -139,17 +129,17 @@ def test_stats_are_fetched_once_per_session(app, monkeypatch):
     assert d2.stats_label.isVisibleTo(d2)    # from the cache the first fetch filled
 
 
-def test_manage_dependencies_only_when_the_launcher_started_kipi(monkeypatch, tmp_path):
-    from kipi import host
-    launcher = tmp_path / "kipi_launcher.py"
+def test_manage_dependencies_only_when_the_launcher_started_kipi_si(monkeypatch, tmp_path):
+    from kipi_si import host
+    launcher = tmp_path / "kipi_si_launcher.py"
     launcher.write_text("")
-    (tmp_path / "kipi_launcher.pyw").write_text("")
-    monkeypatch.delenv("KIPI_LAUNCHER", raising=False)
-    assert about.launcher_command() is None                 # python -m kipi
-    monkeypatch.setenv("KIPI_LAUNCHER", str(launcher))
-    monkeypatch.setenv("KIPI_LAUNCHER_PYTHON", sys.executable)
+    (tmp_path / "kipi_si_launcher.pyw").write_text("")
+    monkeypatch.delenv("KIPI_SI_LAUNCHER", raising=False)
+    assert about.launcher_command() is None                 # python -m kipi_si
+    monkeypatch.setenv("KIPI_SI_LAUNCHER", str(launcher))
+    monkeypatch.setenv("KIPI_SI_LAUNCHER_PYTHON", sys.executable)
     cmd = about.launcher_command()
-    assert cmd[1] == str(tmp_path / "kipi_launcher.pyw") and cmd[2] == "--setup"
+    assert cmd[1] == str(tmp_path / "kipi_si_launcher.pyw") and cmd[2] == "--setup"
     assert cmd[cmd.index("--after-pid") + 1] == str(os.getpid())
     host.set_current(host.Host.PLUGIN)
     assert about.launcher_command() is None                 # the plugin's packages are KiCad's
@@ -164,10 +154,10 @@ def test_versions_compare_as_numbers():
 
 
 @pytest.mark.parametrize("latest,current,says", [
-    (("v0.8.1", "https://x/r"), "0.8.0", "KiPI v0.8.1 is available"),
-    (("v0.7.2", "https://x/r"), "0.8.0", "KiPI 0.8.0 is up to date"),     # ahead of releases
-    (("v0.8.0", "https://x/r"), "0.8.0", "KiPI 0.8.0 is up to date"),
-    (("nightly", "https://x/r"), "0.8.0", "KiPI 0.8.0 is up to date"),
+    (("v0.8.1", "https://x/r"), "0.8.0", "KiPI-SI v0.8.1 is available"),
+    (("v0.7.2", "https://x/r"), "0.8.0", "KiPI-SI 0.8.0 is up to date"),     # ahead of releases
+    (("v0.8.0", "https://x/r"), "0.8.0", "KiPI-SI 0.8.0 is up to date"),
+    (("nightly", "https://x/r"), "0.8.0", "KiPI-SI 0.8.0 is up to date"),
     (None, "0.8.0", "Could not reach GitHub"),
 ])
 def test_update_text(latest, current, says):
@@ -195,7 +185,7 @@ def test_check_for_updates_shows_the_answer(app, monkeypatch):
     while "available" not in d.update_label.text() and time.time() - t0 < 10:
         app.processEvents()
         time.sleep(0.01)
-    assert "KiPI v99.0.0 is available" in d.update_label.text()
+    assert "KiPI-SI v99.0.0 is available" in d.update_label.text()
     assert "https://example.org/r" in d.update_label.text() and d.btn_update.isEnabled()
 
 

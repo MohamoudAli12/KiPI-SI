@@ -18,12 +18,12 @@ from pathlib import Path
 import pytest
 from shapely.geometry import Polygon as SPolygon
 
-from kipi.core.model.layers import F_CU
-from kipi.core.progress import NULL
-from kipi.sources.odbpp import features as feat, lzw
-from kipi.sources.odbpp.archive import Job, OdbError
-from kipi.sources.odbpp.reader import pick_step, read_board
-from kipi.sources.odbpp.source import OdbFileSource
+from kipi_si.core.model.layers import F_CU
+from kipi_si.core.progress import NULL
+from kipi_si.sources.odbpp import features as feat, lzw
+from kipi_si.sources.odbpp.archive import Job, OdbError
+from kipi_si.sources.odbpp.reader import pick_step, read_board
+from kipi_si.sources.odbpp.source import OdbFileSource
 
 DATA = Path(__file__).parents[1] / "data" / "odbpp"
 ZIP = DATA / "features.zip"

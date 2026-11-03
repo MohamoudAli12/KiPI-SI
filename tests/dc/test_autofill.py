@@ -5,12 +5,12 @@ import os
 
 import pytest
 
-from kipi.core.model.board import Footprint, Net, Pad
-from kipi.core.model.nets import guess_voltage, voltage_from_name
-from kipi.dc.pi.autofill import (
+from kipi_si.core.model.board import Footprint, Net, Pad
+from kipi_si.core.model.nets import guess_voltage, voltage_from_name
+from kipi_si.dc.pi.autofill import (
     ground_net, guess_other_side, input_net, next_part, next_phase_refs, other_net, part_nets,
 )
-from kipi.dc.pi.model import Load, PinRef, PISetup
+from kipi_si.dc.pi.model import Load, PinRef, PISetup
 from synthetic import make_board
 
 PARTS = {
@@ -137,7 +137,7 @@ def app():
 
 
 def panel_for(snap, setup, nets):
-    from kipi.dc.gui.pi_panel import PIPanel
+    from kipi_si.dc.gui.pi_panel import PIPanel
     panel = PIPanel()
     panel.set_board(snap, setup)
     panel.set_nets(nets)
@@ -358,7 +358,7 @@ def test_the_step_between_the_last_two_phases_is_kept():
 
 
 def test_probe_takes_its_parts_ground(app):
-    from kipi.ac.gui.panel import ACPanel
+    from kipi_si.ac.gui.panel import ACPanel
     setup = PISetup()
     setup.loads.append(Load("U3", PinRef("U3", "VSNS"), 1.0))
     panel = ACPanel()

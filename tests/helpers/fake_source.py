@@ -1,6 +1,6 @@
 """A board source standing in for a design tool's editor, for window tests."""
 
-from kipi.sources.base import BoardSource, Capabilities
+from kipi_si.sources.base import BoardSource, Capabilities
 from synthetic import make_board
 
 

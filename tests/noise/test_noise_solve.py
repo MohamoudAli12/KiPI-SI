@@ -7,12 +7,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from kipi.ac.model import CapModel
-from kipi.core.progress import ProgressReporter
-from kipi.noise.checks import NoiseError, seed_phases
-from kipi.noise.model import Aggressor
-from kipi.noise.report import load_results, save_results
-from kipi.noise.solver import solve_noise
+from kipi_si.ac.model import CapModel
+from kipi_si.core.progress import ProgressReporter
+from kipi_si.noise.checks import NoiseError, seed_phases
+from kipi_si.noise.model import Aggressor
+from kipi_si.noise.report import load_results, save_results
+from kipi_si.noise.solver import solve_noise
 from noise_boards import buck_board, buck_setup
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -105,7 +105,7 @@ def test_results_save_and_reopen(tmp_path):
     snap = buck_board()
     setup = _setup(snap)
     r = solve_noise(snap, setup, "U1 buck")
-    path = save_results(tmp_path / "x.kipi-noise-results", {r.aggressor: r}, snap.board_name,
+    path = save_results(tmp_path / "x.kipi_si-noise-results", {r.aggressor: r}, snap.board_name,
                         setup)
     back = load_results(path)
     got = back["results"]["U1 buck"]
@@ -117,12 +117,12 @@ def test_results_save_and_reopen(tmp_path):
 
 
 def test_other_modes_results_name_their_mode(tmp_path):
-    from kipi.ac.report import load_results as load_ac
-    from kipi.dc.pi.report import load_results as load_dc
+    from kipi_si.ac.report import load_results as load_ac
+    from kipi_si.dc.pi.report import load_results as load_dc
     snap = buck_board()
     setup = _setup(snap)
     r = solve_noise(snap, setup, "U1 buck")
-    path = save_results(tmp_path / "x.kipi-noise-results", {r.aggressor: r}, "b", setup)
+    path = save_results(tmp_path / "x.kipi_si-noise-results", {r.aggressor: r}, "b", setup)
     with pytest.raises(ValueError, match="Coupled Noise mode"):
         load_ac(path)
     with pytest.raises(ValueError, match="Coupled Noise mode"):
@@ -131,11 +131,11 @@ def test_other_modes_results_name_their_mode(tmp_path):
 
 def test_the_example_multiphase_buck():
     """examples/multiphase_buck: four phases from its VRM, with its inductors' values."""
-    from kipi.core.model import snapshot_io
-    from kipi.dc.pi.model import PISetup
+    from kipi_si.core.model import snapshot_io
+    from kipi_si.dc.pi.model import PISetup
     ex = ROOT / "examples" / "multiphase_buck"
-    snap = snapshot_io.load(ex / "multiphase_buck.kipi.json.gz")
-    setup = PISetup.load(ex / "multiphase_buck.kipi-setup.yml")
+    snap = snapshot_io.load(ex / "multiphase_buck.kipi_si.json.gz")
+    setup = PISetup.load(ex / "multiphase_buck.kipi_si-setup.yml")
     setup.noise.board_model = False                 # ~40 s on this board; tested apart
     vrm = next(v for v in setup.vrms if v.name == "U1")
     a = Aggressor("U1", "U1", fsw_hz=600e3)

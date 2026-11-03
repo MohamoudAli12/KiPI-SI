@@ -9,10 +9,10 @@ import numpy as np
 import pytest
 
 from ac_boards import plane_pair, plane_setup
-from kipi.ac.html_report import report_name, write_ac_report
-from kipi.ac.model import CapModel
-from kipi.ac.solver import solve_ac
-from kipi.dc.pi.model import PISetup
+from kipi_si.ac.html_report import report_name, write_ac_report
+from kipi_si.ac.model import CapModel
+from kipi_si.ac.solver import solve_ac
+from kipi_si.dc.pi.model import PISetup
 
 
 @pytest.fixture(scope="module")
@@ -65,7 +65,7 @@ def test_report_name_is_safe_for_files():
 def test_report_format_is_saved(tmp_path):
     setup = PISetup()
     setup.ac.report_format = "pdf"
-    path = tmp_path / "s.kipi-setup.yml"
+    path = tmp_path / "s.kipi_si-setup.yml"
     setup.save(path)
     assert PISetup.load(path).ac.report_format == "pdf"
 
@@ -74,7 +74,7 @@ def test_panel_option_and_report_button(solved, tmp_path):
     pytest.importorskip("qtpy")
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from qtpy.QtWidgets import QApplication
-    from kipi.ac.gui.panel import ACPanel
+    from kipi_si.ac.gui.panel import ACPanel
     QApplication.instance() or QApplication([])
     snap, setup, result = solved
     p = ACPanel()

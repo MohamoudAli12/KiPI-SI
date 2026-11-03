@@ -9,11 +9,11 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from qtpy.QtWidgets import QApplication, QDialog  # noqa: E402
 
-from kipi.dc.pi.load_model import LoadModel  # noqa: E402
-from kipi.gui import load_model_dialogs as dialogs  # noqa: E402
+from kipi_si.dc.pi.load_model import LoadModel  # noqa: E402
+from kipi_si.gui import load_model_dialogs as dialogs  # noqa: E402
 from tree_boards import board, setup  # noqa: E402
 
-MODEL = LoadModel.from_dict({"kipi_load_model": 1, "part": "REG", "supplies": [
+MODEL = LoadModel.from_dict({"kipi_si_load_model": 1, "part": "REG", "supplies": [
     {"name": "+3V3", "pins": ["1"], "ground_pins": ["2"], "current_a": 0.25,
      "tolerance": {"min": -0.1, "max": 0.1, "unit": "±V"},
      "load_step": {"step_a": 0.1, "slew_a_per_us": 1, "ac_tolerance_mv": 33}}]})
@@ -36,7 +36,7 @@ def accept(monkeypatch):
 
 
 def test_dc_loads_take_a_model_and_get_added_from_one(app, accept):
-    from kipi.dc.gui.pi_panel import PIPanel
+    from kipi_si.dc.gui.pi_panel import PIPanel
     panel = PIPanel()
     panel.snapshot, panel.setup = board(), setup("ldo")
     panel.load_list.reload()
@@ -52,7 +52,7 @@ def test_dc_loads_take_a_model_and_get_added_from_one(app, accept):
 
 
 def test_ac_probes_take_the_target_from_the_load_step(app, accept):
-    from kipi.ac.gui.panel import ACPanel
+    from kipi_si.ac.gui.panel import ACPanel
     panel = ACPanel()
     panel.snapshot, panel.setup = board(), setup("ldo")
     panel.add_probes_from_model(MODEL)

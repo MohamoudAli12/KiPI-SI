@@ -10,7 +10,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from qtpy.QtWidgets import QApplication  # noqa: E402
 
-from kipi.dc.pi.model import DcLink, Load, PinRef, Vrm  # noqa: E402
+from kipi_si.dc.pi.model import DcLink, Load, PinRef, Vrm  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -19,11 +19,11 @@ def app():
 
 
 def _needs(editor, *widgets):
-    return [editor.form.labelForField(w).property("kipi_need") for w in widgets]
+    return [editor.form.labelForField(w).property("kipi_si_need") for w in widgets]
 
 
 def test_a_dc_vrm_needs_its_pins_voltage_and_for_a_converter_its_input(app):
-    from kipi.dc.gui.pi_panel import PIPanel
+    from kipi_si.dc.gui.pi_panel import PIPanel
     p = PIPanel()
     ed = p.vrm_list.editor
     ed.load(Vrm("U1", PinRef("U1", "3V3", ["1"]), 3.3, kind="source"))
@@ -38,7 +38,7 @@ def test_a_dc_vrm_needs_its_pins_voltage_and_for_a_converter_its_input(app):
 
 
 def test_an_ac_vrm_marks_the_dc_fields_unused(app):
-    from kipi.ac.gui.panel import ACPanel
+    from kipi_si.ac.gui.panel import ACPanel
     p = ACPanel()
     ed = p.vrm_list.editor
     ed.load(Vrm("U2", PinRef("U2", "1V8", ["1"]), 1.8, kind="smps"))
@@ -59,7 +59,7 @@ def test_an_ac_vrm_marks_the_dc_fields_unused(app):
 
 
 def test_dc_loads_and_links(app):
-    from kipi.dc.gui.pi_panel import PIPanel
+    from kipi_si.dc.gui.pi_panel import PIPanel
     p = PIPanel()
     ed = p.load_list.editor
     ed.load(Load("U3", PinRef("U3", "3V3", ["4"]), 0.5))

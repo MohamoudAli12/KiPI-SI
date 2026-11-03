@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>KiPI Solver Guide</title>
-<meta name="description" content="What power integrity analysis is, why it matters, and how KiPI's DC, electro-thermal, AC PDN impedance and Coupled Noise solvers work.">
+<title>KiPI-SI Solver Guide</title>
+<meta name="description" content="What power integrity analysis is, why it matters, and how KiPI-SI's DC, electro-thermal, AC PDN impedance and Coupled Noise solvers work.">
 <style>
 :root {
   --bg: #fbfbfa; --panel: #ffffff; --text: #1f2328; --muted: #5d646d; --border: #d9dce0;
@@ -129,13 +129,13 @@ figure svg { display: block; max-width: 760px; background: var(--panel);
 <body>
 <div class="layout">
 <nav id="toc" aria-label="Contents">
-  <div class="brand">KiPI Solver Guide</div>
-  <div class="sub">Power integrity, and what KiPI simulates</div>
+  <div class="brand">KiPI-SI Solver Guide</div>
+  <div class="sub">Power integrity, and what KiPI-SI simulates</div>
   <ol>
     <li class="group">Background</li>
     <li><a href="#pi">What power integrity is</a></li>
     <li><a href="#why">Why it matters</a></li>
-    <li><a href="#analyses">What KiPI simulates</a></li>
+    <li><a href="#analyses">What KiPI-SI simulates</a></li>
     <li class="group">How the solvers work</li>
     <li><a href="#mesh">The triangle mesh</a></li>
     <li><a href="#dc">DC: voltage drop</a>
@@ -151,7 +151,7 @@ figure svg { display: block; max-width: 760px; background: var(--panel);
       <ol>
         <li><a href="#ac-impedance">What PDN impedance is</a></li>
         <li><a href="#ac-target">Target impedance</a></li>
-        <li><a href="#ac-model">How KiPI models it</a></li>
+        <li><a href="#ac-model">How KiPI-SI models it</a></li>
         <li><a href="#ac-capacitance">Effective capacitance</a></li>
       </ol></li>
     <li><a href="#noise">Coupled Noise: a switcher as aggressor</a>
@@ -178,22 +178,22 @@ figure svg { display: block; max-width: 760px; background: var(--panel);
     <li><a href="#solvers">Linear solvers and PARDISO</a></li>
     <li class="group">In practice</li>
     <li><a href="#uses">What PI simulation finds</a></li>
-    <li><a href="#limits">What KiPI does not model</a></li>
+    <li><a href="#limits">What KiPI-SI does not model</a></li>
     <li><a href="#more">Further reading</a></li>
   </ol>
 </nav>
 <main>
-<h1>KiPI Solver Guide</h1>
+<h1>KiPI-SI Solver Guide</h1>
 <p class="lead">What power integrity analysis is, why it is worth doing before a board is
-built, and how KiPI's DC, thermal, AC and Coupled Noise solvers turn a PCB layout into
+built, and how KiPI-SI's DC, thermal, AC and Coupled Noise solvers turn a PCB layout into
 voltages, currents, temperatures, impedances and the noise a switcher couples onto signal
 nets.</p>
 <div class="toolbar">
   <button type="button" id="theme">Toggle light/dark</button>
 </div>
 <p>This page explains the ideas. The <a href="help.html">user guide</a> explains every button,
-the setup and the results, and the <a href="https://github.com/drewsum/KiPI">README</a> how to
-install KiPI.</p>
+the setup and the results, and the <a href="https://github.com/MohamoudAli12/KiPI-SI">README</a> how to
+install KiPI-SI.</p>
 
 <h2 id="pi">What power integrity is</h2>
 <p>Every chip on a board needs its supply voltage held within a tolerance, typically a few
@@ -225,7 +225,7 @@ bench and expensive to fix with a respin.</p>
 where the capacitors go. PI simulation looks at it before fabrication, while fixing a
 problem means moving copper rather than adding bodge wires.</p>
 
-<h2 id="analyses">What KiPI simulates</h2>
+<h2 id="analyses">What KiPI-SI simulates</h2>
 <table>
   <tr><th>Analysis</th><th>Answers</th><th>Results</th></tr>
   <tr><td>DC voltage drop</td><td class="wrap">Does every load get enough voltage at its
@@ -256,7 +256,7 @@ to another.</p>
 <h2 id="mesh">The triangle mesh</h2>
 <p>Copper shapes on a real board are irregular: planes with antipads, traces that bend,
 thermal reliefs, pads of every shape. No formula gives the resistance of such a shape, so
-KiPI cuts it into many small triangles, works out how current flows across each one, and
+KiPI-SI cuts it into many small triangles, works out how current flows across each one, and
 combines them. This is the <b>finite element method (FEM)</b>.</p>
 <figure>
 <svg viewBox="0 0 640 210" width="100%" role="img" aria-label="A copper pour with a via drill hole and a load pad, meshed into triangles that get smaller toward the hole and the pad">
@@ -268,10 +268,10 @@ combines them. This is the <b>finite element method (FEM)</b>.</p>
   <text x="548" y="183" class="svg-label" text-anchor="middle">load pad: nodes of its own</text>
   <text x="20" y="12" class="svg-label">one net on one layer</text>
 </svg>
-<figcaption>A mesh made by Triangle, as KiPI makes them: quality triangles that shrink toward
-the drill hole and the pad. KiPI's default mesh is finer than this.</figcaption>
+<figcaption>A mesh made by Triangle, as KiPI-SI makes them: quality triangles that shrink toward
+the drill hole and the pad. KiPI-SI's default mesh is finer than this.</figcaption>
 </figure>
-<p>KiPI meshes each net on each copper layer with Jonathan Shewchuk's
+<p>KiPI-SI meshes each net on each copper layer with Jonathan Shewchuk's
 <a href="https://www.cs.cmu.edu/~quake/triangle.html">Triangle</a>, a quality Delaunay
 mesher:</p>
 <ul>
@@ -321,12 +321,12 @@ gradient, the via currents from the barrels, and the power lost in the copper fr
 
 <h3 id="dc-tree">The power tree</h3>
 <p>Boards have more than one rail, and rails feed each other: a 12 V input feeds a buck to
-3.3 V, which feeds an LDO to 1.8 V. KiPI solves them downstream first:</p>
+3.3 V, which feeds an LDO to 1.8 V. KiPI-SI solves them downstream first:</p>
 <ul>
   <li>An <b>LDO</b> draws from its input what it delivers plus its quiescent current.</li>
   <li>A <b>switching regulator</b> draws <i>V<sub>out</sub>·I<sub>out</sub> /
     (η·V<sub>in</sub>)</i>. Its input voltage depends on the drop on the input rail, which
-    depends on the current it draws, so KiPI iterates the two until they agree.</li>
+    depends on the current it draws, so KiPI-SI iterates the two until they agree.</li>
   <li><b>Remote sense</b> moves a VRM's output until its sense pins sit at the set voltage, as
     the real control loop does. This creates voltage boost in some places, and drop in other places.</li>
   <li><b>Ground</b> is a net like any other: loads return their current through their ground
@@ -335,7 +335,7 @@ gradient, the via currents from the barrels, and the power lost in the copper fr
 
 <h3 id="dc-tolerance">Tolerance analysis</h3>
 <p>Each load can have a <b>tolerance</b>: how far its supply may sit from the nominal voltage,
-as ± percent or in volts, taken from the load's datasheet. After the solve, KiPI checks every supply pin
+as ± percent or in volts, taken from the load's datasheet. After the solve, KiPI-SI checks every supply pin
 of the load. The worst pin's deviation from the VRM's set voltage (from DC drop on the rail,
 rise on ground, and a VRM load line if it has one) must be within the tolerance for the load
 to <span class="pass">PASS</span>. Any pin outside it makes the load
@@ -359,7 +359,7 @@ every load downstream of it.</p>
 <h2 id="thermal">Electro-thermal co-simulation</h2>
 <p>The power lost in the copper, <i>I²R</i>, turns into heat. On a high-current rail that
 heat raises the board temperature by tens of degrees, and the heat from neighboring planes,
-regulators and loads adds to it. KiPI's thermal model spreads that heat across the whole board,
+regulators and loads adds to it. KiPI-SI's thermal model spreads that heat across the whole board,
 with a temperature for each copper layer <i>l</i>:</p>
 <p class="eq">∇·(G<sub>l</sub> ∇T<sub>l</sub>) + Σ<sub>m</sub> (T<sub>m</sub> − T<sub>l</sub>) / R<sub>lm</sub>
 − (T<sub>l</sub> − T<sub>amb</sub>) / (1/h + R<sub>coat</sub>) + q″<sub>l</sub> = 0</p>
@@ -386,7 +386,7 @@ with a temperature for each copper layer <i>l</i>:</p>
 <p>Spread out, the layers sit within a degree or two of each other: across 1.6 mm of FR4 the
 resistance is about a tenth of the resistance from the surface into the air. Concentrated,
 they do not. A regulator on the top layer heats its own pads and the top copper around it;
-the planes below see that heat only after it crosses the laminate or goes down vias. KiPI
+the planes below see that heat only after it crosses the laminate or goes down vias. KiPI-SI
 reports each layer's own peak.</p>
 
 <h3 id="thermal-copper">Hot copper resists more</h3>
@@ -397,7 +397,7 @@ temperature:</p>
 31% more. The physics behind it: as the copper heats, its atoms vibrate harder and scatter
 the electrons carrying the current more often.</p>
 <p>That forms a loop: current heats the copper, the heat raises its resistance, more
-resistance means more drop and more <i>I²R</i> loss, and that loss heats it further. KiPI's
+resistance means more drop and more <i>I²R</i> loss, and that loss heats it further. KiPI-SI's
 co-simulation follows the loop:</p>
 <ol class="steps">
   <li>Solve the DC power tree at the current temperature map (20 °C everywhere at first).</li>
@@ -421,7 +421,7 @@ planes. How much the voltage moves for a given change in current depends on freq
 <p class="eq">ΔV(f) = Z(f) · ΔI(f)</p>
 <p><b>PDN impedance</b> <i>Z(f)</i> is the impedance a chip sees looking out of its power pins into the power supply network. It is the ratio of voltage change to current change, and it depends on
  every capacitor, plane and via between them and ground. It is a complex number at
-each frequency: KiPI shows its magnitude |Z| and its resistive and reactive parts.</p>
+each frequency: KiPI-SI shows its magnitude |Z| and its resistive and reactive parts.</p>
 <figure>
 <svg viewBox="0 0 640 250" width="100%" role="img" aria-label="Sketch of PDN impedance against frequency: a target line, and a curve that dips at each capacitor's resonance with peaks between">
   <line x1="60" y1="20" x2="60" y2="210" class="svg-axis"/>
@@ -456,15 +456,15 @@ stay below the <b>target impedance</b></p>
 <p>up to the highest frequency in the step. A 1.0 V rail allowed 3% (30 mV) of transient for
 a 10 A step needs Z<sub>target</sub> = 3 mΩ. A step that rises in time <i>t<sub>r</sub></i>
 has most of its energy below <i>f ≈ 1 / (π·t<sub>r</sub>)</i>, which is how far the target
-applies. KiPI's target calculator works both out from the load's transient spec (after
+applies. KiPI-SI's target calculator works both out from the load's transient spec (after
 Smith et al., 1999). Some chip vendors publish a frequency-dependent target mask instead,
-which KiPI takes as corner points.</p>
-<p>KiPI leaves the regulator out of the AC model and computes the <b>open-loop</b> PDN
+which KiPI-SI takes as corner points.</p>
+<p>KiPI-SI leaves the regulator out of the AC model and computes the <b>open-loop</b> PDN
 impedance. Below the regulator's control-loop bandwidth, the loop is assumed to hold the voltage. Above
 it, the loop is too slow, which is the range a target applies to, so you give each VRM's
-bandwidth and the targets are judged from there up. Other analysis methods can model the interaction with the control loop and the capacitive portion of hte PDN, this is called <b>closed-loop</b> analysis and is outside the scope of KiPI.</p>
+bandwidth and the targets are judged from there up. Other analysis methods can model the interaction with the control loop and the capacitive portion of hte PDN, this is called <b>closed-loop</b> analysis and is outside the scope of KiPI-SI.</p>
 
-<h3 id="ac-model">How KiPI models it</h3>
+<h3 id="ac-model">How KiPI-SI models it</h3>
 <p>The AC solver uses the same triangle mesh, extended for the fields between rail and
 ground copper:</p>
 <ul>
@@ -494,7 +494,7 @@ hundred points per decade fast. Note this this creates a massive computational p
 
 <h3 id="ac-capacitance">Effective vs nominal capacitance</h3>
 <p>The capacitance printed on a ceramic capacitor (MLCC) is measured at 1 kHz, 25 °C, with
-no DC voltage, when the part is new. On a board it is often much less. KiPI uses the
+no DC voltage, when the part is new. On a board it is often much less. KiPI-SI uses the
 capacitance you enter for each model, so enter the <b>effective</b> value at your rail's
 conditions. Four effects stack up:</p>
 <table>
@@ -526,7 +526,7 @@ conditions. Four effects stack up:</p>
 the part's resonance and moves the resonance up, by the square root of the ratio, while
 the inductance above resonance does not change. Capacitor makers publish DC-bias and
 temperature curves per part, and their online tools (Murata SimSurfing, TDK SEAT, KEMET
-K-SIM, Samsung's tool) give the capacitance, ESR and ESL at a chosen bias and temperature. Enter the manufacturer's delectric, tolerance, aging and DC bias factors. KiPI can work out how each impacts the PDN impedance.</p>
+K-SIM, Samsung's tool) give the capacitance, ESR and ESL at a chosen bias and temperature. Enter the manufacturer's delectric, tolerance, aging and DC bias factors. KiPI-SI can work out how each impacts the PDN impedance.</p>
 
 <h2 id="noise">Coupled Noise: a switcher as aggressor</h2>
 <p>A buck or boost converter switches amps in nanoseconds. Its switch node swings the full
@@ -572,7 +572,7 @@ the dominant one shows.</p>
   <text x="604" y="244" class="svg-label">ground</text>
   <text x="355" y="266" class="svg-label" text-anchor="middle">3 · common impedance: ΔV between the driver's and receiver's grounds</text>
 </svg>
-<figcaption>The three paths KiPI models. The switch node's swing pushes charge onto the
+<figcaption>The three paths KiPI-SI models. The switch node's swing pushes charge onto the
 victim through their mutual capacitance (1); the hot loop's changing current links flux
 through the loop the victim makes with its return (2); and the switching current's return
 through the ground copper moves the driver's ground against the receiver's (3).</figcaption>
@@ -824,7 +824,7 @@ SI mode models a channel the way commercial tools do: field-solved line sections
 models joined into one circuit, its S-parameters, then the eye at the receiver.</p>
 
 <h3 id="si-xsection">Cross-sections</h3>
-<p>Each trace is cut into sections about a millimetre long. At each section's middle, KiPI
+<p>Each trace is cut into sections about a millimetre long. At each section's middle, KiPI-SI
 cuts the board at right angles to the trace: the trace, any copper within the window either
 side (its pair partner, neighbours, plane edges), the planes above and below and every
 dielectric layer between, solder mask included. A 2D finite element solve of Laplace's
@@ -848,7 +848,7 @@ of 400 nets this leaves about 40 % of the cuts to solve, and Z0 within about 2 %
 the full solve.</p>
 
 <h3 id="si-loss">Loss: dielectric and copper</h3>
-<p>Each dielectric layer's permittivity varies with frequency. KiPI uses the
+<p>Each dielectric layer's permittivity varies with frequency. KiPI-SI uses the
 Djordjevic-Sarkar wideband Debye model, fitted to its permittivity and loss tangent at the
 datasheet frequency, so the loss stays causal. The solve records how much of each
 conductor's field energy lies in each layer, so C(ω), and from its imaginary part the
@@ -867,7 +867,7 @@ layer the capacitance of its pad or barrel to the planes around it through the a
 from an axisymmetric field solve. The barrel past the last layer the signal uses is the
 stub, which resonates near a quarter wavelength. When a signal changes layers between two
 planes, its return current must change planes too, and it does so through the plane pair.
-KiPI takes the parallel-plate impedance matrix of every via of the channel crossing that
+KiPI-SI takes the parallel-plate impedance matrix of every via of the channel crossing that
 pair together with the ground vias near them. That matrix is the modal sum of the
 rectangular cavity the board's outline gives the planes: its static part summed on a mode
 grid fine against the vias' radii and spacing, the frequency-dependent rest added
@@ -902,13 +902,13 @@ UIs, centred half a UI from the mean of its threshold crossings. Each step betwe
 is drawn as a line, so the traces are continuous.</p>
 <p>Equalisers reshape the pulse. The transmitter's FFE taps subtract delayed copies of the
 bit. The receiver's CTLE (IEEE 802.3's form) boosts the high frequencies the channel lost.
-Its DFE cancels the first post-cursors. KiPI tries the interface's FFE presets and CTLE
+Its DFE cancels the first post-cursors. KiPI-SI tries the interface's FFE presets and CTLE
 gains and keeps the pair with the tallest eye. COM is 20 log<sub>10</sub> of the main
 cursor over the residual ISI, crosstalk and noise at the target BER.</p>
 
 <h3 id="si-transient">Buffers and the transient</h3>
 <p>IBIS describes a buffer by its pull-up, pull-down and clamp I-V tables and how fast it
-switches between them (the rising and falling waveforms, or a ramp). From them KiPI derives
+switches between them (the rising and falling waveforms, or a ramp). From them KiPI-SI derives
 the two switching coefficients K<sub>u</sub>(t) and K<sub>d</sub>(t) at the chosen corner,
 so that I = K<sub>u</sub>·I<sub>pu</sub>(V) + K<sub>d</sub>·I<sub>pd</sub>(V) + clamps.
 The channel's S-parameters become impulse responses. At each time step the waves already
@@ -918,7 +918,7 @@ linear tables and a raised-cosine edge.</p>
 
 <h2 id="solvers">Linear solvers and PARDISO</h2>
 <p>Every analysis ends in a large sparse system of equations, one unknown per mesh node. DC
-and thermal systems are symmetric positive definite; AC systems are complex. How KiPI
+and thermal systems are symmetric positive definite; AC systems are complex. How KiPI-SI
 solves them:</p>
 <table>
   <tr><th>Solver</th><th>How it works</th><th>Used for</th></tr>
@@ -939,7 +939,7 @@ solves them:</p>
   <li><b>Speed on large boards.</b> Factorizing is the slow step, and PARDISO uses every core.
     On a 645k-unknown rail one solve drops from about 8 s to 1.2 s, and a four-pass
     electro-thermal run from about 90 s to 34 s.</li>
-  <li><b>A higher direct-solve limit.</b> With PARDISO, KiPI factorizes systems of up to 1M
+  <li><b>A higher direct-solve limit.</b> With PARDISO, KiPI-SI factorizes systems of up to 1M
     unknowns instead of 200k. A factorization is reused for every load, power-tree iteration
     and AC port, which an iterative solver cannot do, so fine meshes stay fast.</li>
   <li><b>AC sweeps.</b> Each field frequency of an AC sweep is a complex factorization, so
@@ -947,16 +947,16 @@ solves them:</p>
 </ul>
 <p>The drawbacks: Intel MKL is about 600 MB installed, it exists only for x86-64 Windows and
 Linux (not macOS or ARM), and small boards, which solve in a second either way, gain little.
-KiPI offers it, ticked, the first time it starts (or sets up, standalone) on a computer
+KiPI-SI offers it, ticked, the first time it starts (or sets up, standalone) on a computer
 that can have it, and it can be turned down there or removed later under
-<i>About → Manage dependencies…</i>. KiPI falls back to SuperLU on its own if PARDISO
+<i>About → Manage dependencies…</i>. KiPI-SI falls back to SuperLU on its own if PARDISO
 is missing, cannot load, or returns an inaccurate result, and the results are the same either
 way. Each factorization is checked by its backward error, the smallest relative change to
 the system that would make the solution exact; a working solve gives about 1e-16 however
 stiff the board's copper and vias make the system. Because PARDISO utilizes all cores, the machine running the simulation will really stretch its legs. Expect high CPU utilization and higher junction temperatures, at the gain of simulation speed. <i>About → Copy version info</i> says which solver is in use. </p>
 
 <h2 id="uses">What PI simulation finds</h2>
-<p>Design problems KiPI typically exposes, and where to look for each:</p>
+<p>Design problems KiPI-SI typically exposes, and where to look for each:</p>
 <table>
   <tr><th>Problem</th><th>How it shows</th><th>Typical fix</th></tr>
   <tr><td>Neck-downs</td><td class="wrap">A bright spot in the current density where a plane
@@ -1000,10 +1000,10 @@ stiff the board's copper and vias make the system. Because PARDISO utilizes all 
     parallel termination, or a filter at the receiver.</td></tr>
 </table>
 
-<h2 id="limits">What KiPI does not model</h2>
+<h2 id="limits">What KiPI-SI does not model</h2>
 <ul>
   <li><b>DC</b>: copper is solid and its thickness uniform. Plating variation and etch
-    undercut are not modeled; KiPI uses the stackup's thicknesses.</li>
+    undercut are not modeled; KiPI-SI uses the stackup's thicknesses.</li>
   <li><b>Thermal</b>: steady state only, with one temperature through the board's thickness
     and no heat carried away by the parts, enclosure or conduction into the mountin. No heatsinks; this tool is meant to model copper losses and expose weak points, not simulate the thermal scenario of an entire system.</li>
   <li><b>AC</b>: the regulator is left out (open-loop impedance). The package and die are
@@ -1022,7 +1022,7 @@ currents are worst case, the capacitor values effective, and the stackup right. 
 
 <h2 id="more">Further reading</h2>
 <ul>
-  <li><a href="help.html">KiPI user guide</a>: setting up and running each analysis, and what
+  <li><a href="help.html">KiPI-SI user guide</a>: setting up and running each analysis, and what
     every result means.</li>
   <li>L. D. Smith, R. E. Anderson, D. W. Forehand, T. J. Pelc and T. Roy, "Power distribution
     system design methodology and capacitor selection for modern CMOS technology,"
@@ -1092,7 +1092,7 @@ currents are worst case, the capacitor values effective, and the stackup right. 
 (function () {
   var root = document.documentElement;
   try {
-    var saved = localStorage.getItem("kipi-help-theme");
+    var saved = localStorage.getItem("kipi_si-help-theme");
     if (saved) root.setAttribute("data-theme", saved);
   } catch (e) {}
   document.getElementById("theme").onclick = function () {
@@ -1100,7 +1100,7 @@ currents are worst case, the capacitor values effective, and the stackup right. 
       window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
     var next = dark ? "light" : "dark";
     root.setAttribute("data-theme", next);
-    try { localStorage.setItem("kipi-help-theme", next); } catch (e) {}
+    try { localStorage.setItem("kipi_si-help-theme", next); } catch (e) {}
   };
 })();
 </script>

@@ -6,7 +6,7 @@ import pytest
 import shapely
 from shapely.geometry import Polygon
 
-from kipi.core.model.snapshot_io import to_dict
+from kipi_si.core.model.snapshot_io import to_dict
 from validation_boards import boards, open_board
 
 

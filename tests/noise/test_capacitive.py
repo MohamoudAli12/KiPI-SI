@@ -6,15 +6,15 @@ import math
 import numpy as np
 import pytest
 
-from kipi.ac.model import CapModel
-from kipi.core import yaml_io
-from kipi.dc.pi.model import PinRef, PISetup
-from kipi.noise.checks import guess_ends, seed_phases
-from kipi.noise.extract.capacitive import BoardCuts, Segment, _bands, extract
-from kipi.noise.model import VICTIM_PRESETS, Aggressor, Victim, logic_margin
-from kipi.noise.network import Termination, VictimNetwork
-from kipi.noise.report import load_results, save_results
-from kipi.noise.solver import solve_noise
+from kipi_si.ac.model import CapModel
+from kipi_si.core import yaml_io
+from kipi_si.dc.pi.model import PinRef, PISetup
+from kipi_si.noise.checks import guess_ends, seed_phases
+from kipi_si.noise.extract.capacitive import BoardCuts, Segment, _bands, extract
+from kipi_si.noise.model import VICTIM_PRESETS, Aggressor, Victim, logic_margin
+from kipi_si.noise.network import Termination, VictimNetwork
+from kipi_si.noise.report import load_results, save_results
+from kipi_si.noise.solver import solve_noise
 from noise_boards import buck_board, buck_setup
 from synthetic import F, IN1, IN2
 
@@ -133,7 +133,7 @@ def test_victims_save_and_reopen(tmp_path):
                                  receiver=PinRef("U4", "SIG", ["1"]))])
     r = solve_noise(snap, setup, "U1 buck")
     assert r.victims[0].warnings == []
-    back = load_results(save_results(tmp_path / "v.kipi-noise-results",
+    back = load_results(save_results(tmp_path / "v.kipi_si-noise-results",
                                      {r.aggressor: r}, "b", setup))
     got = back["results"]["U1 buck"].victims[0]
     assert got.peak_v == pytest.approx(r.victims[0].peak_v)

@@ -6,10 +6,10 @@ import math
 import numpy as np
 import pytest
 
-from kipi.si import eye as eyes
-from kipi.si import ibis, sparams
-from kipi.si.network import Circuit
-from kipi.si.transient import Device, LinearPort, Stimulus, port_transfer, simulate
+from kipi_si.si import eye as eyes
+from kipi_si.si import ibis, sparams
+from kipi_si.si.network import Circuit
+from kipi_si.si.transient import Device, LinearPort, Stimulus, port_transfer, simulate
 
 C0_MM_S = 299792458e3
 
@@ -170,8 +170,8 @@ def test_eye_before_the_pulse_record_is_drawn():
 
 
 def test_slow_edges_get_samples_and_jitter_in_time():
-    from kipi.si.protocols import PROTOCOLS
-    from kipi.si.solver import EDGE_PHASES, EYE_PHASES, per_ui
+    from kipi_si.si.protocols import PROTOCOLS
+    from kipi_si.si.solver import EDGE_PHASES, EYE_PHASES, per_ui
     ui, rise = 10e-9, 0.3e-9                     # a 100 Mb/s clock, 0.5 ns edge
     n = per_ui(ui, rise, EDGE_PHASES, EYE_PHASES, 1024)
     assert n * (rise / 0.6) / ui >= EDGE_PHASES
@@ -243,7 +243,7 @@ def test_waveform_eye_centred_and_drawn_as_lines():
 
 def test_eye_plot_draws_both_kinds():
     from matplotlib.figure import Figure
-    from kipi.si.eyeplot import DARK, LIGHT, draw_eye
+    from kipi_si.si.eyeplot import DARK, LIGHT, draw_eye
     e = eyes.statistical_eye(_ideal_pulse(), 1e-12, 0.01, 0.05, swing=0.8)
     fig = Figure()
     draw_eye(fig, e, (0.2, 0.4), DARK)

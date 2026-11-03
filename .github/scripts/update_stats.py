@@ -29,7 +29,7 @@ def get(path: str, token: Optional[str]) -> Any:
     req = urllib.request.Request(API + path, headers={
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "KiPI-stats",
+        "User-Agent": "KiPI-SI-stats",
     })
     if token:
         req.add_header("Authorization", f"Bearer {token}")

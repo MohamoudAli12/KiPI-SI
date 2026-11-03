@@ -15,7 +15,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from qtpy.QtCore import QPoint, Qt  # noqa: E402
 from qtpy.QtWidgets import QApplication, QTableWidget  # noqa: E402
 
-from kipi.gui.sortable import make_sortable, set_row, sort_key  # noqa: E402
+from kipi_si.gui.sortable import make_sortable, set_row, sort_key  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -68,7 +68,7 @@ def test_keys_take_si_prefixes_and_natural_text():
 # ---------------------------------------------------------------- setup tables
 
 def _cap_board():
-    from kipi.core.model.board import Footprint, Pad
+    from kipi_si.core.model.board import Footprint, Pad
     from synthetic import make_board
     snap = make_board()
     for k, (ref, value) in enumerate((("C10", "100nF"), ("C2", "10uF"), ("C9", "1uF"))):
@@ -80,8 +80,8 @@ def _cap_board():
 
 
 def test_capacitor_parts_sort_and_keep_their_order_when_ticked(app):
-    from kipi.ac.gui.panel import ACPanel
-    from kipi.dc.pi.model import PISetup
+    from kipi_si.ac.gui.panel import ACPanel
+    from kipi_si.dc.pi.model import PISetup
     setup = PISetup()
     panel = ACPanel()
     panel.set_board(_cap_board(), setup)
@@ -104,9 +104,9 @@ def test_capacitor_parts_sort_and_keep_their_order_when_ticked(app):
 
 
 def test_target_points_sort_by_frequency_or_impedance(app):
-    from kipi.ac.gui.panel import ACPanel
-    from kipi.ac.model import Probe
-    from kipi.dc.pi.model import PinRef
+    from kipi_si.ac.gui.panel import ACPanel
+    from kipi_si.ac.model import Probe
+    from kipi_si.dc.pi.model import PinRef
     panel = ACPanel()
     probe = Probe("U1", PinRef("U1", "+1V0"), PinRef("U1", "GND"), target_custom=True,
                   target_points=[(1e4, 0.01), (1e5, 0.03), (1e6, 0.02)])
@@ -131,8 +131,8 @@ def test_target_points_sort_by_frequency_or_impedance(app):
 
 
 def test_load_pin_groups_sort(app):
-    from kipi.dc.gui.pi_panel import PIPanel
-    from kipi.dc.pi.model import Load, PinGroup, PinRef, PISetup
+    from kipi_si.dc.gui.pi_panel import PIPanel
+    from kipi_si.dc.pi.model import Load, PinGroup, PinRef, PISetup
     from phase_boards import board
     setup = PISetup()
     setup.loads.append(Load("U9", PinRef("U9", "VOUT"), 0.0, groups=[
@@ -203,7 +203,7 @@ def test_report_tables_sort_in_the_browser():
 
 
 def _sorted_in_node(node, rows, heads, clicks, unit=None):
-    from kipi.dc.report.html import SORT_JS
+    from kipi_si.dc.report.html import SORT_JS
     root = "" if unit is None else f"rootAttrs['data-vunit'] = {json.dumps(unit)};"
     script = _DOM % dict(rows=json.dumps(rows), heads=json.dumps(heads), js=SORT_JS,
                          clicks=json.dumps(clicks), root=root)

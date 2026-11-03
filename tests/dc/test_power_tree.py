@@ -2,9 +2,9 @@
 
 import pytest
 
-from kipi.ac.model import CapModel
-from kipi.dc.pi.diagram import build_diagram
-from kipi.dc.pi.model import DcLink, Load, PinRef
+from kipi_si.ac.model import CapModel
+from kipi_si.dc.pi.diagram import build_diagram
+from kipi_si.dc.pi.model import DcLink, Load, PinRef
 from tree_boards import board, setup
 
 
@@ -58,13 +58,13 @@ def test_capacitors_need_the_board():
 
 
 def test_empty_setup():
-    from kipi.dc.pi.model import PISetup
+    from kipi_si.dc.pi.model import PISetup
     d = build_diagram(PISetup())
     assert d.blocks == {} and d.arrows == [] and d.columns() == []
 
 
 def test_view_draws_and_saves(tmp_path, qapp_offscreen):
-    from kipi.gui.power_tree import PowerTreeView
+    from kipi_si.gui.power_tree import PowerTreeView
     w = PowerTreeView()
     w.show_tree(_tree(), board())
     assert len(w.diagram.blocks) == 9
@@ -77,8 +77,8 @@ def test_view_draws_and_saves(tmp_path, qapp_offscreen):
 def test_view_follows_the_theme(qapp_offscreen):
     from qtpy.QtGui import QColor, QPalette
     from qtpy.QtWidgets import QGraphicsSimpleTextItem
-    from kipi.gui import theme
-    from kipi.gui.power_tree import DARK, LIGHT, PowerTreeView
+    from kipi_si.gui import theme
+    from kipi_si.gui.power_tree import DARK, LIGHT, PowerTreeView
     before = QPalette(qapp_offscreen.palette())
     w = PowerTreeView()
     w.show_tree(_tree(), board())
@@ -109,7 +109,7 @@ def _contrast(a: str, b: str) -> float:
 
 
 def test_dark_colours_read_well():
-    from kipi.gui.power_tree import DARK, LIGHT
+    from kipi_si.gui.power_tree import DARK, LIGHT
     for colors in (DARK, LIGHT):
         fills = [*colors["fill"].values(), *colors["vrm_fill"].values()]
         # Text on every block at least WCAG AA (4.5:1); outlines and arrows on the canvas
@@ -150,7 +150,7 @@ def _overlap(a, b):
 
 
 def test_many_loads_pack_into_a_grid_that_fits_the_window():
-    from kipi.dc.pi.diagram import place
+    from kipi_si.dc.pi.diagram import place
     d = build_diagram(_many_loads(), board())
     pl = place(d, _size, aspect=1.6)
     (cid, c), = pl.clusters.items()
@@ -166,7 +166,7 @@ def test_many_loads_pack_into_a_grid_that_fits_the_window():
 
 
 def test_placed_blocks_do_not_overlap():
-    from kipi.dc.pi.diagram import place
+    from kipi_si.dc.pi.diagram import place
     d = build_diagram(_many_loads(), board())
     pl = place(d, _size)
     boxes = [r for k, r in pl.rects.items() if k not in pl.cluster_of]
@@ -182,7 +182,7 @@ def test_placed_blocks_do_not_overlap():
 
 
 def test_few_loads_stay_single_blocks():
-    from kipi.dc.pi.diagram import place
+    from kipi_si.dc.pi.diagram import place
     pl = place(build_diagram(_tree(), board()), _size)
     assert pl.clusters == {}
 

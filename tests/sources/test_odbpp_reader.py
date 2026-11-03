@@ -12,12 +12,12 @@ from pathlib import Path
 
 import pytest
 
-from kipi.core.geometry.copper import poly_to_shapely
-from kipi.core.model.layers import B_CU, F_CU, inner_cu
-from kipi.core.model.snapshot_io import load
-from kipi.sources.odbpp import features as feat
-from kipi.sources.odbpp.archive import Job, OdbError
-from kipi.sources.odbpp.reader import read_board
+from kipi_si.core.geometry.copper import poly_to_shapely
+from kipi_si.core.model.layers import B_CU, F_CU, inner_cu
+from kipi_si.core.model.snapshot_io import load
+from kipi_si.sources.odbpp import features as feat
+from kipi_si.sources.odbpp.archive import Job, OdbError
+from kipi_si.sources.odbpp.reader import read_board
 
 DATA = Path(__file__).parents[1] / "data"
 ZIP = DATA / "odbpp" / "features.zip"
@@ -26,7 +26,7 @@ TGZ = DATA / "odbpp" / "features_p2.tgz"
 
 @pytest.fixture(scope="module")
 def ref():
-    return load(DATA / "kicad_pcb" / "features.ref.kipi.json.gz")
+    return load(DATA / "kicad_pcb" / "features.ref.kipi_si.json.gz")
 
 
 @pytest.fixture(scope="module")
@@ -160,8 +160,8 @@ def test_a_job_folder_reads_like_its_archive(tmp_path, snap):
 
 
 def test_the_registry_opens_jobs(tmp_path):
-    from kipi.sources import registry
-    from kipi.sources.odbpp.source import OdbFileSource
+    from kipi_si.sources import registry
+    from kipi_si.sources.odbpp.source import OdbFileSource
     for path in (ZIP, TGZ, Path("board.tar.gz"), Path("x/matrix/matrix")):
         assert registry.format_for(path).name == "ODB++"
     src = registry.open_board(ZIP)
@@ -212,7 +212,7 @@ def test_pads_turn_clockwise_unless_mirrored():
 
 
 def test_arcs_keep_their_direction():
-    """A clockwise arc over the top in ODB++ (y up) is the same arc on KiPI's board."""
+    """A clockwise arc over the top in ODB++ (y up) is the same arc on KiPI-SI's board."""
     lf = feat.parse("UNITS=MM\n$0 r100\nA 0 0 2 0 1 0 0 P 0 Y\nA 0 0 2 0 1 0 0 P 0 N\n", MM)
     cw, ccw = lf.features
     assert feat._arc_mid(cw.start, cw.end, cw.center, cw.clockwise) == pytest.approx((1, -1))
@@ -240,7 +240,7 @@ def test_standard_symbols(name, size):
 
 
 def test_chamfered_corners_are_where_odb_numbers_them():
-    """Corner 2 is the upper left: y is negative there on KiPI's board."""
+    """Corner 2 is the upper left: y is negative there on KiPI-SI's board."""
     pts = feat.symbol_outline("rect1000x1000xc300x2", MM)
     assert (-0.5, -0.5) not in pts and (0.5, -0.5) in pts and (-0.5, 0.5) in pts
 

@@ -5,10 +5,10 @@ probes, where the impedance is looked into, take their place."""
 import numpy as np
 import pytest
 
-from kipi.ac.model import CapModel, Probe
-from kipi.ac.viz.markers import ac_markers
-from kipi.dc.pi.model import DcLink, PinRef
-from kipi.dc.viz.markers import LIFT_MM, pi_markers
+from kipi_si.ac.model import CapModel, Probe
+from kipi_si.ac.viz.markers import ac_markers
+from kipi_si.dc.pi.model import DcLink, PinRef
+from kipi_si.dc.viz.markers import LIFT_MM, pi_markers
 from phase_boards import T, board, two_phase
 from shapely.geometry import box
 from tree_boards import B, pad

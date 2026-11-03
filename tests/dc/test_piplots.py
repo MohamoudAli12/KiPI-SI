@@ -5,10 +5,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from kipi.dc.pi import piplots
-from kipi.dc.pi.model import PinRef
-from kipi.dc.pi.tree import solve_tree
-from kipi.si.siplots import Ink
+from kipi_si.dc.pi import piplots
+from kipi_si.dc.pi.model import PinRef
+from kipi_si.dc.pi.tree import solve_tree
+from kipi_si.si.siplots import Ink
 from phase_boards import board, two_phase
 
 INK = Ink(("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728"), "#333", "#888")
@@ -63,7 +63,7 @@ def test_tab_shows_each_view(solved):
     pytest.importorskip("matplotlib")
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from qtpy.QtWidgets import QApplication
-    from kipi.dc.gui.pi_plot import VIEWS, PIPlot
+    from kipi_si.dc.gui.pi_plot import VIEWS, PIPlot
     QApplication.instance() or QApplication([])
     tree, setup = solved
     w = PIPlot()

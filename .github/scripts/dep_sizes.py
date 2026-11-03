@@ -1,4 +1,4 @@
-"""Write kipi/launcher/deps_manifest.json: every package standalone KiPI installs on each
+"""Write kipi_si/launcher/deps_manifest.json: every package standalone KiPI-SI installs on each
 platform, with its download size.
 
 The launcher works this out live for the computer it runs on; the manifest is what it
@@ -20,8 +20,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from kipi import __version__  # noqa: E402
-from kipi.launcher import deps, paths  # noqa: E402
+from kipi_si import __version__  # noqa: E402
+from kipi_si.launcher import deps, paths  # noqa: E402
 
 PYTHON = "3.12"             # a supported Python with wheels for everything
 
@@ -66,7 +66,7 @@ def platform_entry(tags, pardiso):
 
 
 def main() -> int:
-    out = {"kipi": __version__, "generated": time.strftime("%Y-%m-%d"), "python": PYTHON,
+    out = {"kipi_si": __version__, "generated": time.strftime("%Y-%m-%d"), "python": PYTHON,
            "requirements_hash": deps.requirements_hash(paths.requirements_file(ROOT)),
            "platforms": {}}
     for key, (tags, pardiso) in PLATFORMS.items():

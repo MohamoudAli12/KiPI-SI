@@ -2,11 +2,11 @@
 
 from shapely.geometry import box
 
-from kipi.core.model.board import (
+from kipi_si.core.model.board import (
     BoardSnapshot, CopperLayer, DielectricLayer, Net, Stackup, Zone,
 )
-from kipi.dc.pi.model import Load, PinRef, PISetup, Vrm, VrmPhase
-from kipi.dc.solver.setup import SolveSettings
+from kipi_si.dc.pi.model import Load, PinRef, PISetup, Vrm, VrmPhase
+from kipi_si.dc.solver.setup import SolveSettings
 from tree_boards import B, F, T, pad, poly
 
 I_LOAD = 2.0

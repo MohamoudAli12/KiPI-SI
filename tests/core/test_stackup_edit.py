@@ -2,15 +2,15 @@
 
 import pytest
 
-from kipi.core.model.board import CopperLayer, DielectricLayer, Stackup
-from kipi.core.model.stackup import (
+from kipi_si.core.model.board import CopperLayer, DielectricLayer, Stackup
+from kipi_si.core.model.stackup import (
     dielectric_er, from_setup, restack, stack_order, summary, thicknesses, to_setup,
 )
-from kipi.dc.pi.model import PISetup
+from kipi_si.dc.pi.model import PISetup
 
 
 def four_layer() -> Stackup:
-    """35/17.5/17.5/35 µm copper over 0.2/1.065/0.2 mm dielectrics, as KiPI reads it."""
+    """35/17.5/17.5/35 µm copper over 0.2/1.065/0.2 mm dielectrics, as KiPI-SI reads it."""
     cu_t = [0.035, 0.0175, 0.0175, 0.035]
     diel_t = [0.2, 1.065, 0.2]
     total = sum(cu_t) + sum(diel_t)
@@ -67,7 +67,7 @@ def test_setup_round_trip_and_mismatch(tmp_path):
     st = four_layer()
     ed = restack(st, [0.07, 0.1, 0.035, 1.0, 0.035, 0.1, 0.07], [3.9, 4.6, 3.9])
     setup = PISetup(stackup=to_setup(ed))
-    loaded = PISetup.load(setup.save(tmp_path / "s.kipi-setup.json"))
+    loaded = PISetup.load(setup.save(tmp_path / "s.kipi_si-setup.json"))
     back, why = from_setup(st, loaded.stackup)
     assert why == "" and back.edited
     assert thicknesses(back) == pytest.approx(thicknesses(ed))
@@ -91,11 +91,11 @@ def test_summary_marks_an_edited_stackup():
     st = four_layer()
     assert summary(st).startswith("F.Cu 35 µm, FR4 200 µm εr 4.4, In1.Cu 17.5 µm")
     assert "edited" not in summary(st)
-    assert summary(restack(st, thicknesses(st))).endswith("(edited in KiPI)")
+    assert summary(restack(st, thicknesses(st))).endswith("(edited in KiPI-SI)")
 
 
 def test_dielectric_materials_are_edited_and_kept():
-    from kipi.core.model.stackup import dielectric_materials
+    from kipi_si.core.model.stackup import dielectric_materials
     st = four_layer()
     ed = restack(st, thicknesses(st), [3.48, 4.4, 4.4],
                  materials=["Rogers RO4350B", "FR4", "FR4"])
@@ -109,7 +109,7 @@ def test_dielectric_materials_are_edited_and_kept():
 
 
 def test_conductors_are_listed_and_found():
-    from kipi.core.model.conductors import K_CU_W_MK, conductors, find, layer_k_w_mk
+    from kipi_si.core.model.conductors import K_CU_W_MK, conductors, find, layer_k_w_mk
     cs = conductors()
     assert cs[0].name == "Copper, annealed (IACS)" and cs[0].rho_uohm_cm == pytest.approx(1.724)
     assert len({c.name for c in cs}) == len(cs)

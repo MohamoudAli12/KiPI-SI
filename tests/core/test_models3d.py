@@ -12,10 +12,10 @@ import pytest
 pytest.importorskip("pyvista")
 
 from glb_writer import TRI  # noqa: E402
-from kipi.sources.kicad_ipc import models3d  # noqa: E402
-from kipi.core.model.board import BoardSnapshot, Stackup  # noqa: E402
-from kipi.core.progress import Canceled, ProgressReporter  # noqa: E402
-from kipi.core.viz.glb import Part  # noqa: E402
+from kipi_si.sources.kicad_ipc import models3d  # noqa: E402
+from kipi_si.core.model.board import BoardSnapshot, Stackup  # noqa: E402
+from kipi_si.core.progress import Canceled, ProgressReporter  # noqa: E402
+from kipi_si.core.viz.glb import Part  # noqa: E402
 
 FAKE_CLI = """
 import json, os, sys, time
@@ -158,7 +158,7 @@ def _snap(name, project_dir="", file=""):
 
 def test_board_file_is_found_next_to_the_project_or_the_snapshot(tmp_path, board):
     assert models3d.board_file(_snap("b.kicad_pcb", str(tmp_path))) == board
-    saved = tmp_path / "b.kipi.json.gz"
+    saved = tmp_path / "b.kipi_si.json.gz"
     assert models3d.board_file(_snap("b.kicad_pcb", "/gone", str(saved))) == board
     assert models3d.board_file(_snap("b.kicad_pcb", "/gone")) is None
     assert models3d.board_file(_snap("synthetic", str(tmp_path))) is None
@@ -208,8 +208,8 @@ def test_install_folders_are_listed_newest_first(tmp_path, monkeypatch):
 
 
 def test_setup_lists_the_parts_it_models():
-    from kipi.ac.model import CapModel, Probe
-    from kipi.dc.pi.model import DcLink, Load, PinRef, PISetup, Vrm, VrmPhase
+    from kipi_si.ac.model import CapModel, Probe
+    from kipi_si.dc.pi.model import DcLink, Load, PinRef, PISetup, Vrm, VrmPhase
     setup = PISetup(
         vrms=[Vrm("U1", PinRef("L1", "VOUT"), 1.0, "smps", input=PinRef("U1", "VIN"),
                   sense=PinRef("U9", "VOUT"), phases=[VrmPhase(PinRef("L2", "VOUT"))])],

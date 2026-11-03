@@ -2,8 +2,8 @@ import pytest
 
 pv = pytest.importorskip("pyvista")
 
-from kipi.core.geometry.copper import net_copper
-from kipi.core.viz.meshes import build_scene, triangulate
+from kipi_si.core.geometry.copper import net_copper
+from kipi_si.core.viz.meshes import build_scene, triangulate
 from synthetic import F, IN1, make_board
 
 
@@ -21,7 +21,7 @@ def test_a_plane_with_many_holes_is_tiled_into_one_closed_slab():
     # A ground plane full of antipads is cut into tiles to triangulate quickly; the
     # tiles' vertices are merged again, so the slab has no walls along the cuts.
     import shapely
-    from kipi.core.viz import meshes
+    from kipi_si.core.viz import meshes
     holes = [shapely.Point(x, y).buffer(0.3).exterior.coords
              for x in range(2, 60, 2) for y in range(2, 40, 2)]
     plane = shapely.Polygon([(0, 0), (61, 0), (61, 41), (0, 41)], holes)
@@ -36,7 +36,7 @@ def test_a_plane_with_many_holes_is_tiled_into_one_closed_slab():
 
 def test_segment_strokes_match_stroking_each_segment():
     import shapely
-    from kipi.core.geometry.shapes import segment_strokes, stroke
+    from kipi_si.core.geometry.shapes import segment_strokes, stroke
     segs = [(0, 0, 1, 0, 0.2), (1, 0, 1, 1, 0.2), (1, 1, 0, 1, 0.2),   # one path
             (3, 0, 4, 0, 0.1), (4, 0, 4, 1, 0.3),                      # width changes
             (6, 0, 6, 0, 0.2), (7, 0, 8, 0, 0.0)]                      # a dot; no ink
@@ -65,7 +65,7 @@ def test_scene_builds_closed_slabs():
 def test_board_body_clears_every_copper_face():
     """A body face coplanar with copper z-fights with it: speckle that moves as the view
     rotates (issue #36)."""
-    from kipi.core.viz.meshes import board_body
+    from kipi_si.core.viz.meshes import board_body
     snap = make_board()
     body, _ = board_body(snap)
     z_lo, z_hi = body.bounds[4], body.bounds[5]

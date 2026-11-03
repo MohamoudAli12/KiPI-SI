@@ -4,9 +4,9 @@ import logging
 import re
 
 from ac_boards import plane_pair, plane_setup
-from kipi.ac.solver import solve_ac
-from kipi.ac.solver.sweep import fmt_hz
-from kipi.core.progress import ProgressReporter
+from kipi_si.ac.solver import solve_ac
+from kipi_si.ac.solver.sweep import fmt_hz
+from kipi_si.core.progress import ProgressReporter
 
 
 class Recorder(ProgressReporter):

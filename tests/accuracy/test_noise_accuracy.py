@@ -3,7 +3,7 @@ mechanism and their ranking, and a scan that finds them unaided."""
 
 import pytest
 
-from kipi.noise.solver import solve_noise
+from kipi_si.noise.solver import solve_noise
 from validation_boards import open_board
 
 

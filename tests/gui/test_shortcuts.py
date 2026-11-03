@@ -21,7 +21,7 @@ def app():
 
 @pytest.fixture
 def window(app, no_3d):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     yield w
     w.close()
@@ -38,7 +38,7 @@ def _all_keys(w):
 
 
 def test_home_is_the_iso_view_while_the_3d_view_has_focus(window):
-    from kipi.gui import main_window as mw
+    from kipi_si.gui import main_window as mw
     iso = _actions(window)["Iso"]
     assert iso.shortcut() == QKeySequence(mw.VIEW_KEYS["iso"]) == QKeySequence("Home")
     assert iso.shortcutContext() == Qt.WidgetWithChildrenShortcut
@@ -57,7 +57,7 @@ def test_iso_key_shows_the_3d_view_and_turns_it(window, monkeypatch):
 
 
 def test_every_shortcut_is_used_once_and_shown_in_a_tooltip(window):
-    from kipi.gui import main_window as mw
+    from kipi_si.gui import main_window as mw
     keys = _all_keys(window)
     assert len(keys) == len(set(keys)), keys
     for a in window.findChild(QToolBar).actions():
@@ -71,7 +71,7 @@ def test_every_shortcut_is_used_once_and_shown_in_a_tooltip(window):
 
 
 def test_mode_keys_switch_the_analysis_mode(window):
-    from kipi.gui import main_window as mw
+    from kipi_si.gui import main_window as mw
     by_key = {a.shortcut().toString(): a for a in window.actions()}
     by_key[QKeySequence(mw.KEYS["ac"]).toString()].trigger()
     assert window.mode == "ac"

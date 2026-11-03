@@ -12,9 +12,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from qtpy.QtWidgets import QApplication  # noqa: E402
 
-from kipi.core.progress import NULL  # noqa: E402
-from kipi.dc.pi.tree import solve_tree  # noqa: E402
-from kipi.dc.viz.results import build_result_scene  # noqa: E402
+from kipi_si.core.progress import NULL  # noqa: E402
+from kipi_si.dc.pi.tree import solve_tree  # noqa: E402
+from kipi_si.dc.viz.results import build_result_scene  # noqa: E402
 from tree_boards import board, setup  # noqa: E402
 
 
@@ -24,14 +24,14 @@ def app():
 
 
 def test_the_dc_report_button_writes_and_opens_a_report(app, no_3d, tmp_path, opened_in_browser):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     snap, s = board(), setup("ldo", iq=0.01, ground=True)
     tree = solve_tree(snap, s)
     scenes = {n: build_result_scene(snap, g.result) for n, g in tree.groups.items()}
     w = MainWindow()
     w._run = lambda fn, done, name, **k: done(fn(NULL))      # no background thread here
     try:
-        w.snapshot, w._setup_path = snap, tmp_path / "board.kipi-setup.yml"
+        w.snapshot, w._setup_path = snap, tmp_path / "board.kipi_si-setup.yml"
         w.solve_panel.set_board(snap, s)
         opt = w.solve_panel.report_option
         assert not opt.btn.isEnabled()                      # nothing to report yet
@@ -39,7 +39,7 @@ def test_the_dc_report_button_writes_and_opens_a_report(app, no_3d, tmp_path, op
         w.solve_panel.show_results(tree, next(iter(tree.groups)))
         assert opt.btn.isEnabled()
         opt.btn.click()
-        written, = (tmp_path / "kipi_reports").glob("*_kipi_report_*.html")
+        written, = (tmp_path / "kipi_si_reports").glob("*_kipi_si_report_*.html")
         assert tree.report_path == written
         assert [Path(p) for p in opened_in_browser] == [written]
         assert w.solve_panel.btn_report.isVisibleTo(w.solve_panel)

@@ -2,10 +2,10 @@
 
     python examples/signal_integrity/make_board.py
 
-writes ``signal_integrity.kipi.json.gz`` and ``signal_integrity.kipi-setup.yml`` next to
+writes ``signal_integrity.kipi_si.json.gz`` and ``signal_integrity.kipi_si-setup.yml`` next to
 this file, with a channel for each. Open it without KiCad:
 
-    python -m kipi --snapshot examples/signal_integrity/signal_integrity.kipi.json.gz
+    python -m kipi_si --snapshot examples/signal_integrity/signal_integrity.kipi_si.json.gz
 
 then switch to **SI** mode: **Scan** the board, or pick a channel and **Solve**. The tests
 build the same board from here (``tests/helpers/si_boards.py``).
@@ -23,7 +23,7 @@ FR4 (εr 4.2, tan δ 0.02).
 import sys
 from pathlib import Path
 
-from kipi.core.model.board import (
+from kipi_si.core.model.board import (
     BoardSnapshot, Coating, CopperLayer, DielectricLayer, Footprint, Net, Pad, Poly, Stackup,
     Track, Via, Zone,
 )
@@ -107,8 +107,8 @@ def make_board(stitch=True) -> BoardSnapshot:
 
 
 def make_setup():
-    from kipi.dc.pi.model import PISetup
-    from kipi.si.model import new_channel
+    from kipi_si.dc.pi.model import PISetup
+    from kipi_si.si.model import new_channel
     setup = PISetup()
     setup.si_channels = [new_channel("CLK"), new_channel("USB_P", "USB_N")]
     return setup
@@ -119,9 +119,9 @@ NAME = "signal_integrity"
 
 
 def write():
-    from kipi.core.model.snapshot_io import save
-    snap_path = HERE / f"{NAME}.kipi.json.gz"
-    setup_path = HERE / f"{NAME}.kipi-setup.yml"
+    from kipi_si.core.model.snapshot_io import save
+    snap_path = HERE / f"{NAME}.kipi_si.json.gz"
+    setup_path = HERE / f"{NAME}.kipi_si-setup.yml"
     save(make_board(), snap_path)
     make_setup().save(setup_path)
     return snap_path, setup_path

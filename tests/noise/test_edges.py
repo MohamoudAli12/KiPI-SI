@@ -7,9 +7,9 @@ import math
 import numpy as np
 import pytest
 
-from kipi.noise.model import (DEFAULT_QRR_C, Aggressor, AggressorPhase, NoiseSettings,
+from kipi_si.noise.model import (DEFAULT_QRR_C, Aggressor, AggressorPhase, NoiseSettings,
                               aggressor_from_dict, phase_from_dict, settings_from_dict)
-from kipi.noise.waveforms import CapBranch, PhaseParts, describe_edges, edge_shapes, synthesize
+from kipi_si.noise.waveforms import CapBranch, PhaseParts, describe_edges, edge_shapes, synthesize
 
 FSW = 500e3
 
@@ -98,10 +98,10 @@ def test_qrr_and_the_soft_edge_damping_are_kept_and_defaulted():
 
 
 def test_a_solve_reports_its_edges_and_the_assumed_qrr():
-    from kipi.ac.model import CapModel
-    from kipi.noise.checks import seed_phases
-    from kipi.noise.model import Aggressor
-    from kipi.noise.solver import solve_noise
+    from kipi_si.ac.model import CapModel
+    from kipi_si.noise.checks import seed_phases
+    from kipi_si.noise.model import Aggressor
+    from kipi_si.noise.solver import solve_noise
     from noise_boards import buck_board, buck_setup
     snap = buck_board()
     setup = buck_setup(board_model=False)

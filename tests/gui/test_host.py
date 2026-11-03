@@ -1,4 +1,4 @@
-"""KiPI started by KiCad (plugin) or on its own (standalone): how it tells, and what each
+"""KiPI-SI started by KiCad (plugin) or on its own (standalone): how it tells, and what each
 looks like."""
 
 import os
@@ -13,9 +13,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from qtpy.QtWidgets import QApplication, QMessageBox, QToolBar  # noqa: E402
 
-from kipi import host  # noqa: E402
-from kipi.core.model.snapshot_io import save  # noqa: E402
-from kipi.host import Host  # noqa: E402
+from kipi_si import host  # noqa: E402
+from kipi_si.core.model.snapshot_io import save  # noqa: E402
+from kipi_si.host import Host  # noqa: E402
 from synthetic import make_board  # noqa: E402
 
 
@@ -28,7 +28,7 @@ def app():
 def board_file(tmp_path):
     snap = make_board()
     snap.project_dir = str(tmp_path)
-    return save(snap, tmp_path / "board.kipi.json.gz")
+    return save(snap, tmp_path / "board.kipi_si.json.gz")
 
 
 def _idle(app, w, timeout=30.0):
@@ -57,10 +57,10 @@ def test_kicad_starting_us_means_plugin():
 
 
 def test_the_override_wins():
-    assert host.detect({"KIPI_HOST": "plugin"}) is Host.PLUGIN
-    assert host.detect({"KIPI_HOST": " Standalone ",
+    assert host.detect({"KIPI_SI_HOST": "plugin"}) is Host.PLUGIN
+    assert host.detect({"KIPI_SI_HOST": " Standalone ",
                         "KICAD_API_SOCKET": "ipc:///x"}) is Host.STANDALONE
-    assert host.detect({"KIPI_HOST": "nonsense"}) is Host.STANDALONE   # ignored
+    assert host.detect({"KIPI_SI_HOST": "nonsense"}) is Host.STANDALONE   # ignored
 
 
 def test_the_entry_point_decides():
@@ -70,7 +70,7 @@ def test_the_entry_point_decides():
 
 
 def test_plugin_and_standalone_lock_apart():
-    from kipi.gui import single_instance as si
+    from kipi_si.gui import single_instance as si
     standalone = (si.lock_path(), si.server_name())
     host.set_current(Host.PLUGIN)
     plugin = (si.lock_path(), si.server_name())
@@ -79,7 +79,7 @@ def test_plugin_and_standalone_lock_apart():
 
 
 def test_about_names_the_mode():
-    from kipi.gui import about
+    from kipi_si.gui import about
     assert ("Mode", "Standalone") in about.versions(solver=False)
     host.set_current(Host.PLUGIN)
     assert ("Mode", "KiCad plugin") in about.versions(solver=False)
@@ -88,9 +88,9 @@ def test_about_names_the_mode():
 # --- Board files -------------------------------------------------------------------------
 
 def test_the_registry_knows_snapshots(board_file):
-    from kipi.sources import registry
-    from kipi.sources.snapshot_file import SnapshotFileSource
-    assert registry.format_for("B.KIPI.JSON.GZ").name == "KiPI snapshot"
+    from kipi_si.sources import registry
+    from kipi_si.sources.snapshot_file import SnapshotFileSource
+    assert registry.format_for("B.KIPI_SI.JSON.GZ").name == "KiPI-SI snapshot"
     src = registry.open_board(board_file)
     assert isinstance(src, SnapshotFileSource) and src.caps.reload
     assert not src.caps.refill_zones and not src.caps.select_items
@@ -101,13 +101,13 @@ def test_the_registry_knows_snapshots(board_file):
     assert registry.file_filter().startswith(
         "Boards (*.kicad_pcb *.zip *.tgz *.tar.gz matrix *.hyp *.json.gz *.json);;"
         "KiCad board (*.kicad_pcb);;ODB++ (*.zip *.tgz *.tar.gz matrix);;HyperLynx (*.hyp);;"
-        "KiPI snapshot (")
+        "KiPI-SI snapshot (")
     assert src.files() == [board_file]
 
 
 def test_the_registry_knows_kicad_boards():
-    from kipi.sources import registry
-    from kipi.sources.kicad_pcb.source import KiCadFileSource
+    from kipi_si.sources import registry
+    from kipi_si.sources.kicad_pcb.source import KiCadFileSource
     board = Path(__file__).parents[1] / "data" / "kicad_pcb" / "features.kicad_pcb"
     assert registry.format_for("Board.KiCad_PCB").name == "KiCad board"
     src = registry.open_board(board)
@@ -121,7 +121,7 @@ def test_the_registry_knows_kicad_boards():
 # --- The window --------------------------------------------------------------------------
 
 def test_standalone_opens_files_and_hides_kicad(app, no_3d, board_file):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     assert w.host is Host.STANDALONE
     assert "(standalone)" in w.windowTitle()
@@ -144,7 +144,7 @@ def test_standalone_opens_files_and_hides_kicad(app, no_3d, board_file):
 def kicad_board(tmp_path, monkeypatch):
     """A KiCad board file to open, with the recent-boards list kept in ``tmp_path``."""
     from qtpy.QtCore import QSettings
-    from kipi.gui import recent
+    from kipi_si.gui import recent
     data = Path(__file__).parents[1] / "data" / "kicad_pcb"
     for name in ("features.kicad_pcb", "features.kicad_pro"):
         shutil.copy(data / name, tmp_path / name)
@@ -154,8 +154,8 @@ def kicad_board(tmp_path, monkeypatch):
 
 
 def test_standalone_opens_kicad_boards(app, no_3d, kicad_board):
-    from kipi.gui import recent
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui import recent
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     w._fill_recent_menu()
     assert [a.text() for a in w.recent_menu.actions()] == ["No recent boards"]
@@ -174,8 +174,8 @@ def test_standalone_opens_kicad_boards(app, no_3d, kicad_board):
 
 def test_standalone_opens_odb_jobs(app, no_3d, tmp_path, monkeypatch):
     from qtpy.QtCore import QSettings
-    from kipi.gui import recent
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui import recent
+    from kipi_si.gui.main_window import MainWindow
     ini = str(tmp_path / "settings.ini")
     monkeypatch.setattr(recent, "settings", lambda: QSettings(ini, QSettings.IniFormat))
     job = tmp_path / "features.zip"
@@ -191,8 +191,8 @@ def test_standalone_opens_odb_jobs(app, no_3d, tmp_path, monkeypatch):
 
 def test_standalone_opens_hyperlynx_files(app, no_3d, tmp_path, monkeypatch):
     from qtpy.QtCore import QSettings
-    from kipi.gui import recent
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui import recent
+    from kipi_si.gui.main_window import MainWindow
     ini = str(tmp_path / "settings.ini")
     monkeypatch.setattr(recent, "settings", lambda: QSettings(ini, QSettings.IniFormat))
     board = tmp_path / "small.hyp"
@@ -207,7 +207,7 @@ def test_standalone_opens_hyperlynx_files(app, no_3d, tmp_path, monkeypatch):
 
 
 def test_a_board_saved_on_disk_is_offered_again(app, no_3d, kicad_board, monkeypatch):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     w.open_path(str(kicad_board))
     _idle(app, w)
@@ -216,7 +216,7 @@ def test_a_board_saved_on_disk_is_offered_again(app, no_3d, kicad_board, monkeyp
     monkeypatch.setattr(QMessageBox, "question",
                         lambda *a, **k: asked.append(a[2]) or QMessageBox.Yes)
 
-    w._own_write_until = time.monotonic() + 60       # KiPI's own save: not offered
+    w._own_write_until = time.monotonic() + 60       # KiPI-SI's own save: not offered
     w._board_file_changed(str(kicad_board))
     assert not w._changed_timer.isActive()
 
@@ -234,7 +234,7 @@ def test_a_board_saved_on_disk_is_offered_again(app, no_3d, kicad_board, monkeyp
 
 
 def test_a_bad_board_file_is_reported(app, no_3d, tmp_path, monkeypatch):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     said = []
     monkeypatch.setattr(QMessageBox, "critical", lambda *a: said.append(a[2]))
     bad = tmp_path / "old.kicad_pcb"
@@ -248,7 +248,7 @@ def test_a_bad_board_file_is_reported(app, no_3d, tmp_path, monkeypatch):
 
 
 def test_standalone_says_when_it_cannot_open_a_file(app, no_3d, monkeypatch):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     said = []
     monkeypatch.setattr(QMessageBox, "warning", lambda *a: said.append(a[2]))
     w = MainWindow()
@@ -260,7 +260,7 @@ def test_standalone_says_when_it_cannot_open_a_file(app, no_3d, monkeypatch):
 
 def test_the_plugin_keeps_its_toolbar(app, no_3d, plugin_host):
     from fake_source import FakeSource
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow(source=FakeSource())
     _idle(app, w)
     bar = _toolbar(w)
@@ -271,51 +271,51 @@ def test_the_plugin_keeps_its_toolbar(app, no_3d, plugin_host):
 
 
 def test_models_show_only_with_a_tool_that_has_them(app, no_3d):
-    from kipi.gui.main_window import MainWindow
-    from kipi.sources.kicad_ipc.source import InstalledKiCad
+    from kipi_si.gui.main_window import MainWindow
+    from kipi_si.sources.kicad_ipc.source import InstalledKiCad
     w = MainWindow(tool=InstalledKiCad())
     assert not w.chk_models.isHidden()
     w.close()
 
 
-# --- python -m kipi ----------------------------------------------------------------------
+# --- python -m kipi_si ----------------------------------------------------------------------
 
 @pytest.fixture
 def started(monkeypatch):
-    """What ``python -m kipi`` handed the window, with no window and no lock."""
-    from kipi.gui import app as kipi_app, single_instance
+    """What ``python -m kipi_si`` handed the window, with no window and no lock."""
+    from kipi_si.gui import app as kipi_si_app, single_instance
 
     class Guard:
         def release(self):
             pass
 
     got = {}
-    monkeypatch.setattr(kipi_app, "setup_logging", lambda *a, **k: None)
+    monkeypatch.setattr(kipi_si_app, "setup_logging", lambda *a, **k: None)
     monkeypatch.setattr(single_instance, "claim", lambda: Guard())
-    monkeypatch.setattr(kipi_app, "run", lambda **kw: got.update(kw) or 0)
+    monkeypatch.setattr(kipi_si_app, "run", lambda **kw: got.update(kw) or 0)
     return got
 
 
-def test_from_a_terminal_kipi_is_standalone(started, board_file):
-    from kipi.__main__ import main
-    from kipi.sources.snapshot_file import SnapshotFileSource
+def test_from_a_terminal_kipi_si_is_standalone(started, board_file):
+    from kipi_si.__main__ import main
+    from kipi_si.sources.snapshot_file import SnapshotFileSource
     assert main([str(board_file)]) == 0
     assert host.current() is Host.STANDALONE
     assert isinstance(started["source"], SnapshotFileSource)
-    # KiPI's own colors, and KiCad's part models only if KiCad is installed (#130)
-    from kipi.sources.kicad_ipc.source import KiCadPartModels
-    from kipi.core.viz.layer_colors import DEFAULT_COPPER
+    # KiPI-SI's own colors, and KiCad's part models only if KiCad is installed (#130)
+    from kipi_si.sources.kicad_ipc.source import KiCadPartModels
+    from kipi_si.core.viz.layer_colors import DEFAULT_COPPER
     assert isinstance(started["tool"], KiCadPartModels)
-    assert started["tool"].layer_colors(None) == (dict(DEFAULT_COPPER), "KiPI default colors")
+    assert started["tool"].layer_colors(None) == (dict(DEFAULT_COPPER), "KiPI-SI default colors")
 
     started.clear()
     assert main([]) == 0
     assert started["source"] is None                    # opens files from the window
 
 
-def test_a_file_kipi_cannot_read_stops_it(started, tmp_path, capsys):
-    from kipi.__main__ import main
-    assert main([str(tmp_path / "gone.kipi.json.gz")]) == 2
+def test_a_file_kipi_si_cannot_read_stops_it(started, tmp_path, capsys):
+    from kipi_si.__main__ import main
+    assert main([str(tmp_path / "gone.kipi_si.json.gz")]) == 2
     other = tmp_path / "board.brd"
     other.write_text("")
     assert main([str(other)]) == 2

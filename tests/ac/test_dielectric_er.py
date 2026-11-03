@@ -2,9 +2,9 @@
 
 import pytest
 
-from kipi.ac.model import ACSettings
-from kipi.ac.solver.fem import dielectric_summary
-from kipi.core.model.board import CopperLayer, DielectricLayer, Stackup
+from kipi_si.ac.model import ACSettings
+from kipi_si.ac.solver.fem import dielectric_summary
+from kipi_si.core.model.board import CopperLayer, DielectricLayer, Stackup
 
 F, IN1, B = 3, 4, 34
 
@@ -30,7 +30,7 @@ def test_summary_marks_the_default():
 
 
 def _gap(st, i, j, default_er=4.3):
-    from kipi.ac.solver.fem import ACSystem
+    from kipi_si.ac.solver.fem import ACSystem
     sys_ = ACSystem.__new__(ACSystem)              # _gap only reads the stackup and settings
     sys_.snap = type("S", (), {"stackup": st})()
     sys_.ac = ACSettings(default_er=default_er)

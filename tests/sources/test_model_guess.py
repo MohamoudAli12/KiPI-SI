@@ -6,10 +6,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from kipi.core.model.board import BoardSnapshot, Footprint, Pad, Poly
-from kipi.sources.kicad_ipc import model_guess, models3d
-from kipi.sources.kicad_ipc.model_guess import Library, board_text, footprint_angle
-from kipi.sources.kicad_pcb import sexpr
+from kipi_si.core.model.board import BoardSnapshot, Footprint, Pad, Poly
+from kipi_si.sources.kicad_ipc import model_guess, models3d
+from kipi_si.sources.kicad_ipc.model_guess import Library, board_text, footprint_angle
+from kipi_si.sources.kicad_pcb import sexpr
 
 MODELS = ["Capacitor_SMD.3dshapes/C_0402_1005Metric.step",
           "Capacitor_SMD.3dshapes/C_0603_1608Metric.step",
@@ -145,7 +145,7 @@ def test_a_guess_that_does_not_fit_its_pads_is_left_out(library, monkeypatch):
 
 
 def test_installed_kicad_guesses_only_when_asked(tmp_path, monkeypatch):
-    from kipi.sources.kicad_ipc.source import InstalledKiCad, KiCadPartModels
+    from kipi_si.sources.kicad_ipc.source import InstalledKiCad, KiCadPartModels
     monkeypatch.setattr(models3d, "find_kicad_cli", lambda kicad=None: ["kicad-cli"])
     monkeypatch.setattr(models3d, "board_file", lambda snap: None)
     snap = type("Snap", (), {"board_name": "b.zip"})()

@@ -1,17 +1,20 @@
 [build-system]
-requires = ["setuptools>=77", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.13.6,<0.14"]
+build-backend = "uv_build"
 
 [project]
-name = "kipi"
-dynamic = ["version"]
+name = "kipi_si"
+# uv_build reads no version from the code, so it is written here too; KiCad runs the plugin
+# from its folder, uninstalled, so kipi_si.__version__ stays. tests/core/test_requirements.py
+# keeps the two equal.
+version = "0.9.3"
 description = "DC power-integrity analysis for KiCad: IR drop, current density, via currents and electro-thermal co-simulation in 3D"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
 authors = [{ name = "Drew Maatman", email = "drewmaatman@gmail.com" }]
-maintainers = [{ name = "Drew Maatman", email = "drewmaatman@gmail.com" }]
+maintainers = [{ name = "MohamoudAli12" }]
 keywords = [
     "kicad", "pcb", "power integrity", "ir drop", "dc drop", "pdn",
     "current density", "fem", "electro-thermal", "eda",
@@ -32,7 +35,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Physics",
     "Environment :: X11 Applications :: Qt",
 ]
-# What KiPI needs standalone. requirements.txt, which KiCad installs into the plugin's
+# What KiPI-SI needs standalone. requirements.txt, which KiCad installs into the plugin's
 # venv, is these plus the "kicad" extra; tests/test_requirements.py keeps them in step.
 dependencies = [
     "PySide6-Essentials>=6.6",
@@ -50,31 +53,40 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Talking to a running KiCad: the plugin, `python -m kipi --dump`, and KIPI_HOST=plugin.
+# Talking to a running KiCad: the plugin, `python -m kipi_si --dump`, and KIPI_SI_HOST=plugin.
 # The plugin also gets PARDISO where Intel MKL is published; the launcher asks first.
 kicad = ["kicad-python>=0.7.1",
          'pypardiso>=0.4.6; (sys_platform == "win32" or sys_platform == "linux") and (platform_machine == "AMD64" or platform_machine == "x86_64")']
-dev = ["pytest>=8", "pytest-timeout>=2.3", "ruff==0.17.0"]  # keep in sync with requirements-dev.txt
+
+[dependency-groups]
+# `uv sync` installs the dev group: the plugin's environment (the kicad extra brings
+# kicad-python with its protobuf, and PARDISO where it is published) and the tools.
+lint = ["ruff==0.17.0"]      # pinned: a new ruff release can flag new things and break CI
+test = [
+    "pytest>=8",
+    "pytest-timeout>=2.3",   # ends a test that hangs instead of holding a CI runner (#115)
+]
+dev = ["kipi_si[kicad]", { include-group = "lint" }, { include-group = "test" }]
+
+[tool.uv]
+# The oldest uv that reads this project and its uv.lock the same way.
+required-version = ">=0.9"
 
 [project.urls]
-Homepage = "https://github.com/drewsum/KiPI"
-Repository = "https://github.com/drewsum/KiPI"
-Issues = "https://github.com/drewsum/KiPI/issues"
-Documentation = "https://github.com/drewsum/KiPI/blob/main/docs/research.md"
+Homepage = "https://github.com/MohamoudAli12/KiPI-SI"
+Repository = "https://github.com/MohamoudAli12/KiPI-SI"
+Issues = "https://github.com/MohamoudAli12/KiPI-SI/issues"
+Documentation = "https://github.com/MohamoudAli12/KiPI-SI/blob/main/docs/research.md"
 
 [project.scripts]
-# Standalone app: `kipi [board file]` (see kipi/__main__.py).
-kipi = "kipi.__main__:main"
+# Standalone app: `kipi_si [board file]` (see kipi_si/__main__.py).
+kipi_si = "kipi_si.__main__:main"
 
-[tool.setuptools.dynamic]
-version = { attr = "kipi.__version__" }
-
-[tool.setuptools.packages.find]
-include = ["kipi*"]
-
-[tool.setuptools.package-data]
-# The tooltip drawings (kipi/gui/tooltip_art.py).
-"kipi.gui" = ["graphics/*.svg", "graphics/*.md"]
+[tool.uv.build-backend]
+# The package is at the top of the repo, where KiCad runs it from, not under src/. Every file
+# in it is packaged, the tooltip drawings in kipi_si/gui/graphics included.
+module-name = "kipi_si"
+module-root = ""
 
 [tool.ruff]
 target-version = "py310"
@@ -92,7 +104,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["E402"]                     # imports follow pytest.importorskip
-"kipi/dc/pi/tree.py" = ["B023"]              # regulated() is only called in the iteration defining it
+"kipi_si/dc/pi/tree.py" = ["B023"]              # regulated() is only called in the iteration defining it
 "tests/data/kicad_pcb/make_fixtures.py" = ["E501"]   # board text, kept as KiCad writes it
 
 [tool.pytest.ini_options]

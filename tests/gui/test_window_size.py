@@ -25,7 +25,7 @@ def app():
 
 @pytest.fixture
 def window(app, no_3d):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     w.show()
     app.processEvents()

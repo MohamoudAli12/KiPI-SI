@@ -6,10 +6,10 @@ import numpy as np
 import pytest
 
 from ac_boards import plane_pair, plane_setup
-from kipi.ac.html_report import write_ac_report
-from kipi.ac.solver import solve_ac
-from kipi.ac.solver.sweep import ProbeCurve
-from kipi.ac.target import judged_from, target_at
+from kipi_si.ac.html_report import write_ac_report
+from kipi_si.ac.solver import solve_ac
+from kipi_si.ac.solver.sweep import ProbeCurve
+from kipi_si.ac.target import judged_from, target_at
 
 F = np.logspace(3, 8, 51)            # 1 kHz to 100 MHz, 10 per decade
 
@@ -83,8 +83,8 @@ def test_report_shows_the_bandwidth(tmp_path):
 
 
 def test_a_rail_whose_vrm_has_no_bandwidth_is_not_solved():
-    from kipi.ac.checks import validate_ac
-    from kipi.ac.solver.fem import ACError
+    from kipi_si.ac.checks import validate_ac
+    from kipi_si.ac.solver.fem import ACError
     snap = plane_pair()
     setup = plane_setup(snap)
     assert not any("bandwidth" in e for e in validate_ac(setup, "VRM1", "GND"))
@@ -96,7 +96,7 @@ def test_a_rail_whose_vrm_has_no_bandwidth_is_not_solved():
 
 
 def test_a_new_vrm_starts_at_50_khz():
-    from kipi.dc.pi.model import PinRef, PISetup, Vrm
+    from kipi_si.dc.pi.model import PinRef, PISetup, Vrm
     assert Vrm("U1", PinRef("U1", "+3V3"), 3.3).bandwidth_khz == 50.0      # #190
     d = PISetup(vrms=[Vrm("U1", PinRef("U1", "+3V3"), 3.3, bandwidth_khz=None)]).to_dict()
     assert PISetup.from_dict(d).vrms[0].bandwidth_khz is None              # kept as saved

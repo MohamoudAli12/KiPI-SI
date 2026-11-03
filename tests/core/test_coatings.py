@@ -8,12 +8,12 @@ from pathlib import Path
 import pytest
 import shapely
 
-from kipi.core.geometry.copper import poly_to_shapely
-from kipi.core.progress import NULL
+from kipi_si.core.geometry.copper import poly_to_shapely
+from kipi_si.core.progress import NULL
 
-from kipi.core.model.board import MASK, SILK, Coating, Poly
-from kipi.core.model.snapshot_io import from_dict, to_dict
-from kipi.core.model.stackup import (
+from kipi_si.core.model.board import MASK, SILK, Coating, Poly
+from kipi_si.core.model.snapshot_io import from_dict, to_dict
+from kipi_si.core.model.stackup import (
     DEFAULT_MASK_MM, DEFAULT_SILK_MM, build_stackup, coating_of, coating_thicknesses,
     from_setup, kicad_color, restack, summary, thicknesses, to_setup,
 )
@@ -37,7 +37,7 @@ ORDER = [("top", SILK), ("top", MASK), ("bottom", MASK), ("bottom", SILK)]
 
 
 def test_a_kicad_board_file_gives_its_masks_and_silkscreens():
-    from kipi.sources.kicad_pcb.reader import read_board
+    from kipi_si.sources.kicad_pcb.reader import read_board
     st = read_board(DATA / "kicad_pcb" / "features_v9.kicad_pcb").stackup
     assert _kinds(st) == ORDER
     assert [c.thickness_mm for c in st.coatings] == pytest.approx(
@@ -45,7 +45,7 @@ def test_a_kicad_board_file_gives_its_masks_and_silkscreens():
 
 
 def test_an_odbpp_job_gives_its_masks_and_silkscreens():
-    from kipi.sources.odbpp.reader import read_board
+    from kipi_si.sources.odbpp.reader import read_board
     st = read_board(DATA / "odbpp" / "features.zip").stackup
     assert _kinds(st) == ORDER
     masks = [c for c in st.coatings if c.kind == MASK]
@@ -137,8 +137,8 @@ def test_results_pickled_before_coatings_have_none():
 
 def test_masks_are_open_over_pads_and_sit_outside_the_board():
     pytest.importorskip("pyvista")
-    from kipi.core.viz.meshes import board_coatings
-    from kipi.sources.kicad_pcb.reader import read_board
+    from kipi_si.core.viz.meshes import board_coatings
+    from kipi_si.sources.kicad_pcb.reader import read_board
     snap = read_board(DATA / "kicad_pcb" / "features_v9.kicad_pcb")
     got = board_coatings(snap)
     assert [k for k, _, _ in got] == [MASK, SILK, MASK, SILK]
@@ -147,7 +147,7 @@ def test_masks_are_open_over_pads_and_sit_outside_the_board():
     assert top_mask.bounds[4] >= t and top_silk.bounds[4] >= top_mask.bounds[5] - 1e-9
     assert bottom_mask.bounds[5] <= 0 and bottom_silk.bounds[5] <= bottom_mask.bounds[4] + 1e-9
     # The mask covers the board but the pads; the silkscreen only what it prints.
-    from kipi.core.geometry.silkscreen import mask_openings, printed_silk
+    from kipi_si.core.geometry.silkscreen import mask_openings, printed_silk
     board = shapely.union_all([poly_to_shapely(p) for p in snap.outline])
     open_area = mask_openings(snap, "top").intersection(board).area
     assert top_mask.volume == pytest.approx((board.area - open_area) * 0.01, rel=1e-3)
@@ -163,7 +163,7 @@ def _centers(polys):
 def test_a_kicad_board_file_gives_what_its_silkscreens_print():
     """Each footprint's drawings and its reference and value text on F.SilkS/B.SilkS; a
     footprint on the bottom prints on the bottom."""
-    from kipi.sources.kicad_pcb.reader import read_board
+    from kipi_si.sources.kicad_pcb.reader import read_board
     snap = read_board(DATA / "kicad_pcb" / "features_v9.kicad_pcb")
     assert set(snap.silkscreen) == {"top", "bottom"}
     u1 = next(f for f in snap.footprints if f.reference == "U1")
@@ -178,8 +178,8 @@ def test_a_kicad_board_file_gives_what_its_silkscreens_print():
 def test_odbpp_and_the_board_file_print_the_same_silkscreen():
     """The same board exported to ODB++ (KiCad's own strokes) and read from its file
     (a similar font): every piece lands in the same place."""
-    from kipi.sources.kicad_pcb.reader import read_board as read_pcb
-    from kipi.sources.odbpp.reader import read_board as read_odb
+    from kipi_si.sources.kicad_pcb.reader import read_board as read_pcb
+    from kipi_si.sources.odbpp.reader import read_board as read_odb
     odb = read_odb(DATA / "odbpp" / "features.zip").silkscreen
     pcb = read_pcb(DATA / "kicad_pcb" / "features.kicad_pcb").silkscreen
     for side in ("top", "bottom"):
@@ -189,7 +189,7 @@ def test_odbpp_and_the_board_file_print_the_same_silkscreen():
 
 
 def test_text_is_placed_turned_and_justified_as_kicad_does():
-    from kipi.core.geometry.text import text_geometry
+    from kipi_si.core.geometry.text import text_geometry
     g = text_geometry("HI", (10, 20), 1.0, 1.0)
     assert g.centroid.x == pytest.approx(10, abs=0.05)
     assert g.centroid.y == pytest.approx(20, abs=0.05)
@@ -206,9 +206,9 @@ def test_text_is_placed_turned_and_justified_as_kicad_does():
 def test_footprint_text_reads_upright_unless_unlocked():
     """KiCad turns footprint text (and board text, from KiCad 8) half round to read
     upright; ``unlocked`` text keeps its angle."""
-    from kipi.sources.kicad_pcb.reader import read_silkscreen
-    from kipi.sources.kicad_pcb.sexpr import parse
-    from kipi.core.geometry.text import text_geometry
+    from kipi_si.sources.kicad_pcb.reader import read_silkscreen
+    from kipi_si.sources.kicad_pcb.sexpr import parse
+    from kipi_si.core.geometry.text import text_geometry
     upright = text_geometry("U12", (0, 0), 1.0, 1.0, 0.15, 0)
 
     def fp(at):
@@ -226,13 +226,13 @@ def test_kicad_gives_what_its_silkscreens_print():
     stroke through each text's position)."""
     pytest.importorskip("kipy")
     from kicad_fake import VERSIONS, FakeKiCad
-    from kipi.sources.kicad_ipc.extract import extract_board
+    from kipi_si.sources.kicad_ipc.extract import extract_board
     snap = extract_board(FakeKiCad(VERSIONS[-1]).board())
     top = sorted(poly_to_shapely(p).bounds for p in snap.silkscreen["top"])
     bottom = [poly_to_shapely(p).bounds for p in snap.silkscreen["bottom"]]
     assert top == [pytest.approx((1.9, 11.9, 12.1, 12.1)),                   # the line
                    pytest.approx((18.925, 1.925, 21.075, 2.075), abs=1e-3)]  # U1
-    assert bottom == [pytest.approx((13.925, 9.925, 16.075, 10.075), abs=1e-3)]  # "KiPI"
+    assert bottom == [pytest.approx((13.925, 9.925, 16.075, 10.075), abs=1e-3)]  # "KiPI-SI"
     assert not any("Silkscreen" in a for a in snap.assumed)
 
 
@@ -240,7 +240,7 @@ def test_without_kicads_text_the_silkscreen_keeps_its_graphics():
     pytest.importorskip("kipy")
     from kicad_fake import VERSIONS, FakeKiCad
     from kipy.errors import ApiError
-    from kipi.sources.kicad_ipc.extract import extract_board
+    from kipi_si.sources.kicad_ipc.extract import extract_board
     kicad = FakeKiCad(VERSIONS[-1])
 
     def refuse(cmd):
@@ -272,7 +272,7 @@ def test_snapshots_keep_the_silkscreen_and_older_ones_print_nothing():
 
 def test_silkscreen_is_printed_on_the_board_and_off_the_pads():
     from synthetic import make_board
-    from kipi.core.geometry.silkscreen import printed_silk
+    from kipi_si.core.geometry.silkscreen import printed_silk
     snap = make_board()
     board = shapely.union_all([poly_to_shapely(p) for p in snap.outline])
     pad = next(p for p in snap.pads if snap.stackup.copper[0].id in p.shapes)
@@ -289,7 +289,7 @@ def test_silkscreen_is_printed_on_the_board_and_off_the_pads():
 def test_kicad_gives_its_masks_and_silkscreens():
     pytest.importorskip("kipy")
     from kicad_fake import VERSIONS, FakeKiCad
-    from kipi.sources.kicad_ipc.extract import extract_board
+    from kipi_si.sources.kicad_ipc.extract import extract_board
     st = extract_board(FakeKiCad(VERSIONS[-1]).board()).stackup
     assert _kinds(st) == ORDER
     top_silk, top_mask = st.coatings[:2]

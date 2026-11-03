@@ -7,9 +7,9 @@ import math
 import numpy as np
 import pytest
 
-from kipi.si import closed_form as cf
-from kipi.si.materials import Dielectric, Roughness, surface_resistance
-from kipi.si.xsection import Band, Cache, Conductor, solve
+from kipi_si.si import closed_form as cf
+from kipi_si.si.materials import Dielectric, Roughness, surface_resistance
+from kipi_si.si.xsection import Band, Cache, Conductor, solve
 
 W = 8.0
 

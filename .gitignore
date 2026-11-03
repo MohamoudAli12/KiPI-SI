@@ -5,13 +5,12 @@ __pycache__/
 *.egg-info/
 build/
 dist/
-*.kipi.json.gz
-!examples/**/*.kipi.json.gz
-!tests/data/**/*.kipi.json.gz
-uv.lock
+*.kipi_si.json.gz
+!examples/**/*.kipi_si.json.gz
+!tests/data/**/*.kipi_si.json.gz
 .vscode/
-KiPI.lnk
+KiPI-SI.lnk
 
-# Reports KiPI writes into a project, and KiCad's own project backups
-kipi_reports/
+# Reports KiPI-SI writes into a project, and KiCad's own project backups
+kipi_si_reports/
 *-backups/

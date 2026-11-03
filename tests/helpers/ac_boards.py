@@ -1,6 +1,6 @@
 """Synthetic boards for the AC solver: plane pairs with a probe, and decoupling caps."""
 
-from kipi.core.model.board import BoardSnapshot, Footprint, Net, Pad, Poly, Via, Zone
+from kipi_si.core.model.board import BoardSnapshot, Footprint, Net, Pad, Poly, Via, Zone
 from synthetic import B, F, IN1, IN2, make_board, rect, square  # noqa: F401
 
 
@@ -48,8 +48,8 @@ def plane_pair(size=50.0, probe_xy=(5.0, 5.0), caps=(), rail=None,
 
 
 def plane_setup(snap, **ac):
-    from kipi.ac.model import Probe
-    from kipi.dc.pi.model import PISetup, PinRef, Vrm
+    from kipi_si.ac.model import Probe
+    from kipi_si.dc.pi.model import PISetup, PinRef, Vrm
     setup = PISetup()
     # A bandwidth below every test sweep, so targets apply across it (#183).
     setup.vrms.append(Vrm("VRM1", PinRef("U1", "+3V3", ["1"]), 3.3,

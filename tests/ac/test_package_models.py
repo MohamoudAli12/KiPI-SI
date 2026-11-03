@@ -7,14 +7,14 @@ import numpy as np
 import pytest
 
 from ac_boards import plane_pair, plane_setup
-from kipi.ac.checks import validate_ac
-from kipi.ac.model import DIE, OPEN, PCB, SHORT, PackageModel, PackagePort
-from kipi.ac.package import (
+from kipi_si.ac.checks import validate_ac
+from kipi_si.ac.model import DIE, OPEN, PCB, SHORT, PackageModel, PackagePort
+from kipi_si.ac.package import (
     block_diag, connect, guess_ports, open_removed_dies, rename_package, sync_die_probes,
 )
-from kipi.ac.solver import solve_ac
-from kipi.core.model import touchstone as ts
-from kipi.dc.pi.model import PISetup
+from kipi_si.ac.solver import solve_ac
+from kipi_si.core.model import touchstone as ts
+from kipi_si.dc.pi.model import PISetup
 
 R, L, C, ESR = 0.05, 0.1e-9, 100e-9, 1e-3
 FF = np.logspace(4, 9, 501)
@@ -144,7 +144,7 @@ def test_connect_matches_a_hand_worked_network():
 
 def test_open_and_shorted_ports_are_reduced_out(tmp_path):
     k = _package(tmp_path, die=OPEN)
-    from kipi.ac.package import PackageUse
+    from kipi_si.ac.package import PackageUse
     f = np.array([1e6])
     w = 2 * np.pi * f
     opened = PackageUse(k, balls=[k.ports[0]], opened=[k.ports[1]]).y_at(f)
@@ -255,7 +255,7 @@ def test_packages_tab(tmp_path):
     pytest.importorskip("qtpy")
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from qtpy.QtWidgets import QApplication
-    from kipi.ac.gui.panel import ACPanel
+    from kipi_si.ac.gui.panel import ACPanel
     _app = QApplication.instance() or QApplication([])  # noqa: F841
     snap = plane_pair()
     setup = plane_setup(snap)

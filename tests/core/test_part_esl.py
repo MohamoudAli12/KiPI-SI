@@ -6,8 +6,8 @@ import os
 
 import pytest
 
-from kipi.core.model.board import Footprint, Pad
-from kipi.core.model.parts import bead_esl_h, chip_esl_h, chip_length_mm, part_esl
+from kipi_si.core.model.board import Footprint, Pad
+from kipi_si.core.model.parts import bead_esl_h, chip_esl_h, chip_length_mm, part_esl
 from synthetic import make_board
 
 
@@ -66,8 +66,8 @@ def app():
 
 
 def test_the_link_editor_estimates_from_the_package(app):
-    from kipi.dc.gui.pi_panel import PIPanel
-    from kipi.dc.pi.model import DcLink, PinRef
+    from kipi_si.dc.gui.pi_panel import PIPanel
+    from kipi_si.dc.pi.model import DcLink, PinRef
     snap = make_board()
     snap.footprints.append(Footprint("f9", "R5", "10m", (0, 0), "top",
                                      footprint="Resistor_SMD:R_0805_2012Metric"))
@@ -84,7 +84,7 @@ def test_the_link_editor_estimates_from_the_package(app):
 
 def test_the_bead_dialog(app):
     from qtpy.QtWidgets import QDialogButtonBox
-    from kipi.dc.gui.pi_panel import BeadDialog
+    from kipi_si.dc.gui.pi_panel import BeadDialog
     d = BeadDialog(0.1)
     d.z.setValue(60)
     d.freq.setValue(10)

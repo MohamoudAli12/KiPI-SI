@@ -12,7 +12,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from qtpy.QtWidgets import QApplication, QHeaderView  # noqa: E402
 
-from kipi.dc.solver.post import ViaResult  # noqa: E402
+from kipi_si.dc.solver.post import ViaResult  # noqa: E402
 from phase_boards import board  # noqa: E402
 
 
@@ -22,7 +22,7 @@ def app():
 
 
 def _panel(app, n):
-    from kipi.dc.gui.pi_panel import PIPanel
+    from kipi_si.dc.gui.pi_panel import PIPanel
     vias = [ViaResult(f"v{i}", "via", (float(i), 0.0), 0.3, 0.001 * i, 1e-6) for i in range(n)]
     p = PIPanel()
     p.snapshot = board()
@@ -67,7 +67,7 @@ def test_limit_change_keeps_rows_and_column_sizing(app):
 
 
 def test_the_default_limit_is_1_a_and_none_is_kept():
-    from kipi.dc.pi.model import PISetup
+    from kipi_si.dc.pi.model import PISetup
     assert PISetup().via_current_limit_a == 1.0
     d = PISetup().to_dict()
     del d["via_current_limit_a"]                  # a setup that never saved one

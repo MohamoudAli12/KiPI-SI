@@ -7,15 +7,15 @@ import pytest
 @pytest.fixture(autouse=True)
 def no_kicad_settings(monkeypatch):
     """Tests never read this machine's KiCad color theme."""
-    from kipi.sources.kicad_ipc import colors
+    from kipi_si.sources.kicad_ipc import colors
     monkeypatch.setattr(colors, "_config_roots", lambda: [])
 
 
 @pytest.fixture(autouse=True)
 def standalone_host(monkeypatch):
-    """Tests run standalone unless they say otherwise (``kipi.host.set_current``), whatever
+    """Tests run standalone unless they say otherwise (``kipi_si.host.set_current``), whatever
     this machine's environment, and a host one test sets never leaks into the next."""
-    from kipi import host
+    from kipi_si import host
     monkeypatch.delenv(host.HOST_ENV, raising=False)
     monkeypatch.delenv(host.KICAD_SOCKET_ENV, raising=False)
     monkeypatch.setattr(host, "_current", None)
@@ -24,7 +24,7 @@ def standalone_host(monkeypatch):
 @pytest.fixture
 def plugin_host(monkeypatch):
     """Run the test as the KiCad plugin."""
-    from kipi import host
+    from kipi_si import host
     monkeypatch.setattr(host, "_current", host.Host.PLUGIN)
 
 
@@ -36,7 +36,7 @@ def opened_in_browser(monkeypatch):
     monkeypatch.setattr(webbrowser, "open", lambda uri, *a, **k: opened.append(uri) or True)
     try:
         from qtpy.QtGui import QDesktopServices
-        from kipi.gui import browser
+        from kipi_si.gui import browser
     except Exception:                       # no Qt binding: nothing else can open one
         return opened
     monkeypatch.setattr(browser, "_xdg_open", lambda path: False)   # on to Qt's, below
@@ -54,7 +54,7 @@ def no_3d(monkeypatch):
     """
     from qtpy.QtCore import Signal
     from qtpy.QtWidgets import QMessageBox, QWidget
-    from kipi.gui import main_window
+    from kipi_si.gui import main_window
 
     # A window closed with setup edits not saved asks whether to save them; no one is
     # there to answer, so they are dropped (a test of the question patches it itself).
@@ -129,8 +129,8 @@ def no_3d(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def own_settings(tmp_path_factory):
-    """Tests keep their Qt settings (QSettings("KiPI", "KiPI"): folded Nets sections, the
-    list's height, ...) in a folder of their own, never the user's: a KiPI open on this
+    """Tests keep their Qt settings (QSettings("KiPI-SI", "KiPI-SI"): folded Nets sections, the
+    list's height, ...) in a folder of their own, never the user's: a KiPI-SI open on this
     machine and a test run must not read each other's."""
     try:
         from qtpy.QtCore import QSettings

@@ -12,10 +12,10 @@ from pathlib import Path
 
 import pytest
 
-from kipi.core.geometry.copper import poly_to_shapely
-from kipi.core.model.layers import B_CU, F_CU
-from kipi.sources.hyp.parse import HypError, parse
-from kipi.sources.hyp.reader import read_board
+from kipi_si.core.geometry.copper import poly_to_shapely
+from kipi_si.core.model.layers import B_CU, F_CU
+from kipi_si.sources.hyp.parse import HypError, parse
+from kipi_si.sources.hyp.reader import read_board
 
 DATA = Path(__file__).parents[1] / "data" / "hyp"
 SMALL = DATA / "small.hyp"
@@ -190,7 +190,7 @@ def test_parse_keeps_quoted_values_and_skips_comments():
     assert ps.value == "X 1" and ps.words == ["0.5"] and ps.items[0].words[0] == "MDEF"
 
 
-def test_files_kipi_cannot_read(tmp_path):
+def test_files_kipi_si_cannot_read(tmp_path):
     cut = tmp_path / "cut.hyp"
     cut.write_text(SMALL.read_text(encoding="utf-8")[:3000], encoding="utf-8")
     with pytest.raises(HypError, match="ends inside"):
@@ -206,8 +206,8 @@ def test_files_kipi_cannot_read(tmp_path):
 
 
 def test_the_registry_opens_hyp_files():
-    from kipi.sources import registry
-    from kipi.sources.hyp.source import HypFileSource
+    from kipi_si.sources import registry
+    from kipi_si.sources.hyp.source import HypFileSource
     assert registry.format_for(Path("Board.HYP")).name == "HyperLynx"
     src = registry.open_board(SMALL)
     assert isinstance(src, HypFileSource) and src.caps.reload and src.files() == [SMALL]

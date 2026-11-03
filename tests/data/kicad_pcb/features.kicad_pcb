@@ -140,7 +140,7 @@
 			(outputdirectory "")
 		)
 	)
-	(footprint "kipi:U1"
+	(footprint "kipi_si:U1"
 		(layer "F.Cu")
 		(uuid "b792d562-d540-5950-841e-4b4d0dfb1b07")
 		(at 30 30 30)
@@ -283,7 +283,7 @@
 		)
 		(embedded_fonts no)
 	)
-	(footprint "kipi:J1"
+	(footprint "kipi_si:J1"
 		(layer "B.Cu")
 		(uuid "34fd68c6-d809-5ccc-9e3e-f419a349c104")
 		(at 70 30 90)

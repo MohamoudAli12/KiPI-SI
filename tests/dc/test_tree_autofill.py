@@ -2,14 +2,14 @@
 
 import pytest
 
-from kipi.core.model.board import Footprint, Net, Pad
-from kipi.dc.pi.autofill import input_net
-from kipi.dc.pi.importers.rail_autofill import (
+from kipi_si.core.model.board import Footprint, Net, Pad
+from kipi_si.dc.pi.autofill import input_net
+from kipi_si.dc.pi.importers.rail_autofill import (
     AutofillError, PartsLibrary, autofill_rail, source_candidates, vrm_kind,
 )
-from kipi.dc.pi.importers.tree_autofill import autofill_tree, find_tree
-from kipi.dc.pi.model import PISetup, validate
-from kipi.noise.checks import seed_phases, switching_frequency
+from kipi_si.dc.pi.importers.tree_autofill import autofill_tree, find_tree
+from kipi_si.dc.pi.model import PISetup, validate
+from kipi_si.noise.checks import seed_phases, switching_frequency
 from synthetic import make_board
 
 PARTS = {  # ref: (value, fields)
@@ -183,11 +183,11 @@ def test_source_candidates_skip_translators_and_fed_regulators():
 
 def test_declared_kinds_and_voltage_fields():
     assert vrm_kind("Switcher") == "smps" and vrm_kind("LDO") == "ldo" and vrm_kind("x") == ""
-    lib = PartsLibrary.from_dict({"kipi_parts": 1, "parts": {
+    lib = PartsLibrary.from_dict({"kipi_si_parts": 1, "parts": {
         "BUCK": {"vrm": {"kind": "smps", "fsw_hz": 1e6}}}})
     assert lib.parts["BUCK"].vrm.kind == "smps"
     with pytest.raises(AutofillError, match="kind"):
-        PartsLibrary.from_dict({"kipi_parts": 1, "parts": {"X": {"vrm": {"kind": "nope"}}}})
+        PartsLibrary.from_dict({"kipi_si_parts": 1, "parts": {"X": {"vrm": {"kind": "nope"}}}})
     snap = board(parts={"J1": ("CONN", {"PI_V": "12V"})})
     src = by_ref(find_tree(snap, PartsLibrary()))["J1"]
     assert (src.voltage, src.voltage_from) == (12.0, "PI_V")

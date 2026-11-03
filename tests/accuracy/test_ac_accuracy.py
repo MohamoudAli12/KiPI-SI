@@ -13,8 +13,8 @@ import numpy as np
 import pytest
 
 from validation_boards import boards, open_board
-from kipi.ac.solver import solve_ac
-from kipi.ac.solver.physics import EPS0_F_PER_MM
+from kipi_si.ac.solver import solve_ac
+from kipi_si.ac.solver.physics import EPS0_F_PER_MM
 
 C0_MM_S = 299_792_458e3          # speed of light, mm/s
 

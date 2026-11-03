@@ -13,8 +13,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from qtpy.QtWidgets import QApplication  # noqa: E402
 
 from ac_boards import plane_pair, plane_setup  # noqa: E402
-from kipi.ac.solver.sweep import ACResult, ProbeCurve  # noqa: E402
-from kipi.dc.pi.model import PinRef, Vrm  # noqa: E402
+from kipi_si.ac.solver.sweep import ACResult, ProbeCurve  # noqa: E402
+from kipi_si.dc.pi.model import PinRef, Vrm  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -30,7 +30,7 @@ def _result(rail, mag):
 
 @pytest.fixture
 def panel(app):
-    from kipi.ac.gui.panel import ACPanel
+    from kipi_si.ac.gui.panel import ACPanel
     snap = plane_pair()
     setup = plane_setup(snap)
     setup.vrms.append(Vrm("VRM2", PinRef("U1", "+3V3", ["1"]), 3.3))

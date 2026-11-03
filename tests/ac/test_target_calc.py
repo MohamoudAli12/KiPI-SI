@@ -7,7 +7,7 @@ import os
 
 import pytest
 
-from kipi.ac.target import target_from_transient
+from kipi_si.ac.target import target_from_transient
 
 
 def test_target_from_transient():
@@ -32,7 +32,7 @@ def app():
 
 def test_dialog_computes_and_remembers_inputs(app, monkeypatch):
     from qtpy.QtWidgets import QDialogButtonBox
-    from kipi.ac.gui.target_calc import TargetCalculator
+    from kipi_si.ac.gui.target_calc import TargetCalculator
     monkeypatch.setattr(TargetCalculator, "last", (0.0, 0.0, 0.0))
     d = TargetCalculator(probe_name="U1")
     ok = d.buttons.button(QDialogButtonBox.Ok)
@@ -50,9 +50,9 @@ def test_dialog_computes_and_remembers_inputs(app, monkeypatch):
 
 
 def test_probe_from_a_dc_load_takes_its_pins(app):
-    from kipi.ac.gui.panel import ACPanel
-    from kipi.ac.model import Probe
-    from kipi.dc.pi.model import Load, PinRef
+    from kipi_si.ac.gui.panel import ACPanel
+    from kipi_si.ac.model import Probe
+    from kipi_si.dc.pi.model import Load, PinRef
     panel = ACPanel()
     panel.setup.loads.append(Load("SoC", PinRef("U1", "+1V0", ["1", "3"]), 5.0,
                                   ground=PinRef("U1", "GND", ["2"])))
@@ -68,10 +68,10 @@ def test_probe_from_a_dc_load_takes_its_pins(app):
 
 
 def test_calculator_fills_the_probe_target(app, monkeypatch):
-    from kipi.ac.gui import target_calc
-    from kipi.ac.gui.panel import ACPanel
-    from kipi.ac.model import Probe
-    from kipi.dc.pi.model import PinRef
+    from kipi_si.ac.gui import target_calc
+    from kipi_si.ac.gui.panel import ACPanel
+    from kipi_si.ac.model import Probe
+    from kipi_si.dc.pi.model import PinRef
     panel = ACPanel()
     probe = Probe("U1", PinRef("U1", "+1V0", ["1"]), PinRef("U1", "GND", ["2"]))
     panel.setup.probes.append(probe)
@@ -106,7 +106,7 @@ def test_calculator_fills_the_probe_target(app, monkeypatch):
 # --- Copy tolerance and current from the probe's DC load (#87) -----------------------------
 
 def _setup():
-    from kipi.dc.pi.model import DcLink, Load, PinRef, PISetup, Vrm
+    from kipi_si.dc.pi.model import DcLink, Load, PinRef, PISetup, Vrm
     s = PISetup()
     s.vrms.append(Vrm("VR1", PinRef("U9", "+1V0_VRM"), 1.0))
     s.vrms.append(Vrm("VR2", PinRef("U8", "+3V3"), 3.3))
@@ -119,8 +119,8 @@ def _setup():
 
 
 def test_probe_loads_are_the_loads_on_the_probes_part():
-    from kipi.ac.target import probe_loads
-    from kipi.dc.pi.model import PinRef
+    from kipi_si.ac.target import probe_loads
+    from kipi_si.dc.pi.model import PinRef
     ls = probe_loads(_setup(), PinRef("U1", "+1V0", ["1"]), PinRef("U1", "GND"))
     assert [(p.name, p.current_a, p.exact) for p in ls] == [("SoC", 2.0, False),
                                                             ("IO", 1.0, False)]
@@ -132,8 +132,8 @@ def test_probe_loads_are_the_loads_on_the_probes_part():
 
 
 def test_a_load_on_the_probes_pins_comes_first():
-    from kipi.ac.target import probe_loads
-    from kipi.dc.pi.model import PinRef
+    from kipi_si.ac.target import probe_loads
+    from kipi_si.dc.pi.model import PinRef
     s = _setup()
     io = s.loads[3]
     io.supply, io.ground = PinRef("U1", "+1V0", ["2", "1"]), PinRef("U1", "GND", ["3"])
@@ -146,8 +146,8 @@ def test_a_load_on_the_probes_pins_comes_first():
 
 
 def test_an_uneven_tolerance_gives_its_tighter_side():
-    from kipi.ac.target import probe_loads
-    from kipi.dc.pi.model import PinRef
+    from kipi_si.ac.target import probe_loads
+    from kipi_si.dc.pi.model import PinRef
     s = _setup()
     soc = s.loads[1]
     soc.tol_min, soc.tol_max = -2.0, 5.0                     # -2 % of 1 V is tighter
@@ -161,8 +161,8 @@ def test_an_uneven_tolerance_gives_its_tighter_side():
 
 
 def test_dialog_copies_the_probes_load(app, monkeypatch):
-    from kipi.ac.gui.target_calc import TargetCalculator
-    from kipi.ac.target import LoadTolerance, ProbeLoad
+    from kipi_si.ac.gui.target_calc import TargetCalculator
+    from kipi_si.ac.target import LoadTolerance, ProbeLoad
     monkeypatch.setattr(TargetCalculator, "last", (0.0, 0.0, 0.0))
     none = TargetCalculator()
     assert not none.btn_copy.isEnabled() and not none.btn_current.isEnabled()
@@ -177,8 +177,8 @@ def test_dialog_copies_the_probes_load(app, monkeypatch):
 
 
 def test_dialog_picks_among_the_parts_loads(app, monkeypatch):
-    from kipi.ac.gui.target_calc import TargetCalculator
-    from kipi.ac.target import LoadTolerance, ProbeLoad
+    from kipi_si.ac.gui.target_calc import TargetCalculator
+    from kipi_si.ac.target import LoadTolerance, ProbeLoad
     monkeypatch.setattr(TargetCalculator, "last", (0.0, 0.0, 0.0))
     a = ProbeLoad("A", LoadTolerance("A", "±5 %", 1.0, 0.05), 1.0)
     b = ProbeLoad("B", None, 4.0)
@@ -197,8 +197,8 @@ def test_dialog_picks_among_the_parts_loads(app, monkeypatch):
 
 
 def test_vrm_accuracies_on_the_probes_rail():
-    from kipi.ac.target import vrm_accuracies
-    from kipi.dc.pi.model import PinRef
+    from kipi_si.ac.target import vrm_accuracies
+    from kipi_si.dc.pi.model import PinRef
     s = _setup()
     vr1, vr2 = s.vrms
     vr1.kind = vr2.kind = "smps"
@@ -215,8 +215,8 @@ def test_vrm_accuracies_on_the_probes_rail():
 
 
 def test_dialog_subtracts_a_vrm_accuracy(app, monkeypatch):
-    from kipi.ac.gui.target_calc import TargetCalculator
-    from kipi.ac.target import VrmAccuracy
+    from kipi_si.ac.gui.target_calc import TargetCalculator
+    from kipi_si.ac.target import VrmAccuracy
     monkeypatch.setattr(TargetCalculator, "last", (50.0, 0.0, 0.0))
     assert not TargetCalculator().btn_accuracy.isEnabled()
     d = TargetCalculator(accuracies=[VrmAccuracy("VR1", "±1 %", 0.012)])
@@ -230,9 +230,9 @@ def test_dialog_subtracts_a_vrm_accuracy(app, monkeypatch):
 def test_each_side_of_the_accuracy_comes_off_its_own_side_of_the_tolerance(app, monkeypatch):
     # #172: a load allowed -5 / +3 % of 1 V behind a VRM that may sit -3 / +1 % off it has
     # 50 - 30 = 20 mV left below and 30 - 10 = 20 mV above, not 30 - 30 = 0 mV.
-    from kipi.ac.gui.target_calc import TargetCalculator
-    from kipi.ac.target import LoadDrop, ProbeLoad, probe_loads, vrm_accuracies
-    from kipi.dc.pi.model import PinRef
+    from kipi_si.ac.gui.target_calc import TargetCalculator
+    from kipi_si.ac.target import LoadDrop, ProbeLoad, probe_loads, vrm_accuracies
+    from kipi_si.dc.pi.model import PinRef
     monkeypatch.setattr(TargetCalculator, "last", (0.0, 0.0, 0.0))
     s = _setup()
     soc, vr1 = s.loads[1], s.vrms[0]
@@ -263,7 +263,7 @@ def test_each_side_of_the_accuracy_comes_off_its_own_side_of_the_tolerance(app, 
 
 
 def test_an_accuracy_with_one_end_uses_up_one_side():
-    from kipi.dc.pi.model import PinRef, Vrm
+    from kipi_si.dc.pi.model import PinRef, Vrm
     v = Vrm("VR1", PinRef("U9", "+1V0"), 1.0, kind="smps")
     v.acc_min, v.acc_max = -2.0, None
     assert v.accuracy_sides() == (pytest.approx(0.02), 0.0)
@@ -275,7 +275,7 @@ def test_an_accuracy_with_one_end_uses_up_one_side():
 
 def _tree(*loads):
     """A power-tree result holding ``(name, nominal, v_effective)`` load reports."""
-    from kipi.dc.pi.results import LoadReport, TreeResult
+    from kipi_si.dc.pi.results import LoadReport, TreeResult
     return TreeResult(loads=[
         LoadReport(name=n, group="+1V0", current=1.0, nominal=nom, v_supply=v, v_supply_min=v,
                    v_ground=0.0, v_effective=v, drop=nom - v, tolerance="", passed=True)
@@ -283,7 +283,7 @@ def _tree(*loads):
 
 
 def test_load_drop_is_the_solved_effective_voltage_against_nominal():
-    from kipi.ac.target import load_drop
+    from kipi_si.ac.target import load_drop
     d = load_drop(_tree(("SoC", 1.0, 0.973)), "SoC")
     assert (d.v, d.kind) == (pytest.approx(0.027), "drop")
     assert d.nominal == 1.0 and d.v_effective == pytest.approx(0.973)
@@ -297,8 +297,8 @@ def test_load_drop_is_the_solved_effective_voltage_against_nominal():
 
 
 def test_probe_loads_carry_their_drop_once_solved():
-    from kipi.ac.target import probe_loads
-    from kipi.dc.pi.model import PinRef
+    from kipi_si.ac.target import probe_loads
+    from kipi_si.dc.pi.model import PinRef
     s, rail = _setup(), PinRef("U1", "+1V0")
     assert probe_loads(s, rail)[0].drop is None                 # no DC result
     ls = probe_loads(s, rail, None, _tree(("SoC", 1.0, 0.95)))
@@ -306,8 +306,8 @@ def test_probe_loads_carry_their_drop_once_solved():
 
 
 def test_dialog_subtracts_the_dc_drop(app, monkeypatch):
-    from kipi.ac.gui.target_calc import TargetCalculator
-    from kipi.ac.target import LoadDrop, ProbeLoad
+    from kipi_si.ac.gui.target_calc import TargetCalculator
+    from kipi_si.ac.target import LoadDrop, ProbeLoad
     monkeypatch.setattr(TargetCalculator, "last", (50.0, 0.0, 0.0))
     unsolved = TargetCalculator(loads=[ProbeLoad("SoC", None, 2.0)])
     assert not unsolved.btn_drop.isEnabled()
@@ -329,10 +329,10 @@ def test_dialog_subtracts_the_dc_drop(app, monkeypatch):
 
 
 def test_the_calculator_gets_the_panels_dc_result(app, monkeypatch):
-    from kipi.ac.gui import target_calc
-    from kipi.ac.gui.panel import ACPanel
-    from kipi.ac.model import Probe
-    from kipi.dc.pi.model import PinRef
+    from kipi_si.ac.gui import target_calc
+    from kipi_si.ac.gui.panel import ACPanel
+    from kipi_si.ac.model import Probe
+    from kipi_si.dc.pi.model import PinRef
     panel = ACPanel()
     panel.setup = _setup()
     panel.setup.probes.append(Probe("U1", PinRef("U1", "+1V0", ["1"]), PinRef("U1", "GND")))
@@ -352,10 +352,10 @@ def test_the_calculator_gets_the_panels_dc_result(app, monkeypatch):
 
 
 def test_probe_editor_offers_the_parts_loads(app, monkeypatch):
-    from kipi.ac.gui import target_calc
-    from kipi.ac.gui.panel import ACPanel
-    from kipi.ac.model import Probe
-    from kipi.dc.pi.model import PinRef
+    from kipi_si.ac.gui import target_calc
+    from kipi_si.ac.gui.panel import ACPanel
+    from kipi_si.ac.model import Probe
+    from kipi_si.dc.pi.model import PinRef
     panel = ACPanel()
     panel.setup = _setup()
     panel.setup.probes.append(Probe("U1", PinRef("U1", "+1V0", ["1"]), PinRef("U1", "GND")))
@@ -373,7 +373,7 @@ def test_probe_editor_offers_the_parts_loads(app, monkeypatch):
 
 
 def test_slew_rate_starts_at_10_a_per_us(app):
-    from kipi.ac.gui import target_calc
+    from kipi_si.ac.gui import target_calc
     assert target_calc.TargetCalculator.last == (0.0, 0.0, 10.0)
     assert target_calc.TargetCalculator().slew.value() == 10.0
 
@@ -382,7 +382,7 @@ def test_slew_rate_starts_at_10_a_per_us(app):
 
 def _regulators():
     """A 5 V source feeding an LDO (VR3, 4.5 to 5.5 V in) and a two-phase switcher (VR4)."""
-    from kipi.dc.pi.model import PinRef, PISetup, Vrm, VrmPhase
+    from kipi_si.dc.pi.model import PinRef, PISetup, Vrm, VrmPhase
     s = PISetup()
     s.vrms.append(Vrm("VR5", PinRef("U7", "+5V"), 5.0))
     s.vrms.append(Vrm("VR3", PinRef("U4", "+1V8", ["3"]), 1.8, kind="ldo",
@@ -397,7 +397,7 @@ def _regulators():
 
 def _vrm_tree():
     """A power-tree result with VR3's and VR4's inputs solved."""
-    from kipi.dc.pi.results import PhaseReport, TreeResult, VrmReport
+    from kipi_si.dc.pi.results import PhaseReport, TreeResult, VrmReport
     vr3 = VrmReport("VR3", "ldo", "+1V8", 1.8, 1.8, None, 0.5, 4.97, 0.501, 0.9, 2.49)
     vr4 = VrmReport("VR4", "smps", "+0V9", 0.9, 0.9, None, 20.0, 4.95, 4.0, 18.0, 19.8,
                     phases=[PhaseReport(1, 0.9, 10.0, 4.96, 1.9),
@@ -406,7 +406,7 @@ def _vrm_tree():
 
 
 def test_regulator_inputs_one_per_phase():
-    from kipi.ac.target import vrm_inputs
+    from kipi_si.ac.target import vrm_inputs
     s = _regulators()
     assert [(n, v.name, k) for n, v, k in vrm_inputs(s)] == [
         ("VR3 input", "VR3", 0), ("VR4 phase 1 input", "VR4", 0),
@@ -416,8 +416,8 @@ def test_regulator_inputs_one_per_phase():
 
 
 def test_an_ldo_input_is_a_load_with_its_input_range():
-    from kipi.ac.target import probe_loads
-    from kipi.dc.pi.model import PinRef
+    from kipi_si.ac.target import probe_loads
+    from kipi_si.dc.pi.model import PinRef
     s = _regulators()
     ls = probe_loads(s, PinRef("U4", "+5V", ["1"]), PinRef("U4", "GND", ["2"]))
     assert [(p.name, p.exact, p.vrm_input) for p in ls] == [("VR3 input", True, True)]
@@ -438,8 +438,8 @@ def test_an_ldo_input_is_a_load_with_its_input_range():
 
 
 def test_regulator_inputs_take_current_and_drop_from_the_solve():
-    from kipi.ac.target import probe_loads
-    from kipi.dc.pi.model import PinRef
+    from kipi_si.ac.target import probe_loads
+    from kipi_si.dc.pi.model import PinRef
     s, tree = _regulators(), _vrm_tree()
     ldo = probe_loads(s, PinRef("U4", "+5V", ["1"]), None, tree)[0]
     assert ldo.current_a == pytest.approx(0.501)
@@ -455,8 +455,8 @@ def test_regulator_inputs_take_current_and_drop_from_the_solve():
 
 def test_probe_from_a_regulator_input_takes_its_pins(app):
     from qtpy.QtWidgets import QMenu
-    from kipi.ac.gui.panel import ACPanel
-    from kipi.dc.pi.model import Load, PinRef
+    from kipi_si.ac.gui.panel import ACPanel
+    from kipi_si.dc.pi.model import Load, PinRef
     panel = ACPanel()
     panel.setEnabled(True)
     menu = QMenu()
@@ -476,8 +476,8 @@ def test_probe_from_a_regulator_input_takes_its_pins(app):
 
 
 def test_dialog_asks_for_a_dc_solve_for_a_regulators_current(app, monkeypatch):
-    from kipi.ac.gui.target_calc import TargetCalculator
-    from kipi.ac.target import ProbeLoad
+    from kipi_si.ac.gui.target_calc import TargetCalculator
+    from kipi_si.ac.target import ProbeLoad
     monkeypatch.setattr(TargetCalculator, "last", (0.0, 0.0, 0.0))
     d = TargetCalculator(loads=[ProbeLoad("VR3 input", None, 0.0, True, vrm_input=True)])
     assert not d.btn_current.isEnabled() and "solve it on the DC tab" in d.btn_current.toolTip()
@@ -490,8 +490,8 @@ def test_dialog_asks_for_a_dc_solve_for_a_regulators_current(app, monkeypatch):
 
 def test_a_loads_own_ac_tolerance_is_offered_apart():
     """#174: the load's AC tolerance, its min below and its max above the DC voltage."""
-    from kipi.ac.target import probe_loads
-    from kipi.dc.pi.model import PinRef
+    from kipi_si.ac.target import probe_loads
+    from kipi_si.dc.pi.model import PinRef
     s = _setup()
     soc = s.loads[1]
     assert probe_loads(s, PinRef("U1", "+1V0"))[0].ac_tolerance is None
@@ -512,8 +512,8 @@ def test_a_loads_own_ac_tolerance_is_offered_apart():
 
 
 def test_dialog_copies_the_ac_tolerance_only_when_there_is_one(app, monkeypatch):
-    from kipi.ac.gui.target_calc import TargetCalculator
-    from kipi.ac.target import LoadTolerance, ProbeLoad
+    from kipi_si.ac.gui.target_calc import TargetCalculator
+    from kipi_si.ac.target import LoadTolerance, ProbeLoad
     monkeypatch.setattr(TargetCalculator, "last", (0.0, 0.0, 0.0))
     assert not TargetCalculator().btn_copy_ac.isEnabled()      # greyed out by default
     total = LoadTolerance("A", "±5 %", 1.0, 0.05)

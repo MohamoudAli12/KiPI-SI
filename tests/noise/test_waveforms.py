@@ -6,7 +6,7 @@ import math
 import numpy as np
 import pytest
 
-from kipi.noise.waveforms import (
+from kipi_si.noise.waveforms import (
     CapBranch, PhaseParts, harmonic_count, ifft_periodic, pwl_spectrum, ringing_response,
     synthesize,
 )

@@ -1,7 +1,7 @@
 """The ``.kicad_pcb`` reader against what the KiCad API reads from the same board.
 
 ``tests/data/kicad_pcb/features*.kicad_pcb`` were saved by KiCad 10 (and turned into KiCad
-9's numbered nets); the ``.ref.kipi.json.gz`` beside each is the KiCad API's reading of it
+9's numbered nets); the ``.ref.kipi_si.json.gz`` beside each is the KiCad API's reading of it
 (``make_fixtures.py`` says how they were made). The reader must give the same board.
 """
 
@@ -9,12 +9,12 @@ from pathlib import Path
 
 import pytest
 
-from kipi.core.geometry.copper import poly_to_shapely
-from kipi.core.model.board import BoardSnapshot
-from kipi.core.model.layers import B_CU, F_CU, inner_cu
-from kipi.core.model.snapshot_io import load
-from kipi.sources.kicad_pcb import sexpr
-from kipi.sources.kicad_pcb.reader import KiCadFileError, read_board
+from kipi_si.core.geometry.copper import poly_to_shapely
+from kipi_si.core.model.board import BoardSnapshot
+from kipi_si.core.model.layers import B_CU, F_CU, inner_cu
+from kipi_si.core.model.snapshot_io import load
+from kipi_si.sources.kicad_pcb import sexpr
+from kipi_si.sources.kicad_pcb.reader import KiCadFileError, read_board
 
 DATA = Path(__file__).parents[1] / "data" / "kicad_pcb"
 AREA_TOL = 1e-3          # relative: KiCad's polygons and ours differ only in rounding
@@ -27,7 +27,7 @@ def _area(polys) -> float:
 @pytest.fixture(scope="module", params=["features", "features_v9"])
 def boards(request):
     name = request.param
-    return name, read_board(DATA / f"{name}.kicad_pcb"), load(DATA / f"{name}.ref.kipi.json.gz")
+    return name, read_board(DATA / f"{name}.kicad_pcb"), load(DATA / f"{name}.ref.kipi_si.json.gz")
 
 
 # --- the file against the KiCad API -----------------------------------------------------
@@ -237,10 +237,10 @@ def test_other_files_are_refused(tmp_path, text):
 
 
 def test_snapshot_round_trip_keeps_the_board(tmp_path):
-    from kipi.core.model.snapshot_io import save
+    from kipi_si.core.model.snapshot_io import save
     snap = read_board(DATA / "features.kicad_pcb")
-    save(snap, tmp_path / "s.kipi.json.gz")
-    back = load(tmp_path / "s.kipi.json.gz")
+    save(snap, tmp_path / "s.kipi_si.json.gz")
+    back = load(tmp_path / "s.kipi_si.json.gz")
     assert isinstance(back, BoardSnapshot)
     assert back.source_format == "kicad-pcb"
     assert back.pads == snap.pads

@@ -46,6 +46,6 @@ def test_release_downloads_count_uploaded_assets_only():
 
 def test_output_is_what_the_about_dialog_reads():
     pytest.importorskip("qtpy")
-    from kipi.gui import about
+    from kipi_si.gui import about
     out = stats.build({}, [day("2026-10-01", 10)], 6, {"v0.7.0": 2}, "2026-10-01T03:00:00Z")
     assert about.parse_stats(out) == about.RepoStats(10, "2026-10-01", 6, 2)

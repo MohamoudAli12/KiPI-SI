@@ -1,5 +1,5 @@
-"""KiPI shows as "KiPI" in Windows Task Manager: it runs on KiPI.exe, a copy of the venv's
-base Python with KiPI's icon and version information (#124)."""
+"""KiPI-SI shows as "KiPI-SI" in Windows Task Manager: it runs on KiPI-SI.exe, a copy of the venv's
+base Python with KiPI-SI's icon and version information (#124)."""
 
 import os
 import struct
@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from kipi.launcher import named_exe
+from kipi_si.launcher import named_exe
 
 
 def test_icon_file_becomes_a_group_and_its_images():
@@ -22,11 +22,11 @@ def test_icon_file_becomes_a_group_and_its_images():
         named_exe.icon_resources(b"\0" * 16)
 
 
-def test_version_resource_names_kipi():
+def test_version_resource_names_kipi_si():
     res = named_exe.version_resource(version="0.9.0")
     assert struct.unpack_from("<H", res)[0] == len(res)
     assert "VS_VERSION_INFO".encode("utf-16-le") in res
-    for text in ("FileDescription", "KiPI", "0.9.0", "040904b0"):
+    for text in ("FileDescription", "KiPI-SI", "0.9.0", "040904b0"):
         assert text.encode("utf-16-le") in res
 
 
@@ -45,7 +45,7 @@ def test_only_a_windows_venv_pythonw_gets_a_copy(tmp_path):
 def test_relaunch_stays_put_when_it_is_the_copy(monkeypatch, tmp_path):
     ready = tmp_path / "ready"
     monkeypatch.setenv(named_exe.RELAUNCHED_ENV, str(ready))
-    assert named_exe.relaunch(["kipi_entry.py"]) is None
+    assert named_exe.relaunch(["kipi_si_entry.py"]) is None
     assert ready.read_text() == str(os.getpid())
     assert named_exe.RELAUNCHED_ENV not in os.environ
 
@@ -55,7 +55,7 @@ def _base_home() -> Path:
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows executables")
-def test_copy_runs_the_venv_and_says_kipi(tmp_path):
+def test_copy_runs_the_venv_and_says_kipi_si(tmp_path):
     home = _base_home()
     if named_exe.runtime_files(home) is None:
         pytest.skip("no pythonw.exe and Python DLL beside the base Python")
@@ -65,8 +65,8 @@ def test_copy_runs_the_venv_and_says_kipi(tmp_path):
     launcher = scripts / "pythonw.exe"
     launcher.write_bytes(b"")
     exe = named_exe.named_python(launcher)
-    assert exe == scripts / "KiPI.exe"
-    assert _file_description(exe) == "KiPI"
+    assert exe == scripts / "KiPI-SI.exe"
+    assert _file_description(exe) == "KiPI-SI"
     out = tmp_path / "out.txt"
     subprocess.run([str(exe), "-c", f"import sys; open({str(out)!r}, 'w').write(sys.prefix)"],
                    check=True, timeout=60)
@@ -76,7 +76,7 @@ def test_copy_runs_the_venv_and_says_kipi(tmp_path):
     assert (scripts / named_exe.STAMP_NAME).read_text() == stamp
     named_exe.mark_failed(launcher)
     assert named_exe.named_python(launcher) is None                     # not tried again
-    (scripts / "KiPI.exe").unlink()
+    (scripts / "KiPI-SI.exe").unlink()
     assert named_exe.named_python(launcher) == exe                      # until made anew
 
 

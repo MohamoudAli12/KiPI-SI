@@ -4,8 +4,8 @@ connected loads (and the VRMs it feeds) actually draw."""
 
 import pytest
 
-from kipi.dc.pi.model import Load, PinRef, PISetup, Vrm, validate
-from kipi.dc.pi.tree import solve_tree
+from kipi_si.dc.pi.model import Load, PinRef, PISetup, Vrm, validate
+from kipi_si.dc.pi.tree import solve_tree
 from tree_boards import R, board, by_name, pad, setup
 
 
@@ -91,13 +91,13 @@ def test_old_results_read_without_a_load_line():
 
 def test_reports_show_the_load_line(tmp_path):
     import csv
-    from kipi.dc.pi.report import export_csv
+    from kipi_si.dc.pi.report import export_csv
     snap = board()
     s = setup("ldo")
     s.vrms[1].load_line_mohm = 10.0
     tree = solve_tree(snap, s)
     export_csv(tree, snap, tmp_path)
-    with open(tmp_path / "kipi_vrms.csv", encoding="utf-8") as fh:
+    with open(tmp_path / "kipi_si_vrms.csv", encoding="utf-8") as fh:
         row = next(r for r in csv.DictReader(fh) if r["vrm"] == "U1")
     assert float(row["load_line_mOhm"]) == 10.0
     assert float(row["v_target_V"]) == pytest.approx(3.29, rel=1e-9)
@@ -108,7 +108,7 @@ def test_editor_and_notes_show_the_load_line():
     pytest.importorskip("qtpy")
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from qtpy.QtWidgets import QApplication
-    from kipi.dc.gui.pi_panel import PIPanel
+    from kipi_si.dc.gui.pi_panel import PIPanel
     _app = QApplication.instance() or QApplication([])  # noqa: F841
     s = setup("ldo")
     panel = PIPanel()
@@ -130,7 +130,7 @@ def test_editor_input_range_is_one_row_in_volts_or_percent():
     pytest.importorskip("qtpy")
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from qtpy.QtWidgets import QApplication
-    from kipi.dc.gui.pi_panel import PIPanel
+    from kipi_si.dc.gui.pi_panel import PIPanel
     _app = QApplication.instance() or QApplication([])  # noqa: F841
     s = setup("smps")
     panel = PIPanel()
@@ -165,7 +165,7 @@ def test_editor_vrm_dc_accuracy_is_min_and_max_in_percent_or_volts():
     pytest.importorskip("qtpy")
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from qtpy.QtWidgets import QApplication
-    from kipi.dc.gui.pi_panel import PIPanel
+    from kipi_si.dc.gui.pi_panel import PIPanel
     _app = QApplication.instance() or QApplication([])  # noqa: F841
     s = setup("ldo")
     panel = PIPanel()
@@ -198,7 +198,7 @@ def test_editor_load_tolerance_is_min_and_max_in_percent_or_volts():
     pytest.importorskip("qtpy")
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from qtpy.QtWidgets import QApplication
-    from kipi.dc.gui.pi_panel import PIPanel
+    from kipi_si.dc.gui.pi_panel import PIPanel
     _app = QApplication.instance() or QApplication([])  # noqa: F841
     s = setup("ldo")                                   # U2: ±1 % of U1's 3.3 V
     panel = PIPanel()

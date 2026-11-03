@@ -7,11 +7,11 @@ import numpy as np
 import pytest
 
 from ac_boards import plane_pair, plane_setup
-from kipi.ac.model import CapModel
-from kipi.ac.solver import solve_ac
-from kipi.ac.solver.near_rail import margin_mm, near_rail
-from kipi.core.mesh.mesher import mesh_net
-from kipi.core.model.board import Via
+from kipi_si.ac.model import CapModel
+from kipi_si.ac.solver import solve_ac
+from kipi_si.ac.solver.near_rail import margin_mm, near_rail
+from kipi_si.core.mesh.mesher import mesh_net
+from kipi_si.core.model.board import Via
 from synthetic import IN1, rect
 
 RAIL = rect(0, 0, 20, 15)                  # +3V3 in one corner of a 70 x 40 mm ground
@@ -72,8 +72,8 @@ def test_the_checkbox_is_ticked_by_default_and_for_older_setups():
     pytest.importorskip("qtpy")
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from qtpy.QtWidgets import QApplication
-    from kipi.ac.gui.panel import ACPanel
-    from kipi.dc.pi.model import PISetup
+    from kipi_si.ac.gui.panel import ACPanel
+    from kipi_si.dc.pi.model import PISetup
     QApplication.instance() or QApplication([])
     snap = _board()
     older = PISetup.from_dict({"ac": {"max_edge_mm": 1.0}})     # saved before #123

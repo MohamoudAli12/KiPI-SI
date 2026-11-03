@@ -1,4 +1,4 @@
-"""Signs of life while KiPI works (#111): the status bar spinner with the time taken, the
+"""Signs of life while KiPI-SI works (#111): the status bar spinner with the time taken, the
 moving progress bar between stages and the wait cursor while results are drawn."""
 
 import os
@@ -12,7 +12,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from qtpy.QtCore import Qt  # noqa: E402
 from qtpy.QtWidgets import QApplication  # noqa: E402
 
-from kipi.gui import heartbeat as hb  # noqa: E402
+from kipi_si.gui import heartbeat as hb  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -65,7 +65,7 @@ def test_busy_cursor_is_restored_after_an_error(app):
 @pytest.fixture
 def window(app, no_3d):
     pytest.importorskip("pyvistaqt")
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     yield w
     w.close()

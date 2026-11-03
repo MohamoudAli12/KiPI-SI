@@ -6,13 +6,13 @@ import os
 import numpy as np
 import pytest
 
-from kipi.ac.model import CapModel
-from kipi.noise.checks import seed_phases
-from kipi.noise.model import Aggressor, Victim
-from kipi.noise.network import Termination, VictimNetwork
-from kipi.noise.report import load_results, save_results
-from kipi.noise.solver import solve_noise
-from kipi.noise.viz import coupling_overlay
+from kipi_si.ac.model import CapModel
+from kipi_si.noise.checks import seed_phases
+from kipi_si.noise.model import Aggressor, Victim
+from kipi_si.noise.network import Termination, VictimNetwork
+from kipi_si.noise.report import load_results, save_results
+from kipi_si.noise.solver import solve_noise
+from kipi_si.noise.viz import coupling_overlay
 from noise_boards import buck_board, buck_setup
 from test_capacitive import _line
 
@@ -72,7 +72,7 @@ def test_the_shares_add_up_to_the_peak(solved, tmp_path):
     assert v.segment_v["capacitive"].sum() > 0
     assert v.segments_xyz.shape == (len(v.segment_v["capacitive"]), 2, 3)
     assert r.loop_paths and all(p.shape[1:] == (2, 3) for p in r.loop_paths.values())
-    back = load_results(save_results(tmp_path / "c.kipi-noise-results", {r.aggressor: r},
+    back = load_results(save_results(tmp_path / "c.kipi_si-noise-results", {r.aggressor: r},
                                      "b", setup))["results"]["U1 buck"]
     assert np.allclose(back.victims[0].segment_v["inductive"], v.segment_v["inductive"])
     assert set(back.loop_paths) == set(r.loop_paths)
@@ -101,7 +101,7 @@ def test_the_overlay_shows_one_mechanism_or_all(solved):
 def test_the_hot_loops_overlay_draws_each_loop_in_its_colour(solved):
     """#178: the loops are their own view, one colour and name per capacitor, with
     arrows along the current, and are no longer part of the coupling views."""
-    from kipi.noise.viz import LOOP_COLORS, LOOPS_ALL, hot_loops_overlay, loop_choices
+    from kipi_si.noise.viz import LOOP_COLORS, LOOPS_ALL, hot_loops_overlay, loop_choices
     _, _, r = solved
     assert hot_loops_overlay(r, "off") is None and hot_loops_overlay(None, LOOPS_ALL) is None
     assert hot_loops_overlay(r, "C9 (phase 1)") is None
@@ -140,7 +140,7 @@ def app():
 
 
 def test_the_panel_picks_the_view_for_the_selected_victim(app, solved):
-    from kipi.noise.gui.panel import NoisePanel
+    from kipi_si.noise.gui.panel import NoisePanel
     snap, setup, r = solved
     p = NoisePanel()
     p.set_board(snap, setup)
@@ -157,7 +157,7 @@ def test_the_panel_picks_the_view_for_the_selected_victim(app, solved):
 
 
 def test_the_panel_offers_the_hot_loops(app, solved):
-    from kipi.noise.gui.panel import NoisePanel
+    from kipi_si.noise.gui.panel import NoisePanel
     snap, setup, r = solved
     p = NoisePanel()
     p.set_board(snap, setup)
@@ -180,7 +180,7 @@ def test_the_panel_offers_the_hot_loops(app, solved):
 
 def test_the_window_draws_it_in_noise_mode_only(app, no_3d, solved):
     from qtpy.QtWidgets import QRadioButton
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     snap, setup, r = solved
     w = MainWindow()
     try:

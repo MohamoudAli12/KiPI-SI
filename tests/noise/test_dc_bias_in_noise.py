@@ -5,12 +5,12 @@ from types import SimpleNamespace as NS
 
 import pytest
 
-from kipi.ac.model import CapModel
-from kipi.dc.pi.model import DcLink, PinRef, constant_drop_ref
-from kipi.dc.solver.post import SeriesResult
-from kipi.noise.checks import operating_point, seed_phases
-from kipi.noise.extract.common import board_ports
-from kipi.noise.model import Aggressor
+from kipi_si.ac.model import CapModel
+from kipi_si.dc.pi.model import DcLink, PinRef, constant_drop_ref
+from kipi_si.dc.solver.post import SeriesResult
+from kipi_si.noise.checks import operating_point, seed_phases
+from kipi_si.noise.extract.common import board_ports
+from kipi_si.noise.model import Aggressor
 from noise_boards import buck_board, buck_setup
 
 
@@ -35,7 +35,7 @@ def test_capacitors_are_derated_at_the_dc_solves_voltage(monkeypatch):
     c1 = next(p for p in nominal.ports if p.name == "C1").element
     assert c1.capacitance_f == pytest.approx(setup.caps[0].capacitance_at(12.0))
     # A DC solve that found 11 V across C1: the board model derates it there.
-    monkeypatch.setattr("kipi.ac.bias.dc_volts", lambda snap, dc, caps: {"C1": 11.0})
+    monkeypatch.setattr("kipi_si.ac.bias.dc_volts", lambda snap, dc, caps: {"C1": 11.0})
     tree = NS(groups={"x": NS(result=NS(fields=NS(series=[])))})
     solved = board_ports(snap, setup, agg, op, {}, dc_result=tree)
     c1 = next(p for p in solved.ports if p.name == "C1").element
@@ -45,7 +45,7 @@ def test_capacitors_are_derated_at_the_dc_solves_voltage(monkeypatch):
 
 
 def test_a_diode_link_is_biased_by_the_dc_solve(monkeypatch):
-    monkeypatch.setattr("kipi.ac.bias.dc_volts", lambda snap, dc, caps: {})
+    monkeypatch.setattr("kipi_si.ac.bias.dc_volts", lambda snap, dc, caps: {})
     snap = buck_board()
     setup = _setup(snap)
     # A diode in series on the output rail, from VOUT to itself (a stand-in: both sides

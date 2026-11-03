@@ -2,11 +2,11 @@
 
     python examples/multiphase_buck/make_board.py
 
-writes ``multiphase_buck.kipi.json.gz`` next to this script. Open it without KiCad:
+writes ``multiphase_buck.kipi_si.json.gz`` next to this script. Open it without KiCad:
 
-    python -m kipi --snapshot examples/multiphase_buck/multiphase_buck.kipi.json.gz
+    python -m kipi_si --snapshot examples/multiphase_buck/multiphase_buck.kipi_si.json.gz
 
-KiPI then loads ``multiphase_buck.kipi-setup.yml`` from the same folder.
+KiPI-SI then loads ``multiphase_buck.kipi_si-setup.yml`` from the same folder.
 
 The board is 60 x 40 mm, four layers (1 oz everywhere):
 
@@ -38,13 +38,13 @@ from shapely.ops import unary_union
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1]))
 
-from kipi.core.model.snapshot_io import save  # noqa: E402
-from kipi.core.model.board import (  # noqa: E402
+from kipi_si.core.model.snapshot_io import save  # noqa: E402
+from kipi_si.core.model.board import (  # noqa: E402
     BoardSnapshot, CopperLayer, DielectricLayer, Footprint, Net, Pad, Poly, Stackup, Via, Zone,
 )
-from kipi.ac.model import CapModel, Probe  # noqa: E402
-from kipi.dc.pi.model import Load, PinRef, PISetup, Vrm, VrmPhase  # noqa: E402
-from kipi.dc.solver.setup import SolveSettings  # noqa: E402
+from kipi_si.ac.model import CapModel, Probe  # noqa: E402
+from kipi_si.dc.pi.model import Load, PinRef, PISetup, Vrm, VrmPhase  # noqa: E402
+from kipi_si.dc.solver.setup import SolveSettings  # noqa: E402
 
 F, IN1, IN2, B = 3, 4, 5, 34
 ALL = [F, IN1, IN2, B]
@@ -204,7 +204,7 @@ def make_setup() -> PISetup:
 
 
 if __name__ == "__main__":
-    out = HERE / "multiphase_buck.kipi.json.gz"
+    out = HERE / "multiphase_buck.kipi_si.json.gz"
     save(build(), out)
-    make_setup().save(HERE / "multiphase_buck.kipi-setup.yml")
-    print(f"Wrote {out} and multiphase_buck.kipi-setup.yml")
+    make_setup().save(HERE / "multiphase_buck.kipi_si-setup.yml")
+    print(f"Wrote {out} and multiphase_buck.kipi_si-setup.yml")

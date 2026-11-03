@@ -6,7 +6,7 @@ import pytest
 
 pytest.importorskip("pyvista")
 
-from kipi.core.viz import polydata  # noqa: E402
+from kipi_si.core.viz import polydata  # noqa: E402
 
 
 def test_a_mesh_owns_its_points_whatever_their_memory_order():

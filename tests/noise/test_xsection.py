@@ -7,7 +7,7 @@ import math
 import numpy as np
 import pytest
 
-from kipi.noise.extract.xsection import (
+from kipi_si.noise.extract.xsection import (
     AGGRESSOR, GROUND, VICTIM, Band, Cache, Rect, solve,
 )
 

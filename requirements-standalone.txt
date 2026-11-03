@@ -1,4 +1,4 @@
-# What KiPI needs standalone; the launcher installs these into its own environment.
+# What KiPI-SI needs standalone; the launcher installs these into its own environment.
 # Kept equal to pyproject.toml's dependencies by tests/test_requirements.py.
 PySide6-Essentials>=6.6
 qtpy>=2.4

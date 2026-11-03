@@ -11,7 +11,7 @@ from qtpy.QtCore import QPoint, Qt  # noqa: E402
 from qtpy.QtTest import QTest  # noqa: E402
 from qtpy.QtWidgets import QApplication, QListWidget, QListWidgetItem  # noqa: E402
 
-from kipi.gui import multi_tick  # noqa: E402
+from kipi_si.gui import multi_tick  # noqa: E402
 
 
 @pytest.fixture(scope="module")

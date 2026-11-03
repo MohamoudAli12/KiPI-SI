@@ -6,17 +6,17 @@ import math
 import numpy as np
 import pytest
 
-from kipi.ac.model import CapModel
-from kipi.noise.checks import seed_phases
-from kipi.noise.extract.capacitive import Segment
-from kipi.noise.extract.peec import (
+from kipi_si.ac.model import CapModel
+from kipi_si.noise.checks import seed_phases
+from kipi_si.noise.extract.capacitive import Segment
+from kipi_si.noise.extract.peec import (
     mirror, mutual, mutual_matrix, plane_shielding, polyline, segment,
 )
-from kipi.noise.extract.xsection import GROUND, VICTIM, Rect, solve as xsolve
-from kipi.noise.model import Aggressor, Victim
-from kipi.noise.network import Termination, VictimNetwork
-from kipi.noise.parasitics import phase_layout
-from kipi.noise.solver import solve_noise
+from kipi_si.noise.extract.xsection import GROUND, VICTIM, Rect, solve as xsolve
+from kipi_si.noise.model import Aggressor, Victim
+from kipi_si.noise.network import Termination, VictimNetwork
+from kipi_si.noise.parasitics import phase_layout
+from kipi_si.noise.solver import solve_noise
 from noise_boards import buck_board, buck_setup
 from synthetic import F, IN2
 
@@ -147,7 +147,7 @@ def test_inductive_coupling_falls_with_distance():
 def _via_board(flip_top=False, flip_bottom=False):
     """SIG on F.Cu from (0, 0) to a through via at (5, 0), then on B.Cu to (10, 0), with
     no planes; either track can run the other way."""
-    from kipi.core.model.board import Net, Track, Via
+    from kipi_si.core.model.board import Net, Track, Via
     from synthetic import B, IN1, make_board
     snap = make_board()
     snap.nets = [Net(0, ""), Net(1, "SIG")]
@@ -163,7 +163,7 @@ def _via_board(flip_top=False, flip_bottom=False):
 def _drop_loop(snap):
     """A loop standing in the y–z plane beside the via, its via drops 1 mm and 3 mm
     from it: a hot loop's vertical current next to the victim's."""
-    from kipi.noise.extract.inductive import LoopSource
+    from kipi_si.noise.extract.inductive import LoopSource
     z = {c.id: c.z_mid_mm for c in snap.stackup.copper}
     zt, zb = z[F], z[IN2]
     pts = [[5, 1, zt], [5, 1, zb], [5, 3, zb], [5, 3, zt]]
@@ -180,8 +180,8 @@ def test_a_victim_via_links_a_loops_via_drops():
     """#173: the via between the victim's layers is a vertical conductor in the loops'
     field. Its EMF, −jω·I·Σ M(loop, via piece), adds to the path's, whichever way the
     tracks run."""
-    from kipi.noise.extract.capacitive import split_tracks
-    from kipi.noise.extract.inductive import via_pieces, victim_emf
+    from kipi_si.noise.extract.capacitive import split_tracks
+    from kipi_si.noise.extract.inductive import via_pieces, victim_emf
     freqs = np.array([1e6, 1e7])
     totals = []
     for flips in ((False, False), (True, False), (False, True), (True, True)):
@@ -204,8 +204,8 @@ def test_a_victim_via_links_a_loops_via_drops():
 
 
 def test_a_via_that_joins_one_layer_is_not_a_path():
-    from kipi.noise.extract.capacitive import split_tracks
-    from kipi.noise.extract.inductive import via_pieces
+    from kipi_si.noise.extract.capacitive import split_tracks
+    from kipi_si.noise.extract.inductive import via_pieces
     snap = _via_board()
     snap.tracks = snap.tracks[:1]
     snap.invalidate_index()

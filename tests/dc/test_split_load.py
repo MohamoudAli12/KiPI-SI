@@ -4,14 +4,14 @@ import os
 
 import pytest
 
-from kipi.dc.pi.model import Load, PinRef, PISetup
-from kipi.dc.pi.split import PER_NET, existing_load, split_current, supply_nets
+from kipi_si.dc.pi.model import Load, PinRef, PISetup
+from kipi_si.dc.pi.split import PER_NET, existing_load, split_current, supply_nets
 
 
 def _board():
     """U1 with three pins on +3V3, two on a ferrite bead filtered +3V3_PLL and a ground
     pin."""
-    from kipi.core.model.board import Net, Pad
+    from kipi_si.core.model.board import Net, Pad
     from synthetic import make_board
     snap = make_board()
     snap.nets.append(Net(4, "+3V3_PLL"))
@@ -50,7 +50,7 @@ def app():
 
 def test_the_panel_splits_a_load_across_the_ticked_nets(app):
     from qtpy.QtCore import Qt
-    from kipi.dc.gui.pi_panel import PIPanel
+    from kipi_si.dc.gui.pi_panel import PIPanel
     setup = PISetup()
     setup.loads.append(Load("U1 core", PinRef("U1", "+3V3"), 0.3,
                             ground=PinRef("U1", "GND")))

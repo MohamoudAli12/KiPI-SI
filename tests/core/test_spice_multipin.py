@@ -7,12 +7,12 @@ import numpy as np
 import pytest
 from shapely.geometry import box
 
-from kipi.core.model.board import (
+from kipi_si.core.model.board import (
     BoardSnapshot, CopperLayer, DielectricLayer, Net, Pad, Poly, Stackup, Zone,
 )
-from kipi.core.model.spice import Library, SpiceError, link_ref
-from kipi.dc.pi.model import DcLink, Load, PinRef, PISetup, Vrm, net_groups, warmed_link
-from kipi.dc.solver.setup import RHO_CU_OHM_MM as RHO, SolveSettings
+from kipi_si.core.model.spice import Library, SpiceError, link_ref
+from kipi_si.dc.pi.model import DcLink, Load, PinRef, PISetup, Vrm, net_groups, warmed_link
+from kipi_si.dc.solver.setup import RHO_CU_OHM_MM as RHO, SolveSettings
 
 PARTS = """\
 * A common-mode choke: two 25 mOhm windings, coupled, with some capacitance between them
@@ -104,7 +104,7 @@ def test_a_choke_joins_each_winding_s_nets_not_the_rails():
 def test_a_multi_pin_link_goes_in_a_setup_file(tmp_path):
     s = PISetup(links=[_choke_link()])
     s.links[0].temp_c = 60.0                    # never saved
-    path = s.save(tmp_path / "x.kipi-setup.yml")
+    path = s.save(tmp_path / "x.kipi_si-setup.yml")
     back = PISetup.load(path)
     assert back.links[0].more_sides == s.links[0].more_sides and back.links[0].is_multi
     assert back.links[0].temp_c is None
@@ -146,7 +146,7 @@ def _dc_setup(link):
 
 
 def test_the_dc_solve_takes_the_part_s_conductance_between_its_sides():
-    from kipi.dc.pi.tree import solve_tree
+    from kipi_si.dc.pi.tree import solve_tree
     ref, _v = link_ref(Library(PARTS), "SPLIT")
     link = DcLink("R1", PinRef("R1", "A", ["1"]), PinRef("R1", "B", ["2"]), 0.04,
                   spice=ref, more_sides=[PinRef("R1", "B", ["3"])])
@@ -167,8 +167,8 @@ def test_an_ac_solve_terminates_a_multi_pin_part_by_its_admittance():
     """A three-pin part that is a series RLC from pin 1 to pin 2 (its pin 3 all but open)
     solves as that RLC as a capacitor does."""
     from ac_boards import plane_pair, plane_setup
-    from kipi.ac.model import CapModel
-    from kipi.ac.solver import solve_ac
+    from kipi_si.ac.model import CapModel
+    from kipi_si.ac.solver import solve_ac
     snap = plane_pair(20.0, caps=[("C1", "10u X5R", (10.0, 10.0))])
 
     def setup():
@@ -180,7 +180,7 @@ def test_an_ac_solve_terminates_a_multi_pin_part_by_its_admittance():
     rlc = solve_ac(snap, s, "VRM1", "GND").probes[0].z
     lib = Library(".subckt C3 1 2 3\nC1 1 a 10u\nL1 a b 1n\nR1 b 2 3m\nR2 2 3 1e9\n.ends\n")
 
-    from kipi.core.model.spice import SpiceRef
+    from kipi_si.core.model.spice import SpiceRef
     ref = SpiceRef("C3", lib.netlist("C3"))
     s = setup()
     s.links.append(DcLink("C1", PinRef("C1", "+3V3", ["1"]), PinRef("C1", "GND", ["2"]), 1.0,
@@ -193,8 +193,8 @@ def test_an_ac_solve_terminates_a_multi_pin_part_by_its_admittance():
 def test_the_termination_handles_a_choke_s_floating_windings():
     """Admittances in place of impedances: the same answer where both exist, and an
     answer where a part's ports have no impedance matrix."""
-    from kipi.ac.solver.fem import PortDef
-    from kipi.ac.solver.sweep import LinkPin, terminate
+    from kipi_si.ac.solver.fem import PortDef
+    from kipi_si.ac.solver.sweep import LinkPin, terminate
     rng = np.random.default_rng(3)
     a = rng.normal(size=(4, 4)) + 1j * rng.normal(size=(4, 4))
     zb = (a @ a.conj().T + 4 * np.eye(4))[None]          # a passive board, one frequency
@@ -241,7 +241,7 @@ def test_a_model_follows_its_temperature():
 
 
 def test_a_link_is_at_the_copper_s_temperature_under_its_pads():
-    from kipi.dc.solver import pads_for
+    from kipi_si.dc.solver import pads_for
     lib = Library(".subckt R 1 2\nR1 1 2 0.1 tc1=0.004\n.ends\n")
     ref, _v = link_ref(lib, "R")
     k = DcLink("R1", PinRef("R1", "A", ["1"]), PinRef("R1", "B", ["2"]), 0.1, spice=ref)
@@ -261,7 +261,7 @@ def test_a_link_is_at_the_copper_s_temperature_under_its_pads():
 
 
 def test_the_dc_solve_warms_a_link_s_model_with_the_copper():
-    from kipi.dc.pi.tree import solve_tree
+    from kipi_si.dc.pi.tree import solve_tree
     lib = Library(".subckt R 1 2\nR1 1 2 0.05 tc1=0.004\n.ends\n")
     ref, _v = link_ref(lib, "R")
     link = DcLink("R1", PinRef("R1", "A", ["1"]), PinRef("R1", "B", ["2"]), 0.05, spice=ref)
@@ -284,7 +284,7 @@ def app():
 
 def test_the_dialog_maps_a_multi_pin_model_s_pins_to_the_part_s(app):
     from qtpy.QtWidgets import QDialogButtonBox
-    from kipi.gui.spice_dialog import LINK, SpiceModelDialog
+    from kipi_si.gui.spice_dialog import LINK, SpiceModelDialog
     pins = [("1", "VBUS_IN"), ("2", "VBUS"), ("3", "GND_IN"), ("4", "GND")]
     d = SpiceModelDialog(Library(PARTS, "parts.lib"), LINK, ["CMC"], pins=pins)
     names = [d.list.item(i).text() for i in range(d.list.count())]
@@ -301,8 +301,8 @@ def test_the_dialog_maps_a_multi_pin_model_s_pins_to_the_part_s(app):
 
 
 def test_the_link_editor_sets_the_part_s_sides_from_the_mapping(app, monkeypatch):
-    from kipi.dc.gui import pi_panel
-    from kipi.core.model.board import Footprint
+    from kipi_si.dc.gui import pi_panel
+    from kipi_si.core.model.board import Footprint
     from synthetic import make_board
 
     def fake(parent, kind, hints, pins=()):

@@ -8,10 +8,10 @@ import os
 import numpy as np
 import pytest
 
-from kipi.ac.model import Probe
-from kipi.ac.solver.sweep import ACResult, ProbeCurve
-from kipi.ac.transient import bandwidth_limited, closed_loop, transient, transients
-from kipi.dc.pi.model import PinRef, PISetup
+from kipi_si.ac.model import Probe
+from kipi_si.ac.solver.sweep import ACResult, ProbeCurve
+from kipi_si.ac.transient import bandwidth_limited, closed_loop, transient, transients
+from kipi_si.dc.pi.model import PinRef, PISetup
 
 F = np.logspace(3, math.log10(300e6), 1500)
 W = 2 * np.pi * F
@@ -114,7 +114,7 @@ def app():
 
 
 def test_the_transient_tab_plots_and_limits_bandwidth(app):
-    from kipi.ac.gui.transient_plot import TransientPlot
+    from kipi_si.ac.gui.transient_plot import TransientPlot
     p = TransientPlot()
     p.set_result(_result())
     full = p.transients["U1"].undershoot_v
@@ -133,8 +133,8 @@ def test_the_transient_tab_plots_and_limits_bandwidth(app):
 
 
 def test_the_transient_at_the_load_adds_its_dc_voltage_and_tolerance(app):
-    from kipi.ac.gui.transient_plot import TransientPlot
-    from kipi.ac.target import LoadWindow
+    from kipi_si.ac.gui.transient_plot import TransientPlot
+    from kipi_si.ac.target import LoadWindow
     p = TransientPlot()
     window = LoadWindow("U1 load", 0.990, 1.0, 0.95, 1.05)
     p.window_source = lambda name: window if name == "U1" else None
@@ -156,8 +156,8 @@ def test_the_transient_at_the_load_adds_its_dc_voltage_and_tolerance(app):
 
 def test_load_window_from_a_dc_solve():
     from phase_boards import board, two_phase
-    from kipi.ac.target import load_window
-    from kipi.dc.pi.tree import solve_tree
+    from kipi_si.ac.target import load_window
+    from kipi_si.dc.pi.tree import solve_tree
     setup = two_phase(ground=True)
     setup.loads[0].tol_min, setup.loads[0].tol_max = -3.0, 5.0
     probe = Probe("P", PinRef("U2", "VOUT", ["1"]), PinRef("U2", "GND", ["2"]))
@@ -169,7 +169,7 @@ def test_load_window_from_a_dc_solve():
 
 
 def test_the_results_table_shows_the_swing(app):
-    from kipi.ac.gui.panel import ACPanel
+    from kipi_si.ac.gui.panel import ACPanel
     panel = ACPanel()
     r = _result()
     panel._display(r)
@@ -182,7 +182,7 @@ def test_the_results_table_shows_the_swing(app):
 
 
 def test_the_probe_editor_saves_the_load_step(app):
-    from kipi.ac.gui.panel import ACPanel
+    from kipi_si.ac.gui.panel import ACPanel
     panel = ACPanel()
     probe = Probe("U1", PinRef("U1", "+1V0", ["1"]), PinRef("U1", "GND", ["2"]))
     panel.setup.probes.append(probe)
@@ -198,7 +198,7 @@ def test_the_probe_editor_saves_the_load_step(app):
 
 
 def test_the_main_window_has_a_transient_tab_in_ac_mode(app, no_3d):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     try:
         i = w.views.indexOf(w.transient_plot)
@@ -216,8 +216,8 @@ def test_the_main_window_has_a_transient_tab_in_ac_mode(app, no_3d):
 def test_the_report_has_a_transient_section(tmp_path):
     pytest.importorskip("plotly")
     from ac_boards import plane_pair, plane_setup
-    from kipi.ac.html_report import write_ac_report
-    from kipi.ac.solver import solve_ac
+    from kipi_si.ac.html_report import write_ac_report
+    from kipi_si.ac.solver import solve_ac
     snap = plane_pair()
     setup = plane_setup(snap, f_start_hz=1e5, f_stop_hz=1e8, points_per_decade=20,
                         field_points_per_decade=2)

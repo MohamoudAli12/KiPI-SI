@@ -17,7 +17,7 @@ def app():
 
 
 def test_all_and_none_set_every_layer(app, no_3d):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     shown = {}
     w.viewer.set_layer_visible = lambda lid, on: shown.__setitem__(lid, on)

@@ -8,15 +8,15 @@ import numpy as np
 import pytest
 from shapely.geometry import box
 
-from kipi.core.model.board import (
+from kipi_si.core.model.board import (
     BoardSnapshot, CopperLayer, DielectricLayer, Net, Pad, Poly, Stackup, Zone,
 )
-from kipi.dc.pi.model import PISetup
-from kipi.dc.pi.report import pin_rows
-from kipi.dc.pi.tree import solve_tree
-from kipi.dc.solver import CurrentLoad, NetProblem, SeriesLink, SolveSettings, VoltageSource, run
-from kipi.dc.thermal.cosim import ThermalResult, heat_sources, load_powers, solve_electrothermal
-from kipi.dc.thermal.model import ThermalSettings
+from kipi_si.dc.pi.model import PISetup
+from kipi_si.dc.pi.report import pin_rows
+from kipi_si.dc.pi.tree import solve_tree
+from kipi_si.dc.solver import CurrentLoad, NetProblem, SeriesLink, SolveSettings, VoltageSource, run
+from kipi_si.dc.thermal.cosim import ThermalResult, heat_sources, load_powers, solve_electrothermal
+from kipi_si.dc.thermal.model import ThermalSettings
 from tree_boards import board, setup
 
 F, B = 3, 34
@@ -124,7 +124,7 @@ def test_dc_connection_losses_heat_its_pins():
 
 
 def test_load_power_checkbox(qapp_offscreen):
-    from kipi.dc.gui.pi_panel import PIPanel
+    from kipi_si.dc.gui.pi_panel import PIPanel
     snap = board()
     s = setup("ldo", ground=True)
     panel = PIPanel()

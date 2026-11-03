@@ -3,15 +3,15 @@
 import pytest
 from shapely.geometry import box
 
-from kipi.core.mesh.mesher import mesh_nets
-from kipi.core.model.board import (
+from kipi_si.core.mesh.mesher import mesh_nets
+from kipi_si.core.model.board import (
     BoardSnapshot, CopperLayer, DielectricLayer, Net, Pad, Poly, Stackup, Zone,
 )
-from kipi.dc.solver import (
+from kipi_si.dc.solver import (
     CurrentLoad, NetProblem, SeriesLink, SolveError, SolveSettings, VoltageSource, run,
 )
-from kipi.dc.solver.fem import LinearSystem
-from kipi.dc.solver.setup import RHO_CU_OHM_MM as RHO
+from kipi_si.dc.solver.fem import LinearSystem
+from kipi_si.dc.solver.setup import RHO_CU_OHM_MM as RHO
 
 F, B = 3, 34
 T = 0.035
@@ -72,7 +72,7 @@ def test_series_diode_applies_forward_drop_and_counts_its_loss():
 
 
 def test_series_diode_drop_follows_its_spice_model():
-    from kipi.core.model.spice import Library
+    from kipi_si.core.model.spice import Library
     m = Library(".model D1 D(IS=10n N=1.2 RS=30m)").model("D1")
     for amps in (0.5, 2.0):
         p = problem(0.05, current=amps)                  # 50 mΩ: only how it is split
@@ -88,7 +88,7 @@ def test_series_diode_drop_follows_its_spice_model():
 
 
 def test_a_reversed_diode_cannot_feed_its_load():
-    from kipi.core.model.spice import Library
+    from kipi_si.core.model.spice import Library
     m = Library(".model D1 D(IS=10n RS=30m)\n.subckt REV a k\nD1 k a D1\n.ends").model("REV")
     p = problem(0.05)
     p.series[0].curve = m.dc_current

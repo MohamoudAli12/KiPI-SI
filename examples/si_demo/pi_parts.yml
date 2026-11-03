@@ -1,4 +1,4 @@
-kipi_parts: 1
+kipi_si_parts: 1
 parts:
   'ClockRx':    # U3
     supplies:

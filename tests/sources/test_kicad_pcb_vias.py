@@ -3,11 +3,11 @@
 import pytest
 from shapely.geometry import box
 
-from kipi.core.model.board import Pad, Track
-from kipi.core.model.layers import B_CU, F_CU, inner_cu
-from kipi.sources.kicad_pcb.reader import _via_filled, _via_pads, trim_unused_via_pads
-from kipi.sources.kicad_pcb.sexpr import parse
-from kipi.core.geometry.copper import shapely_to_polys
+from kipi_si.core.model.board import Pad, Track
+from kipi_si.core.model.layers import B_CU, F_CU, inner_cu
+from kipi_si.sources.kicad_pcb.reader import _via_filled, _via_pads, trim_unused_via_pads
+from kipi_si.sources.kicad_pcb.sexpr import parse
+from kipi_si.core.geometry.copper import shapely_to_polys
 
 IN1, IN2 = inner_cu(1), inner_cu(2)
 SPAN = [F_CU, IN1, IN2, B_CU]
@@ -47,7 +47,7 @@ def test_custom_padstack_takes_each_layers_own_pad():
 
 
 def _trim_one(keep_ends: bool):
-    from kipi.core.model.board import Via
+    from kipi_si.core.model.board import Via
     v = Via("v1", "N", (0.0, 0.0), 0.3, 0.6, SPAN, pad_mm=dict.fromkeys(SPAN, 0.6))
     tracks = [Track(net="N", layer=F_CU, width_mm=0.2, start=(0.0, 0.0), end=(5.0, 0.0))]
     pads = [Pad(id="p", net="N", footprint="U1", number="1", position=(0.0, 0.0),
@@ -71,7 +71,7 @@ def test_keep_end_layers_keeps_the_outer_pads():
 def _pair(gap_mm: float, keep_ends: bool):
     """Two through vias of one net, 0.6 mm pads and 0.3 mm drills, both set to remove
     unused layers, with nothing else on the board."""
-    from kipi.core.model.board import Via
+    from kipi_si.core.model.board import Via
     a, b = (Via(id=i, net="N", position=(x, 0.0), drill_mm=0.3, diameter_mm=0.6,
                 layers=list(SPAN), pad_mm=dict.fromkeys(SPAN, 0.6))
             for i, x in (("a", 0.0), ("b", gap_mm)))

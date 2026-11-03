@@ -8,22 +8,22 @@ from pathlib import Path
 
 import pytest
 
-from kipi.launcher import deps, paths, state, system
-from kipi.launcher.system import Python
+from kipi_si.launcher import deps, paths, state, system
+from kipi_si.launcher.system import Python
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
 # --- Where -------------------------------------------------------------------------------
 
-def test_each_platform_keeps_kipi_in_its_usual_place(tmp_path):
+def test_each_platform_keeps_kipi_si_in_its_usual_place(tmp_path):
     home = tmp_path
     assert paths.data_dir({"LOCALAPPDATA": r"C:\Users\me\AppData\Local"}, "win32", home) == \
-        Path(r"C:\Users\me\AppData\Local") / "KiPI"
-    assert paths.data_dir({}, "darwin", home) == home / "Library/Application Support/KiPI"
-    assert paths.data_dir({}, "linux", home) == home / ".local/share/kipi"
-    assert paths.data_dir({"XDG_DATA_HOME": "/data"}, "linux", home) == Path("/data/kipi")
-    assert paths.data_dir({"KIPI_HOME": "/elsewhere", "LOCALAPPDATA": "x"}, "win32", home) == \
+        Path(r"C:\Users\me\AppData\Local") / "KiPI-SI"
+    assert paths.data_dir({}, "darwin", home) == home / "Library/Application Support/KiPI-SI"
+    assert paths.data_dir({}, "linux", home) == home / ".local/share/kipi_si"
+    assert paths.data_dir({"XDG_DATA_HOME": "/data"}, "linux", home) == Path("/data/kipi_si")
+    assert paths.data_dir({"KIPI_SI_HOME": "/elsewhere", "LOCALAPPDATA": "x"}, "win32", home) == \
         Path("/elsewhere")
 
 
@@ -90,7 +90,7 @@ def test_platform_keys(os_name, machine, key):
 def test_requirements_hash_ignores_comments_and_spacing(tmp_path):
     a, b = tmp_path / "a.txt", tmp_path / "b.txt"
     a.write_text("numpy>=1.24\nscipy >= 1.11\n")
-    b.write_text("# KiPI\nscipy>=1.11\n\nnumpy>=1.24  # arrays\n")
+    b.write_text("# KiPI-SI\nscipy>=1.11\n\nnumpy>=1.24  # arrays\n")
     assert deps.requirements_hash(a) == deps.requirements_hash(b)
     b.write_text("scipy>=1.12\nnumpy>=1.24\n")
     assert deps.requirements_hash(a) != deps.requirements_hash(b)
@@ -147,7 +147,7 @@ def test_offline_falls_back_to_the_release_list_then_names(monkeypatch):
     def offline(*a, **k):
         raise deps.ResolveError("no network")
     monkeypatch.setattr(deps, "live_plan", offline)
-    manifest = {"kipi": "0.8.0", "platforms": {"win_amd64": {
+    manifest = {"kipi_si": "0.8.0", "platforms": {"win_amd64": {
         "packages": [["numpy", "2.5.4", 13_000_000]], "pardiso": [["mkl", "2026", 1]]}}}
     monkeypatch.setattr(deps, "load_manifest", lambda path=deps.MANIFEST: manifest)
     plan = deps.make_plan(["python"], paths.requirements_file(ROOT), True, "win_amd64")
@@ -163,7 +163,7 @@ def test_offline_falls_back_to_the_release_list_then_names(monkeypatch):
 def test_the_release_list_matches_the_requirements():
     """Regenerate it with .github/scripts/dep_sizes.py after changing the requirements."""
     data = deps.load_manifest()
-    assert data, "kipi/launcher/deps_manifest.json is missing"
+    assert data, "kipi_si/launcher/deps_manifest.json is missing"
     assert data["requirements_hash"] == deps.requirements_hash(paths.requirements_file(ROOT))
     for key in ("win_amd64", "linux_x86_64", "macos_arm64"):
         entry = data["platforms"][key]

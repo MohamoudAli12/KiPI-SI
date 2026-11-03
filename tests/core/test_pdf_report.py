@@ -16,15 +16,15 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from qtpy.QtWidgets import QApplication  # noqa: E402
 
 from ac_boards import plane_pair, plane_setup  # noqa: E402
-from kipi.ac.html_report import report_name as ac_report_name  # noqa: E402
-from kipi.ac.html_report import write_ac_report  # noqa: E402
-from kipi.ac.model import CapModel  # noqa: E402
-from kipi.ac.solver import solve_ac  # noqa: E402
-from kipi.core import pdf  # noqa: E402
-from kipi.dc.pi.model import PISetup  # noqa: E402
-from kipi.dc.pi.tree import solve_tree  # noqa: E402
-from kipi.dc.report.html import report_name, write_report  # noqa: E402
-from kipi.dc.viz.results import build_result_scene  # noqa: E402
+from kipi_si.ac.html_report import report_name as ac_report_name  # noqa: E402
+from kipi_si.ac.html_report import write_ac_report  # noqa: E402
+from kipi_si.ac.model import CapModel  # noqa: E402
+from kipi_si.ac.solver import solve_ac  # noqa: E402
+from kipi_si.core import pdf  # noqa: E402
+from kipi_si.dc.pi.model import PISetup  # noqa: E402
+from kipi_si.dc.pi.tree import solve_tree  # noqa: E402
+from kipi_si.dc.report.html import report_name, write_report  # noqa: E402
+from kipi_si.dc.viz.results import build_result_scene  # noqa: E402
 from tree_boards import board, setup  # noqa: E402
 
 WHEN = datetime(2026, 10, 15, 9, 5, 7)
@@ -188,7 +188,7 @@ def test_dc_report_as_pdf(dc, tmp_path, printed):
 
 def test_the_dc_pdf_maps_are_two_to_a_page_and_sharp(dc, tmp_path, printed):
     import re
-    from kipi.dc.report.html import PDF_MAP_BOX, png_size
+    from kipi_si.dc.report.html import PDF_MAP_BOX, png_size
     tree, scenes, snap, s = dc
     write_report(tmp_path / "r.pdf", tree, scenes, snap, s)
     html, = printed
@@ -230,7 +230,7 @@ def test_the_html_reports_are_unchanged(dc, ac, tmp_path):
 
 
 def test_report_names_end_in_the_format():
-    assert report_name("board", WHEN, fmt="pdf") == "board_kipi_report_2026-10-15_090507.pdf"
+    assert report_name("board", WHEN, fmt="pdf") == "board_kipi_si_report_2026-10-15_090507.pdf"
     assert ac_report_name("board", "+3.3V", WHEN, fmt="pdf") == \
         "board_+3.3V_ac_report_2026-10-15_090507.pdf"
 
@@ -238,7 +238,7 @@ def test_report_names_end_in_the_format():
 def test_the_format_is_saved(tmp_path):
     s = PISetup(html_report=True, report_format="pdf")
     s.ac.report_format = "pdf"
-    path = s.save(tmp_path / "s.kipi-setup.yml")
+    path = s.save(tmp_path / "s.kipi_si-setup.yml")
     back = PISetup.load(path)
     assert back.report_format == "pdf" and back.ac.report_format == "pdf"
     d = s.to_dict()
@@ -251,8 +251,8 @@ def test_the_format_is_saved(tmp_path):
 
 
 def test_html_where_a_pdf_cannot_be_made(tmp_path):
-    from kipi.core.progress import ProgressReporter
-    from kipi.gui.main_window import write_report_file
+    from kipi_si.core.progress import ProgressReporter
+    from kipi_si.gui.main_window import write_report_file
 
     def write(path):
         if path.suffix == ".pdf":
@@ -285,7 +285,7 @@ def test_panel_report_button(mode, ac, dc):
     # The Report button writes a report of the shown results on demand (#185): only once
     # there are results, in the format picked beside it.
     if mode == "dc":
-        from kipi.dc.gui.pi_panel import PIPanel
+        from kipi_si.dc.gui.pi_panel import PIPanel
         tree, scenes, snap, s = dc
         s.report_format = "pdf"
         p = PIPanel()
@@ -294,7 +294,7 @@ def test_panel_report_button(mode, ac, dc):
         show = lambda: p.show_results(tree, next(iter(tree.groups)))       # noqa: E731
         clear, shown = p.clear_results, ()
     else:
-        from kipi.ac.gui.panel import ACPanel
+        from kipi_si.ac.gui.panel import ACPanel
         result, snap, s = ac
         s.ac.report_format = "pdf"
         p = ACPanel()

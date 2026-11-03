@@ -8,10 +8,10 @@ import numpy as np
 import pytest
 
 from ac_boards import plane_pair, plane_setup
-from kipi.ac.report import RESULTS_SUFFIX, load_results, save_results
-from kipi.ac.solver.sweep import ACResult, ProbeCurve
-from kipi.dc.pi import report as dc_report
-from kipi.dc.pi.model import PinRef, Vrm
+from kipi_si.ac.report import RESULTS_SUFFIX, load_results, save_results
+from kipi_si.ac.solver.sweep import ACResult, ProbeCurve
+from kipi_si.dc.pi import report as dc_report
+from kipi_si.dc.pi.model import PinRef, Vrm
 
 
 def _result(rail, mag):
@@ -55,9 +55,9 @@ def test_report_link_is_dropped_if_the_report_is_gone(tmp_path):
 
 def test_dc_and_ac_files_are_told_apart(tmp_path):
     from tree_boards import board, setup
-    from kipi.dc.pi.tree import solve_tree
+    from kipi_si.dc.pi.tree import solve_tree
     snap, s = board(), setup()
-    dc = dc_report.save_results(tmp_path / "r.kipi-results", solve_tree(snap, s), snap, s)
+    dc = dc_report.save_results(tmp_path / "r.kipi_si-results", solve_tree(snap, s), snap, s)
     ac = save_results(tmp_path / f"r{RESULTS_SUFFIX}", {"VRM1": _result("VRM1", 1e-3)}, "b", s)
     with pytest.raises(ValueError, match="DC mode"):
         load_results(dc)
@@ -80,7 +80,7 @@ def app():
 
 @pytest.fixture
 def panel(app):
-    from kipi.ac.gui.panel import ACPanel
+    from kipi_si.ac.gui.panel import ACPanel
     snap, s = _setup()
     p = ACPanel()
     p.set_board(snap, s)
@@ -148,7 +148,7 @@ def test_opened_results_replace_the_ones_held(panel):
 
 @pytest.fixture
 def window(app, no_3d):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     yield w
     w.close()

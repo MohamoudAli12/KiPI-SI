@@ -5,11 +5,11 @@ import pytest
 pytest.importorskip("plotly")
 pytest.importorskip("matplotlib")
 
-from kipi.dc.pi.tree import solve_tree
-from kipi.dc.report.html import write_report
-from kipi.dc.thermal.cosim import solve_electrothermal
-from kipi.dc.thermal.model import ThermalSettings
-from kipi.dc.viz.results import build_result_scene
+from kipi_si.dc.pi.tree import solve_tree
+from kipi_si.dc.report.html import write_report
+from kipi_si.dc.thermal.cosim import solve_electrothermal
+from kipi_si.dc.thermal.model import ThermalSettings
+from kipi_si.dc.viz.results import build_result_scene
 from tree_boards import board, setup
 
 
@@ -42,7 +42,7 @@ def test_report_contents(tmp_path, thermal):
     # #128: an editable notes box, last in the report, kept and saved by the page itself
     assert "contenteditable='true'" in text and "user-notes-save" in text
     assert text.rindex("<h2") == text.index("<h2 id='user-notes'")       # the last section
-    assert "<style data-kipi>" in text      # a saved copy keeps the report's own styles
+    assert "<style data-kipi_si>" in text      # a saved copy keeps the report's own styles
 
 
 def test_report_mesh_keeps_copper(tmp_path):
@@ -52,8 +52,8 @@ def test_report_mesh_keeps_copper(tmp_path):
     import pyvista as pv
     from shapely.geometry import Point, Polygon
 
-    from kipi.core.mesh.mesher import mesh_polygon
-    from kipi.dc.report.html import _decimate
+    from kipi_si.core.mesh.mesher import mesh_polygon
+    from kipi_si.dc.report.html import _decimate
 
     poly = Polygon([(0, 0), (40, 0), (40, 25), (25, 25), (25, 35), (0, 35)])
     for k in range(20):
@@ -81,8 +81,8 @@ def test_narrow_voltage_maps_show_the_drop(monkeypatch, drop, label):
     from types import SimpleNamespace
     from matplotlib.tri import Triangulation
 
-    from kipi.dc.report import html
-    from kipi.dc.report.html import _has_offset, _layer_map
+    from kipi_si.dc.report import html
+    from kipi_si.dc.report.html import _has_offset, _layer_map
 
     monkeypatch.setattr(html, "_png", lambda fig, dpi=110: fig)
     g = np.mgrid[0:20:21j, 0:10:11j].reshape(2, -1).T

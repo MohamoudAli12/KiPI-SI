@@ -11,7 +11,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from qtpy.QtWidgets import QApplication  # noqa: E402
 
-from kipi.sources.base import Capabilities, InstalledTool  # noqa: E402
+from kipi_si.sources.base import Capabilities, InstalledTool  # noqa: E402
 from synthetic import make_board  # noqa: E402
 
 
@@ -39,7 +39,7 @@ def _idle(app, w, timeout=30.0):
 # --- The window --------------------------------------------------------------------------
 
 def test_a_source_gets_load_refill_and_select(app, no_3d, plugin_host):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     src = FakeSource()
     w = MainWindow(source=src)
     _idle(app, w)
@@ -61,7 +61,7 @@ def test_a_source_gets_load_refill_and_select(app, no_3d, plugin_host):
 
 
 def test_a_source_that_cannot_refill_hides_it(app, no_3d):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
 
     class NoRefill(FakeSource):
         caps = Capabilities(reload=True)
@@ -78,7 +78,7 @@ def test_a_source_that_cannot_refill_hides_it(app, no_3d):
 
 
 def test_without_a_source_only_snapshots_open(app, no_3d):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     assert not w.act_reload.isVisible() and not w._act_refill.isVisible()
     assert w.btn_select.isHidden()
@@ -88,10 +88,10 @@ def test_without_a_source_only_snapshots_open(app, no_3d):
 
 
 def test_without_a_tool_colors_are_kipis_and_there_are_no_models():
-    from kipi.core.viz.layer_colors import DEFAULT_COPPER
+    from kipi_si.core.viz.layer_colors import DEFAULT_COPPER
     tool = InstalledTool()
     colors, where = tool.layer_colors(make_board())
-    assert colors == DEFAULT_COPPER and "KiPI" in where
+    assert colors == DEFAULT_COPPER and "KiPI-SI" in where
     assert tool.part_models(make_board()) == (None, "")
 
 
@@ -100,8 +100,8 @@ def test_without_a_tool_colors_are_kipis_and_there_are_no_models():
 def test_the_live_source_reads_the_board_and_its_version(monkeypatch):
     pytest.importorskip("kipy")
     from kicad_fake import FakeKiCad
-    from kipi.sources.kicad_ipc import extract
-    from kipi.sources.kicad_ipc.source import KiCadLiveSource
+    from kipi_si.sources.kicad_ipc import extract
+    from kipi_si.sources.kicad_ipc.source import KiCadLiveSource
 
     class Kicad:
         def get_version(self):
@@ -127,7 +127,7 @@ def test_the_live_source_reads_the_board_and_its_version(monkeypatch):
 
 def test_the_live_source_selects_by_kiid():
     pytest.importorskip("kipy")
-    from kipi.sources.kicad_ipc.source import KiCadLiveSource
+    from kipi_si.sources.kicad_ipc.source import KiCadLiveSource
 
     class Board:
         def __init__(self):
@@ -145,8 +145,8 @@ def test_the_live_source_selects_by_kiid():
 
 
 def test_installed_kicad_says_why_there_are_no_models(monkeypatch):
-    from kipi.sources.kicad_ipc import models3d
-    from kipi.sources.kicad_ipc.source import InstalledKiCad, KiCadCliModels, KiCadLiveSource
+    from kipi_si.sources.kicad_ipc import models3d
+    from kipi_si.sources.kicad_ipc.source import InstalledKiCad, KiCadCliModels, KiCadLiveSource
 
     asked = []
     monkeypatch.setattr(models3d, "find_kicad_cli",

@@ -5,9 +5,9 @@ import scipy.sparse as sp
 
 pytest.importorskip("pyamg")
 
-from kipi.core.solver import spd  # noqa: E402
-from kipi.core.solver.spd import CG_ACCEPT_FACTOR, SpdSolver  # noqa: E402
-from kipi.dc.solver.setup import SolveSettings  # noqa: E402
+from kipi_si.core.solver import spd  # noqa: E402
+from kipi_si.core.solver.spd import CG_ACCEPT_FACTOR, SpdSolver  # noqa: E402
+from kipi_si.dc.solver.setup import SolveSettings  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -62,5 +62,5 @@ def test_unreachable_tolerance_stops_early_instead_of_running_to_max_iter():
 
 
 def _quiet():
-    from kipi.core.progress import NULL
+    from kipi_si.core.progress import NULL
     return NULL

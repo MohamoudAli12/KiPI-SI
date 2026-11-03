@@ -9,10 +9,10 @@ import math
 import pytest
 from shapely.geometry import box
 
-from kipi.dc.pi.model import Load, PinGroup, PinRef
-from kipi.dc.pi.results import DISCONNECTED
-from kipi.dc.pi.tree import solve_tree
-from kipi.dc.solver.fem import SolveError
+from kipi_si.dc.pi.model import Load, PinGroup, PinRef
+from kipi_si.dc.pi.results import DISCONNECTED
+from kipi_si.dc.pi.tree import solve_tree
+from kipi_si.dc.solver.fem import SolveError
 from tree_boards import B, board, by_name, pad, setup
 
 
@@ -92,14 +92,14 @@ def test_a_rail_with_no_load_connected_stops_the_solve():
 
 def test_reports_show_a_disconnected_load(tmp_path):
     import csv
-    from kipi.dc.pi.report import export_csv
-    from kipi.dc.pi.results import fmt_drop
+    from kipi_si.dc.pi.report import export_csv
+    from kipi_si.dc.pi.results import fmt_drop
     snap = island_board()
     s = setup()
     s.loads.append(Load("U3", PinRef("U3", "+3V3", ["1"]), 2.0, tol_min=-1.0, tol_max=1.0))
     tree = solve_tree(snap, s)
     export_csv(tree, snap, tmp_path)
-    with open(tmp_path / "kipi_loads.csv", encoding="utf-8") as fh:
+    with open(tmp_path / "kipi_si_loads.csv", encoding="utf-8") as fh:
         row = next(r for r in csv.DictReader(fh) if r["load"] == "U3")
     assert row["result"] == DISCONNECTED and row["current_A"] == "0"
     assert row["v_effective_V"] == "" and row["mean_is"] == ""
@@ -116,7 +116,7 @@ def qapp():
 
 
 def test_results_table_shows_a_disconnected_load(qapp):
-    from kipi.dc.gui.pi_panel import PIPanel
+    from kipi_si.dc.gui.pi_panel import PIPanel
     s = setup()
     s.loads.append(Load("U3", PinRef("U3", "+3V3", ["1"]), 2.0, tol_min=-1.0, tol_max=1.0))
     snap = island_board()
@@ -131,8 +131,8 @@ def test_results_table_shows_a_disconnected_load(qapp):
 
 
 def test_unconnected_pins_add_no_load_heat():
-    from kipi.dc.thermal.cosim import load_powers, solve_electrothermal
-    from kipi.dc.thermal.model import ThermalSettings
+    from kipi_si.dc.thermal.cosim import load_powers, solve_electrothermal
+    from kipi_si.dc.thermal.model import ThermalSettings
     snap = island_board()
     s = setup(ground=True)
     s.loads[0].supply.pins = ["1", "3"]

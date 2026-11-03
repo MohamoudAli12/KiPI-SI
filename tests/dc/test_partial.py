@@ -2,9 +2,9 @@
 
 import pytest
 
-from kipi.dc.pi.model import Load, PinRef, PISetup, active_setup, validate
-from kipi.dc.pi.tree import solve_tree
-from kipi.dc.solver.fem import SolveError
+from kipi_si.dc.pi.model import Load, PinRef, PISetup, active_setup, validate
+from kipi_si.dc.pi.tree import solve_tree
+from kipi_si.dc.solver.fem import SolveError
 from tree_boards import R, board, by_name, setup
 
 

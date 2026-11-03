@@ -12,7 +12,7 @@ from qtpy.QtGui import QWheelEvent  # noqa: E402
 from qtpy.QtWidgets import (QApplication, QComboBox, QDoubleSpinBox, QScrollArea,  # noqa: E402
                             QSlider, QVBoxLayout, QWidget)
 
-from kipi.gui.wheel_guard import install  # noqa: E402
+from kipi_si.gui.wheel_guard import install  # noqa: E402
 
 
 @pytest.fixture(scope="module")

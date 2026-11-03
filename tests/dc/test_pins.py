@@ -6,13 +6,13 @@ from types import SimpleNamespace
 import pytest
 from shapely.geometry import box
 
-from kipi.core.model.board import (
+from kipi_si.core.model.board import (
     BoardSnapshot, CopperLayer, DielectricLayer, Net, Pad, Poly, Stackup, Zone,
 )
-from kipi.dc.pi.report import PIN_CURRENT_SHARED, PIN_CURRENT_SOLVED, export_csv, pin_rows
-from kipi.dc.pi.tree import solve_tree
-from kipi.dc.solver import CurrentLoad, NetProblem, SeriesLink, SolveSettings, VoltageSource, run
-from kipi.dc.solver.post import SeriesResult, TerminalResult
+from kipi_si.dc.pi.report import PIN_CURRENT_SHARED, PIN_CURRENT_SOLVED, export_csv, pin_rows
+from kipi_si.dc.pi.tree import solve_tree
+from kipi_si.dc.solver import CurrentLoad, NetProblem, SeriesLink, SolveSettings, VoltageSource, run
+from kipi_si.dc.solver.post import SeriesResult, TerminalResult
 from tree_boards import board, setup
 
 F, B = 3, 34

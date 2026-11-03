@@ -26,7 +26,7 @@ def app():
 
 @pytest.fixture
 def window(app):
-    from kipi.gui.main_window import MainWindow
+    from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     yield w
     w.close()
@@ -108,7 +108,7 @@ def test_a_source_given_later_is_read(window, monkeypatch):
 
 
 def test_failing_to_connect_says_why_and_closes(window, monkeypatch):
-    from kipi.gui import app as gui_app
+    from kipi_si.gui import app as gui_app
     shown, exits = [], []
     monkeypatch.setattr("qtpy.QtWidgets.QMessageBox.critical",
                         lambda parent, title, text: shown.append(text))
@@ -124,7 +124,7 @@ def test_failing_to_connect_says_why_and_closes(window, monkeypatch):
 
 
 def test_connecting_hands_the_window_its_source(window, monkeypatch):
-    from kipi.gui import app as gui_app
+    from kipi_si.gui import app as gui_app
     given = []
     monkeypatch.setattr(window, "set_source", lambda s, t: given.append((s, t)))
     gui_app._connect(SimpleNamespace(exit=None), window, lambda: ("src", "tool"))

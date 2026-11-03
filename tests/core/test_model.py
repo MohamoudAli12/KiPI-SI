@@ -2,10 +2,10 @@ import math
 
 import pytest
 
-from kipi.core.geometry.copper import net_copper, net_layer_copper
-from kipi.core.model import snapshot_io as snapshot
-from kipi.core.geometry.arcs import arc_points as _arc_points
-from kipi.core.model.nets import classify_nets, guess_voltage, is_ground_name, is_power_name
+from kipi_si.core.geometry.copper import net_copper, net_layer_copper
+from kipi_si.core.model import snapshot_io as snapshot
+from kipi_si.core.geometry.arcs import arc_points as _arc_points
+from kipi_si.core.model.nets import classify_nets, guess_voltage, is_ground_name, is_power_name
 from synthetic import B, F, IN1, IN2, make_board
 
 # The copper module approximates circles with 32-gon polygons.
@@ -87,8 +87,8 @@ def test_guess_voltage(name, volts):
 
 def test_old_setup_plating_becomes_every_rules_plating(tmp_path):
     import json
-    from kipi.dc.pi.model import PISetup
-    p = tmp_path / "old.kipi-setup.json"
+    from kipi_si.dc.pi.model import PISetup
+    p = tmp_path / "old.kipi_si-setup.json"
     p.write_text(json.dumps({"format_version": 1, "vrms": [], "loads": [], "links": [],
                              "settings": {"plating_mm": 0.03}}), encoding="utf-8")
     s = PISetup.load(p)

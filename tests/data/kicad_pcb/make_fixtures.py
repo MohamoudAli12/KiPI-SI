@@ -14,8 +14,8 @@
 Then open each board in the PCB editor and save what the KiCad API reads as the
 reference the tests compare with:
 
-    set KIPI_HOST=plugin
-    python -m kipi --dump tests/data/kicad_pcb/features.ref.kipi.json.gz
+    set KIPI_SI_HOST=plugin
+    python -m kipi_si --dump tests/data/kicad_pcb/features.ref.kipi_si.json.gz
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ NETS = ["", "+5V", "SIG", "GND", "VOUT"]
 
 
 def uid(name: str) -> str:
-    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"kipi-fixture/{name}"))
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"kipi_si-fixture/{name}"))
 
 
 def net(name: str) -> str:
@@ -53,7 +53,7 @@ def footprint(ref: str, layer: str, at: str, angle: float, pads: str, extra: str
         f'\t\t(property "{name}" "{text}"\n\t\t\t(at 0 {y} {angle:g})\n\t\t\t(layer "{silk}")\n'
         f'\t\t\t(uuid "{uid(ref + name)}")\n\t\t\t(effects (font (size 1 1) (thickness 0.15)))\n'
         "\t\t)\n" for name, text, y in (("Reference", ref, -5), ("Value", "TEST", 5)))
-    return (f'\t(footprint "kipi:{ref}"\n\t\t(layer "{layer}")\n\t\t(uuid "{uid(ref)}")\n'
+    return (f'\t(footprint "kipi_si:{ref}"\n\t\t(layer "{layer}")\n\t\t(uuid "{uid(ref)}")\n'
             f"\t\t(at {at} {angle:g})\n{fields}{extra}{pads}\t)\n")
 
 

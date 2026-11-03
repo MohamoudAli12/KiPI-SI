@@ -1,4 +1,4 @@
-"""Dark mode: the default, kept in KiPI's settings, and switched back to the startup
+"""Dark mode: the default, kept in KiPI-SI's settings, and switched back to the startup
 palette for light."""
 
 import os
@@ -11,7 +11,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from qtpy.QtGui import QPalette  # noqa: E402
 from qtpy.QtWidgets import QApplication  # noqa: E402
 
-from kipi.gui import theme  # noqa: E402
+from kipi_si.gui import theme  # noqa: E402
 
 
 class _Store:
@@ -85,7 +85,7 @@ def test_widgets_with_their_own_style_sheet_follow_the_switch(app, store):
         return img.pixelColor(img.width() // 2, img.height() - 4).lightness()
 
     theme.apply(theme.LIGHT, app)
-    window = QWidget()                       # in a window, as in KiPI's panels
+    window = QWidget()                       # in a window, as in KiPI-SI's panels
     button = QPushButton("Solve all", window)
     button.setStyleSheet("font-weight: bold; padding: 6px;")
     log = QPlainTextEdit(window)

@@ -1,8 +1,8 @@
-"""KiPI refuses to connect while more than one KiCad is open."""
+"""KiPI-SI refuses to connect while more than one KiCad is open."""
 
 import pytest
 
-from kipi.sources.kicad_ipc import extract, instances
+from kipi_si.sources.kicad_ipc import extract, instances
 
 
 def test_recognizes_kicad_executables_on_every_platform():

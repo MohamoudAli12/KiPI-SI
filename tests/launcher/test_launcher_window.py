@@ -8,17 +8,17 @@ from types import SimpleNamespace
 
 import pytest
 
-from kipi.launcher import deps, state, system
-from kipi.launcher.install import Canceled, InstallError
-from kipi.launcher.setup_env import Summary
-from kipi.launcher.system import Python
+from kipi_si.launcher import deps, state, system
+from kipi_si.launcher.install import Canceled, InstallError
+from kipi_si.launcher.setup_env import Summary
+from kipi_si.launcher.system import Python
 
 if not system.can_show_windows():
     pytest.skip("no tkinter or no display", allow_module_level=True)
 
 import tkinter as tk  # noqa: E402
 
-from kipi.launcher.ui_tk import TkUI  # noqa: E402
+from kipi_si.launcher.ui_tk import TkUI  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -50,8 +50,8 @@ def _summary(offered=True, default=False):
     plan = deps.Plan([deps.Package("numpy", "2.5.4", 13_000_000),
                       deps.Package("vtk", "9.7.1", 80_000_000)],
                      [deps.Package("mkl", "2026.2.0", 185_000_000)], "live")
-    return Summary("KiPI's environment is not set up yet",
-                   Python(sys.executable, (3, 13, 1), True), Path("/home/me/.local/share/kipi/venv"),
+    return Summary("KiPI-SI's environment is not set up yet",
+                   Python(sys.executable, (3, 13, 1), True), Path("/home/me/.local/share/kipi_si/venv"),
                    plan, offered, "" if offered else "Intel MKL is not available for Darwin",
                    default)
 
@@ -178,20 +178,20 @@ def test_cancel_stops_the_install(ui, later):
     assert Slow.canceled
 
 
-def test_the_window_is_kipi_with_its_icon(ui, monkeypatch):
-    """#127: the KiPI icon and window class, not Python's; on Windows, pinning its taskbar
+def test_the_window_is_kipi_si_with_its_icon(ui, monkeypatch):
+    """#127: the KiPI-SI icon and window class, not Python's; on Windows, pinning its taskbar
     button pins the launcher."""
-    from kipi.launcher import appid, ui_tk
-    assert ui.root.winfo_class().lower() == "kipi"           # matches kipi.desktop
+    from kipi_si.launcher import appid, ui_tk
+    assert ui.root.winfo_class().lower() == "kipi_si"           # matches kipi_si.desktop
     assert ui._icons and max(i.width() for i in ui._icons) == 256
     tagged = []
     monkeypatch.setattr(appid, "tag_window", lambda *a: tagged.append(a))
     # Windows only as the window code sees it: faking sys.platform for the whole process
     # while Tk draws a real Cocoa window crashed Python on the macOS runner.
     monkeypatch.setattr(ui_tk, "sys", SimpleNamespace(platform="win32"))
-    ui.status("Checking which packages KiPI needs...")
+    ui.status("Checking which packages KiPI-SI needs...")
     ui.status("Still checking...")
     assert len(tagged) == 1                                 # once, when it first shows
     hwnd, command, name, icon = tagged[0]
-    assert hwnd and "kipi_launcher.pyw" in command and name == "KiPI"
-    assert icon.name == "kipi.ico"
+    assert hwnd and "kipi_si_launcher.pyw" in command and name == "KiPI-SI"
+    assert icon.name == "kipi_si.ico"

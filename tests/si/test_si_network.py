@@ -6,9 +6,9 @@ import math
 import numpy as np
 import pytest
 
-from kipi.core.model import touchstone
-from kipi.si import sparams
-from kipi.si.network import Circuit, line_blocks
+from kipi_si.core.model import touchstone
+from kipi_si.si import sparams
+from kipi_si.si.network import Circuit, line_blocks
 
 C0_MM_S = 299792458e3
 

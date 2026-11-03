@@ -7,10 +7,10 @@ import os
 
 import pytest
 
-from kipi.dc.pi.model import PISetup
-from kipi.dc.pi.report import export_csv, layer_temps, thermal_passed
-from kipi.dc.thermal.cosim import solve_electrothermal
-from kipi.dc.thermal.model import ThermalSettings
+from kipi_si.dc.pi.model import PISetup
+from kipi_si.dc.pi.report import export_csv, layer_temps, thermal_passed
+from kipi_si.dc.thermal.cosim import solve_electrothermal
+from kipi_si.dc.thermal.model import ThermalSettings
 from tree_boards import board, setup
 
 
@@ -66,7 +66,7 @@ def test_hottest_copper_per_layer(hot):
 
 
 def test_no_thermal_rows_without_a_thermal_solve():
-    from kipi.dc.pi.tree import solve_tree
+    from kipi_si.dc.pi.tree import solve_tree
     tree = solve_tree(board(), setup("ldo"))
     assert layer_temps(tree, board()) == []
 
@@ -90,8 +90,8 @@ def app():
 
 
 def test_thermal_results_tab(app, hot):
-    from kipi.dc.gui.pi_panel import PIPanel
-    from kipi.dc.pi.tree import solve_tree
+    from kipi_si.dc.gui.pi_panel import PIPanel
+    from kipi_si.dc.pi.tree import solve_tree
     snap, s, tree = hot
     panel = PIPanel()
     panel.set_board(snap, s)

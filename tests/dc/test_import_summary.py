@@ -3,8 +3,8 @@
 
 import copy
 
-from kipi.dc.pi.importers.import_summary import counts, group_notes, setup_changes
-from kipi.dc.pi.model import Load, PinRef, PISetup
+from kipi_si.dc.pi.importers.import_summary import counts, group_notes, setup_changes
+from kipi_si.dc.pi.model import Load, PinRef, PISetup
 
 
 def test_the_same_note_on_several_parts_is_one_line():
