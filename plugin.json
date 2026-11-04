@@ -1,6 +1,6 @@
 {
     "$schema": "https://go.kicad.org/api/schemas/v1",
-    "identifier": "com.github.mohamoudali12.kipi_si",
+    "identifier": "com.github.mohamoudali12.kipi-si",
     "name": "KiPI-SI",
     "description": "Power integrity: DC IR drop, current density, via currents and temperature in 3D, and AC PDN impedance over frequency",
     "runtime": {

@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-APP_ID = "com.github.mohamoudali12.kipi_si"        # the plugin.json identifier
+APP_ID = "com.github.mohamoudali12.kipi-si"        # the plugin.json identifier
 
 
 _IID_PROPERTY_STORE = "886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99"

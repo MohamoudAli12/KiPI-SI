@@ -5,12 +5,47 @@ set, so kipy connects to the instance that launched us.
 """
 
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+_PYTHON_DIR = re.compile(r"python(\d+)\.(\d+)")
+
+
+def foreign_python_path(path: str, version=sys.version_info) -> bool:
+    """Whether ``path`` belongs to a Python other than this one (a ``pythonX.Y`` folder in it,
+    such as /usr/lib/python3.14/site-packages).
+
+    KiCad starts a plugin with its own PYTHONPATH, whatever interpreter the plugin is set to
+    use. Arch's KiCad runs on the system Python 3.14 and so hands over
+    /usr/lib/python3.14/site-packages; the plugin's venv runs on 3.13 (no 3.14 wheels for
+    triangle), and the 3.14 builds there (PySide6, numpy) load ahead of the venv's and fail:
+    "No module named 'shiboken6.Shiboken'", and the button does nothing. A sitecustomize.py
+    put by hand into KiCad's venv once did this; KiCad rebuilds that venv, so it lives here.
+    """
+    for part in path.replace("\\", "/").lower().split("/"):
+        m = _PYTHON_DIR.fullmatch(part)
+        if m and (int(m[1]), int(m[2])) != tuple(version[:2]):
+            return True
+    return False
+
+
+def drop_foreign_python_paths() -> None:
+    """Take other Pythons' folders off sys.path, and out of PYTHONPATH for the processes
+    KiPI-SI starts (pip for PARDISO, the help browser)."""
+    sys.path[:] = [p for p in sys.path if not foreign_python_path(p)]
+    if os.environ.get("PYTHONPATH"):
+        kept = [p for p in os.environ["PYTHONPATH"].split(os.pathsep)
+                if p and not foreign_python_path(p)]
+        if kept:
+            os.environ["PYTHONPATH"] = os.pathsep.join(kept)
+        else:
+            del os.environ["PYTHONPATH"]
+
 
 def main() -> int:
+    drop_foreign_python_paths()             # before anything imports Qt or numpy
     # Windows: on to KiPI-SI.exe, so Task Manager shows KiPI-SI rather than Python (#124).
     from kipi_si.launcher.named_exe import relaunch
     code = relaunch([os.path.abspath(__file__), *sys.argv[1:]])
