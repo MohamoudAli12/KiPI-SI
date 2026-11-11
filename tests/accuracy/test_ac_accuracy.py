@@ -65,12 +65,22 @@ def test_plane_pair_is_a_parallel_plate_capacitor(plane):
         assert z == pytest.approx(1 / (2j * math.pi * f * c), rel=5e-3)
 
 
+def _peak_between_points(result, f_peak):
+    """A peak's frequency between the sweep's points: the top of the parabola through
+    log |Z| at the highest point and its two neighbours, on log f. The sweep is solved at
+    its own points around a resonance, which lies between two of them (2.3 % apart)."""
+    m, f = np.log(np.abs(result.probes[0].z)), np.log(result.freqs)
+    i = int(np.argmin(np.abs(result.freqs - f_peak)))
+    a, b, c = m[i - 1], m[i], m[i + 1]
+    return float(np.exp(f[i] + 0.5 * (a - c) / (a - 2 * b + c) * (f[i + 1] - f[i])))
+
+
 def test_plane_pair_first_cavity_resonance(plane):
     _, _, res = plane
     g = boards.AcPlane
     f10 = C0_MM_S / (2 * g.SIZE * math.sqrt(boards.ER))
     (f_peak, _), *_ = _peaks(res, 0.5 * f10, 1.2 * f10)
-    assert f_peak == pytest.approx(f10, rel=1.5e-2)
+    assert _peak_between_points(res, f_peak) == pytest.approx(f10, rel=1.5e-2)
 
 
 # ---------------------------------------------------------------- decoupling capacitor
@@ -151,3 +161,42 @@ def test_ferrite_resonates_with_the_filtered_plane(ferrite):
     (f_peak, z_peak), = _peaks(res, f0 / 3, 3 * f0)
     assert f_peak == pytest.approx(f0, rel=1.5e-2)
     assert z_peak == pytest.approx(np.abs(expected).max(), rel=0.05)
+
+
+# ---------------------------------------------------------------- past the first resonance
+
+def _plane_sweep(f_start, f_stop, field, adaptive):
+    snap, setup = boards.ac_plane()
+    a = setup.ac
+    a.f_start_hz, a.f_stop_hz, a.points_per_decade = f_start, f_stop, 100
+    a.field_points_per_decade, a.field_adaptive = field, adaptive
+    return solve_ac(snap, setup, a.rail, a.ground)
+
+
+def test_sweep_past_the_cavity_resonances_follows_the_copper():
+    """Interpolating between 20 field solves a decade loses the planes' resonances (70 %
+    off here); solving more where the interpolation does not hold keeps to the sweep
+    solved at every point."""
+    exact = _plane_sweep(3e8, 1.5e9, 0, False)
+    fixed = _plane_sweep(3e8, 1.5e9, 20, False)
+    adaptive = _plane_sweep(3e8, 1.5e9, 20, True)
+    ref = np.abs(exact.probes[0].z)
+
+    def worst(res):
+        return float(np.max(np.abs(np.abs(res.probes[0].z) - ref) / ref))
+    assert worst(fixed) > 0.3
+    assert worst(adaptive) < 0.03
+    assert len(fixed.field_freqs) < len(adaptive.field_freqs) <= len(exact.freqs)
+    f10 = C0_MM_S / (2 * boards.AcPlane.SIZE * math.sqrt(boards.ER))
+    (f_peak, z_peak), *_ = _peaks(adaptive, 0.8 * f10, 1.2 * f10)
+    (f_ref, z_ref), *_ = _peaks(exact, 0.8 * f10, 1.2 * f10)
+    assert f_peak == pytest.approx(f_ref, rel=0.01)
+    assert z_peak == pytest.approx(z_ref, rel=0.1)
+
+
+def test_sweep_below_the_resonances_needs_no_more_solves():
+    fixed = _plane_sweep(1e5, 5e7, 20, False)
+    adaptive = _plane_sweep(1e5, 5e7, 20, True)
+    assert len(adaptive.field_freqs) == len(fixed.field_freqs)
+    assert adaptive.probes[0].z == pytest.approx(fixed.probes[0].z, rel=1e-9)
+    assert not adaptive.warnings

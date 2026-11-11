@@ -240,6 +240,9 @@ class ACSettings:
     # Field (copper) solves per decade; the sweep in between is interpolated. 0 = solve the
     # copper at every sweep point (exact, slow).
     field_points_per_decade: int = 20
+    # Solve the copper at more frequencies where the interpolation between them does not
+    # hold (kipi_si.ac.solver.sweep.refine_field): around the planes' cavity resonances.
+    field_adaptive: bool = True
     # Mesh: coarser than DC by default; refined toward plated holes, where via inductance
     # is decided.
     max_edge_mm: float = 1.0

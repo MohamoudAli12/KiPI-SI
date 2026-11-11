@@ -43,9 +43,9 @@ def test_toolbar_has_stackup_help_and_about_after_open_results(app, no_3d):
     from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     names = [a.text() for a in w.findChild(QToolBar).actions() if a.text()]
-    assert names[-6:] == ["Open results…", "Stackup", "Power tree", "Help", "About",
-                          "Dark mode"]
-    w.act_power_tree.trigger()                       # the power tree tab (#58) comes up
+    assert names[-5:] == ["Open results…", "Stackup", "Help", "About", "Dark mode"]
+    assert "Power tree" not in names                 # a tab beside the 3D view, no button
+    w.act_power_tree.trigger()                       # Ctrl+T brings the tab (#58) up
     assert w.views.currentWidget() is w.power_tree
     w.close()
 

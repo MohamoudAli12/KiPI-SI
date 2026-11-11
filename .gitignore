@@ -14,3 +14,7 @@ KiPI-SI.lnk
 # Reports KiPI-SI writes into a project, and KiCad's own project backups
 kipi_si_reports/
 *-backups/
+
+# Sphinx docs: build output and the images copied in from docs/images
+docs_sphinx/build/
+docs_sphinx/source/images/

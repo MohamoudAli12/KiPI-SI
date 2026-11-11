@@ -106,10 +106,12 @@ class _DriverState:
 
 def impulse_responses(freqs: np.ndarray, s: np.ndarray, dt: float, taper: float = 0.25):
     """h (P, P, K) of S (F, P, P) on f_k = k·Δf, sampled at ``dt`` (zero-padded), tapered
-    over the top ``taper`` of the band, and trimmed where they have died away."""
+    over the top ``taper`` of the band, and trimmed where they have died away. They sum
+    to S at DC, which is what the channel settles to."""
     df = freqs[0]
     f_all = np.concatenate([[0.0], freqs])
-    s0 = s[0].real if len(s) < 2 else (2 * s[0] - s[1]).real
+    # Re S is even in f: fit a + b·f² through the two lowest points.
+    s0 = s[0].real if len(s) < 2 else (4 * s[0] - s[1]).real / 3
     sf = np.concatenate([s0[None], s], axis=0)
     w = np.ones(len(f_all))
     f_max = f_all[-1]
@@ -119,13 +121,18 @@ def impulse_responses(freqs: np.ndarray, s: np.ndarray, dt: float, taper: float 
     h = np.fft.irfft(sf * w[:, None, None], n, axis=0)        # (n, P, P), per step
     dt_eff = 1.0 / (n * df)
     h = h.transpose(1, 2, 0)
-    # Keep the causal part, until the responses have died away.
+    # The band limit smears the response to just before t = 0: fold that onto the taps just
+    # after, or the DC gain is lost with it. Then keep them until they have died away.
     keep = n // 2
-    energy = np.cumsum((h[:, :, :keep] ** 2).sum(axis=(0, 1)))
+    causal = h[:, :, :keep].copy()
+    causal[:, :, 1:] += h[:, :, :keep:-1]
+    energy = np.cumsum((causal ** 2).sum(axis=(0, 1)))
     if energy[-1] > 0:
         k_end = int(np.searchsorted(energy, energy[-1] * (1 - 1e-9))) + 1
         keep = max(min(keep, k_end + 16), 8)
-    return h[:, :, :keep], dt_eff
+    causal = causal[:, :, :keep]
+    causal[:, :, -1] += s0 - causal.sum(axis=-1)      # what the trim took
+    return causal, dt_eff
 
 
 @dataclass
@@ -171,19 +178,22 @@ def simulate(freqs: np.ndarray, y: np.ndarray, devices: Sequence[Device], t_stop
                 g[j] += 1.0 / d.r_term
         return i, g
 
-    # DC operating point: the channel's DC admittance.
-    y_dc = y[0].real
+    # DC operating point, of the taps' own DC gain so that the history starts settled:
+    # (I − S)·v = R0·(I + S)·i, as Y has no finite value at DC across a through connection.
+    s_dc = h.sum(axis=-1)
+    dc_v = eye - s_dc
+    dc_i = R0 * (eye + s_dc)
     v = np.zeros(p)
     for _ in range(60):
         i_dev, g_dev = dev_current(v, -1.0)
-        f = y_dc @ v + i_dev
-        jac = y_dc + np.diag(g_dev + 1e-12)
+        f = dc_v @ v + dc_i @ i_dev
+        jac = dc_v + dc_i @ np.diag(g_dev + 1e-12)
         dv = np.linalg.solve(jac, -f)
         dv = np.clip(dv, -0.5, 0.5)
         v = v + dv
         if np.abs(dv).max() < 1e-9:
             break
-    i_ch = y_dc @ v
+    i_ch = -dev_current(v, -1.0)[0]
     a_ss = (v + R0 * i_ch) / (2 * sq)
     n_steps = int(math.ceil(t_stop / dt))
     a = np.zeros((p, n_steps + k))

@@ -26,6 +26,10 @@ MASK = Dielectric(3.5, 0.025)
 
 
 TILE_MM = 4.0                  # the copper's tiles for cutting (SIBoard.pieces)
+# A cut reaches at least this many reference heights past the trace's edge: the box that
+# closes it is grounded, and nearer than that it pulls the impedance down (5 % at 2 heights,
+# 1 % at 8).
+WINDOW_HEIGHTS = 8.0
 
 
 @dataclass
@@ -222,8 +226,16 @@ class SIBoard:
                 pieces: Optional[List[Piece]] = None):
         """The cross-section at a trace's middle: (conductors, box, partner names found).
         ``partners`` names nets to give their own conductor: net -> (layer, x expected);
-        the piece of that net nearest there is it, its other pieces are reference."""
+        the piece of that net nearest there is it, its other pieces are reference.
+
+        ``window`` is the least the cut reaches to each side: a trace high over its
+        reference (a thick dielectric, a 2-layer board) gets a wider cut
+        (:meth:`window_for`), cut again when ``pieces`` were cut at ``window``."""
         pieces = self.pieces(mid, normal, window) if pieces is None else pieces
+        wide = self.window_for(pieces, layer, width_mm, window)
+        if wide > window + 1e-9:
+            window = wide
+            pieces = self.pieces(mid, normal, window)
         lay = self.stack.layer(layer)
         conds = [Conductor.rect(-width_mm / 2, width_mm / 2, lay.z_bottom_mm, lay.z_top_mm, net,
                                 self.etch_mm)]
@@ -253,6 +265,21 @@ class SIBoard:
         margin = max(2.0, window)
         box = (-window, window, self.z_range[0] - margin, self.z_range[1] + margin)
         return conds, box, list(chosen)
+
+    def window_for(self, pieces: Sequence[Piece], layer: int, width_mm: float,
+                   window: float) -> float:
+        """How far to each side a trace's cut must reach: ``window``, or
+        :data:`WINDOW_HEIGHTS` times its height over its reference past its edge, if that
+        is more. The height is to the farther of its references above and below (the
+        field between two planes spreads by their spacing); with neither, the board's
+        thickness. Rounded up to 0.5 mm, so the traces of one layer share their cuts."""
+        above, below, _ = self.references(pieces, layer, width_mm)
+        ds = [r.distance_mm for r in (above, below) if r is not None]
+        h = max(ds) if ds else self.stack.board_thickness_mm
+        need = width_mm / 2 + WINDOW_HEIGHTS * h
+        if need <= window:
+            return window
+        return math.ceil(need / 0.5 - 1e-9) * 0.5
 
     def solve(self, conds, box):
         return self.cache.solve(conds, self.bands, box)

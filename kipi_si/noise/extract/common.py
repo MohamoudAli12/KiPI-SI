@@ -251,7 +251,7 @@ def solve_board(snap: BoardSnapshot, setup: PISetup, agg, op, wf,
     ``dc_result``, the last DC solve, for the parts' bias (:func:`board_ports`)."""
     from kipi_si.ac.solver.fem import ACSystem
     from kipi_si.ac.solver.sweep import (_interpolate, element_currents, fmt_hz,
-                                      terminate_transfer)
+                                      refine_field, terminate_transfer)
     bp = board_ports(snap, setup, agg, op, victim_grounds, probes, dc_result)
     ports, src, buck = bp.ports, bp.src, bp.buck
     currents = [c for pw in wf.phases for c in (pw.pulsed.c, pw.inductor.c)]
@@ -282,6 +282,16 @@ def solve_board(snap: BoardSnapshot, setup: PISetup, agg, op, wf,
             if k == 0:
                 progress.info(f"  first frequency took {time.perf_counter() - t1:.2f} s "
                               f"({system.stats.method})")
+        # Where the copper's response between the solved frequencies is not what they
+        # interpolate to (the planes' cavity resonances), it is solved at the harmonics
+        # themselves, as AC mode's sweep is at its own points.
+        if setup.ac.field_adaptive and len(freqs) > 1:
+            f_field, zb, why = refine_field(
+                lambda f: system.port_impedance(2 * np.pi * f, progress), f_field, zb,
+                freqs, progress=progress)
+            if why:
+                notes.append(why.replace("the sweep's points resolve", "the harmonics resolve")
+                             .replace(": more points per decade would show it better", ""))
     finally:
         system.close()
     progress.info(f"Field solves done in {time.perf_counter() - t1:.2f} s")

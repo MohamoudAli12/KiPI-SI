@@ -14,7 +14,7 @@ requires-python = ">=3.10"
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
 authors = [{ name = "Drew Maatman", email = "drewmaatman@gmail.com" }]
-maintainers = [{ name = "MohamoudAli12" }]
+maintainers = [{ name = "Mohamoud Ali" }]
 keywords = [
     "kicad", "pcb", "power integrity", "ir drop", "dc drop", "pdn",
     "current density", "fem", "electro-thermal", "eda",
@@ -67,6 +67,14 @@ test = [
     "pytest-timeout>=2.3",   # ends a test that hangs instead of holding a CI runner (#115)
 ]
 dev = ["kipi_si[kicad]", { include-group = "lint" }, { include-group = "test" }]
+docs = [
+    "myst-parser>=4",
+    "pydata-sphinx-theme>=0.16",
+    "sphinx>=8",
+    "sphinx-autobuild>=2024.10",
+    "sphinx-copybutton>=0.5.2",
+    "sphinx-design>=0.6",
+]
 
 [tool.uv]
 # The oldest uv that reads this project and its uv.lock the same way.

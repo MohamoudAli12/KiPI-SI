@@ -74,6 +74,44 @@ def test_view_draws_and_saves(tmp_path, qapp_offscreen):
     w.close()
 
 
+def test_view_zooms_and_pans(qapp_offscreen):
+    from qtpy.QtCore import QPoint, QPointF, Qt
+    from qtpy.QtGui import QWheelEvent
+    from qtpy.QtWidgets import QPushButton
+    from kipi_si.gui.power_tree import PowerTreeView
+    w = PowerTreeView()
+    w.resize(600, 400)
+    w.show_tree(_tree(), board())
+    v = w.view
+    labels = {b.text(): b for b in w.findChildren(QPushButton)}
+    z0 = v.zoom()
+    labels["Zoom in"].click()
+    assert v.zoom() == pytest.approx(z0 * v.STEP)
+    labels["Zoom out"].click()
+    labels["Zoom out"].click()
+    assert v.zoom() == pytest.approx(z0 / v.STEP)
+    # The wheel zooms without Ctrl.
+    z1 = v.zoom()
+    pos = QPointF(300, 200)
+    ev = QWheelEvent(pos, v.mapToGlobal(pos.toPoint()), QPoint(0, 0), QPoint(0, 120),
+                     Qt.NoButton, Qt.NoModifier, Qt.NoScrollPhase, False)
+    v.wheelEvent(ev)
+    assert v.zoom() == pytest.approx(z1 * v.STEP)
+    # Zoom stays within its limits.
+    for _ in range(60):
+        v.zoom_in()
+    assert v.zoom() == pytest.approx(v.MAX_ZOOM)
+    for _ in range(80):
+        v.zoom_out()
+    assert v.zoom() == pytest.approx(v.MIN_ZOOM)
+    # Pans by drag (hand drag mode); Fit returns to the whole tree.
+    from qtpy.QtWidgets import QGraphicsView
+    assert v.dragMode() == QGraphicsView.ScrollHandDrag
+    labels["Fit"].click()
+    assert v.zoom() <= 1.0
+    w.close()
+
+
 def test_view_follows_the_theme(qapp_offscreen):
     from qtpy.QtGui import QColor, QPalette
     from qtpy.QtWidgets import QGraphicsSimpleTextItem

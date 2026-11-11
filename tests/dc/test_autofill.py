@@ -229,7 +229,9 @@ def test_load_ground_only_on_ticked_nets(app):
     assert setup.loads[0].ground is None
     # ... unless the setup already uses that ground.
     setup.loads[0].ground = PinRef("C3", "GND")
+    setup.loads[0].supply = PinRef("FB1", "VSNS")   # U3 free again: Add puts the next on it
     panel.load_list._add()
+    assert setup.loads[1].supply.ref == "U3"
     assert setup.loads[1].ground == PinRef("U3", "GND")
     panel.close()
 

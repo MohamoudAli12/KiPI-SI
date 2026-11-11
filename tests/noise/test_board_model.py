@@ -146,3 +146,47 @@ def test_a_board_model_that_cannot_be_built_falls_back():
     r = solve_noise(snap, setup, "U1 buck")
     assert any("Board model left out" in w for w in r.warnings)
     assert r.board_note == "" and r.waveforms.input_caps
+
+
+def _field_solves(result) -> int:
+    import re
+    return int(re.search(r"(\d+) field solves", " ".join(result.summary_lines())).group(1))
+
+
+def test_the_board_model_solves_the_harmonics_its_interpolation_misses(monkeypatch):
+    """Where the copper's response between the solved frequencies is not what they
+    interpolate to, it is solved at the harmonics themselves (as AC mode's sweep)."""
+    from kipi_si.ac.solver import sweep
+    real, seen = sweep.refine_field, {}
+
+    def spy(solve, f_field, zb, freqs, **kw):
+        kw.pop("tol", None)
+        f2, z2, why = real(solve, f_field, zb, freqs, tol=seen["tol"], max_extra=3, **kw)
+        seen.update(base=np.array(f_field), freqs=np.array(freqs), out=f2, why=why)
+        return f2, z2, why
+    monkeypatch.setattr(sweep, "refine_field", spy)
+    snap = buck_board()
+    seen["tol"] = sweep.FIELD_TOL
+    plain = solve_noise(snap, _setup(snap, []), "U1 buck")
+    assert np.allclose(seen["freqs"], 1e6 * np.arange(1, len(seen["freqs"]) + 1))   # harmonics
+    assert len(seen["out"]) == len(seen["base"]) == _field_solves(plain)   # smooth: no more
+    seen["tol"] = 0.0                                   # nothing holds: up to the budget
+    forced = solve_noise(snap, _setup(snap, []), "U1 buck")
+    added = np.setdiff1d(seen["out"], seen["base"])
+    assert len(added) == 3 and np.isin(added, seen["freqs"]).all()
+    assert _field_solves(forced) == len(seen["base"]) + 3
+    assert any("3 more frequencies" in w for w in forced.warnings)
+    # Solved at more points of a smooth response, the answer is the same.
+    a, b = plain.waveforms.input_ripple.c, forced.waveforms.input_ripple.c
+    assert np.allclose(a, b, rtol=0.02, atol=1e-3 * np.abs(a).max())
+
+
+def test_the_board_model_keeps_to_its_solves_with_adaptive_off(monkeypatch):
+    from kipi_si.ac.solver import sweep
+    called = []
+    monkeypatch.setattr(sweep, "refine_field", lambda *a, **k: called.append(1))
+    snap = buck_board()
+    setup = _setup(snap, [])
+    setup.ac.field_adaptive = False
+    solve_noise(snap, setup, "U1 buck")
+    assert not called

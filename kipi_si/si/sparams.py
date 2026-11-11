@@ -3,7 +3,7 @@
 
 Time-domain responses come from a uniform frequency grid f_k = k·Δf (k ≥ 1) with the DC
 point extrapolated: the inverse real FFT of the response times a Gaussian edge filter
-(the 10–90 % rise time asked for) gives the impulse response on Δt = 1/(2·f_max) over
+(the 20–80 % rise time asked for) gives the impulse response on Δt = 1/(2·f_max) over
 T = 1/Δf; its running sum is the step response.
 """
 
@@ -89,11 +89,21 @@ def _with_dc(freqs: np.ndarray, h: np.ndarray) -> np.ndarray:
     return np.concatenate([[h0], h])
 
 
+# A Gaussian step's 20–80 % rise time in standard deviations (its 10–90 % is 2.5631).
+RISE_20_80_SIGMAS = 1.6832
+
+
+def edge_sigma(rise_s: float) -> float:
+    """The standard deviation of the Gaussian edge whose 20–80 % rise time is ``rise_s``:
+    the edge an interface (:mod:`kipi_si.si.protocols`) and the Channels table give."""
+    return rise_s / RISE_20_80_SIGMAS
+
+
 def gaussian_filter(freqs: np.ndarray, rise_s: float) -> np.ndarray:
-    """A Gaussian edge of 10–90 % rise time ``rise_s`` in frequency."""
+    """A Gaussian edge of 20–80 % rise time ``rise_s`` in frequency."""
     if rise_s <= 0:
         return np.ones_like(freqs)
-    sigma_t = rise_s / 2.563                    # 10–90 % of a Gaussian step
+    sigma_t = edge_sigma(rise_s)
     return np.exp(-0.5 * (2 * math.pi * freqs * sigma_t) ** 2)
 
 
@@ -109,13 +119,13 @@ def impulse(freqs: np.ndarray, h: np.ndarray, rise_s: float = 0.0, oversample: i
 
 
 def step(freqs: np.ndarray, h: np.ndarray, rise_s: float = 0.0, oversample: int = 1):
-    """(t, step response) of ``h`` with a Gaussian edge of ``rise_s``. The edge is
+    """(t, step response) of ``h`` with a Gaussian edge of ``rise_s`` (20–80 %). The edge is
     centred on t = 0, so a response that starts at once (a reflection at the port, near-end
     crosstalk) has half its first edge before 0, wrapped to the record's end: that part is
     summed in first, else the step would settle at half its height."""
     t, x = impulse(freqs, h, rise_s, oversample)
     dt = t[1] - t[0] if len(t) > 1 else 0.0
-    pre = int(math.ceil(5 * rise_s / 2.563 / dt)) if rise_s > 0 and dt > 0 else 0
+    pre = int(math.ceil(5 * edge_sigma(rise_s) / dt)) if rise_s > 0 and dt > 0 else 0
     pre = min(pre, len(x) // 4)
     if pre == 0:
         return t, np.cumsum(x)
@@ -124,7 +134,7 @@ def step(freqs: np.ndarray, h: np.ndarray, rise_s: float = 0.0, oversample: int 
 
 
 def tdr(freqs: np.ndarray, s11: np.ndarray, z0: float = 50.0, rise_s: float = 35e-12):
-    """(t, impedance seen into port 1) of a TDR with a ``rise_s`` step: the reflected
+    """(t, impedance seen into port 1) of a TDR with a ``rise_s`` (20–80 %) step: the reflected
     step ρ(t) as Z = z0·(1 + ρ)/(1 − ρ). Time is round trip."""
     t, rho = step(freqs, s11, rise_s, oversample=2)
     rho = np.clip(rho, -0.999, 0.999)

@@ -571,10 +571,11 @@ class MainWindow(QMainWindow):
                                "The board's layers: thicknesses, εr and copper resistivity, "
                                "for every analysis. Unlock to try another stackup.",
                                KEYS["stackup"])
-        self.act_power_tree = act("Power tree", self.show_power_tree,
-                                  "Block diagram of the setup: VRMs (by type), rails, series "
-                                  "links, loads and capacitors, in the direction power flows",
-                                  KEYS["power_tree"])
+        # The Power tree is a tab beside the 3D view; no toolbar button, just its key.
+        self.act_power_tree = QAction("Power tree", self)
+        self.act_power_tree.setShortcut(KEYS["power_tree"])
+        self.act_power_tree.triggered.connect(self.show_power_tree)
+        self.addAction(self.act_power_tree)
         tb.addSeparator()
         self.act_help = act("Help", self.show_help, "Open the KiPI-SI user guide in your browser",
                             KEYS["help"])
@@ -767,7 +768,7 @@ class MainWindow(QMainWindow):
             self.power_tree.set_source(self.solve_panel.setup, self.snapshot)
 
     def _show_power_tree_tab(self, mode: str):
-        """The Power tree tab and button in the power integrity modes, not in SI; the PI
+        """The Power tree tab and its key in the power integrity modes, not in SI; the PI
         plots tab, once built, in DC mode only (they plot the DC solve)."""
         self.act_power_tree.setVisible(mode != "si")
         self._set_tab_shown(self.power_tree, mode != "si")
@@ -2187,7 +2188,7 @@ class MainWindow(QMainWindow):
         except AutofillError as e:
             QMessageBox.critical(self, "KiPI-SI", f"Could not read the parts library:\n\n{e}")
             return
-        found = find_tree(snap, library)
+        found = find_tree(snap, library, current)
         if not found:
             QMessageBox.information(
                 self, "KiPI-SI", "No regulators found on the board: no inductor between a "

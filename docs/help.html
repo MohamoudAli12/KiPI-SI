@@ -469,7 +469,8 @@ of decimals, plus more when a small typed value needs them.</p>
     mode, the rails saved with the AC panel's <b>Save results…</b>.</td></tr>
   <tr><td><b>Stackup</b></td><td class="wrap">Opens the <a href="#stackup">Stackup
     window</a>: the board's layers with their thicknesses, εr and copper resistivity.</td></tr>
-  <tr><td><b>Power tree</b></td><td class="wrap">Opens a block diagram of the setup, drawn
+  <tr><td><b>Power tree</b> tab <kbd>Ctrl+T</kbd></td><td class="wrap">Beside the 3D view in
+    the power integrity modes (no toolbar button): a block diagram of the setup, drawn
     left to right in the direction power flows: each source and regulator, the rails they
     drive, series links between rails, and the loads and capacitor models on each rail
     (capacitors are grouped per model and rail, with a dashed line). VRM types differ in
@@ -479,7 +480,10 @@ of decimals, plus more when a small typed value needs them.</p>
     current); the grids take the shape that lets the whole tree fit the window largest.
     Each block sits just right of the one feeding it. Ground nets, and net ties between
     them, are left out. Hover a block for its pins;
-    drag to pan, <kbd>Ctrl</kbd> + wheel to zoom, <b>Save image…</b> for a PNG. It redraws
+    drag (left or middle button) to pan, the wheel to zoom about the pointer
+    (<kbd>Shift</kbd> + wheel scrolls sideways), <b>Zoom in</b> / <b>Zoom out</b> or
+    <kbd>+</kbd> / <kbd>-</kbd> to zoom, <b>Fit</b> or <kbd>0</kbd> to see the whole tree,
+    <b>Save image…</b> for a PNG. It redraws
     as the setup changes.</td></tr>
   <tr><td><b>Help</b> <kbd>F1</kbd></td><td class="wrap">Opens this guide in your web
     browser.</td></tr>
@@ -957,10 +961,16 @@ and capacitor models.</p>
     feeds, to a rail that is fed (a P-FET load switch). It becomes a series link through
     the transistor, with the <code>PI_R</code> field as its on-resistance (else a short, in
     the notes);</li>
-  <li>a <b>Source</b> on each regulator input rail still not fed: on its connector, else the
-    transistor or diode the power comes in through (not a TVS to ground), else another part
-    on it.</li>
+  <li>a <b>Source</b> on each regulator input rail still not fed: on its connector, else on
+    the input found by tracing back through the transistors and series parts behind the rail
+    (those transistors become switches), else the transistor or diode the power comes in
+    through (not a TVS to ground), else another part on it.</li>
 </ul>
+<p>When the trace finds several inputs joining on one rail, they are ORed and only one supplies
+it at a time, so KiPI-SI does not choose. They are listed with none ticked and <b>OK</b> waits
+until you tick the one in use; ticking another clears the first, and only the picked input's
+own switches and series parts go in the tree. Run again, the input already in the setup stays
+picked.</p>
 <p>The preview lists them sources first, then down the tree. Untick a row to leave it out,
 change a <b>Type</b>, or, for a source, pick another <b>Part</b> from the list. Orange cells
 are guesses to check. The <b>Voltage</b> comes from the part's <code>PI_V</code> field, the
@@ -1960,9 +1970,12 @@ Distribution System Design Methodology and Capacitor Selection for Modern CMOS T
   <tr><td>Points per decade</td><td class="wrap">Resolution of the plotted curve. Cheap: the
     parts are evaluated at every point.</td></tr>
   <tr><td>Field solves per decade</td><td class="wrap">How often the copper itself is solved;
-    in between, its response is interpolated (smoothly, it varies slowly).
-    <i>Every point</i> solves the copper at each sweep frequency: exact and slowest. Raise
-    this if sharp plane resonances look under-resolved.</td></tr>
+    in between, its response is interpolated (smoothly, it varies slowly). Where it does not
+    vary slowly (around the planes' cavity resonances) the copper is solved at the sweep's
+    own points as well, so those solves come on top; the log says how many.
+    <i>Every point</i> solves the copper at each sweep frequency: exact and slowest. If the
+    Notes say a resonance changes faster than the sweep's points resolve, raise
+    <b>Points per decade</b>.</td></tr>
   <tr><td>Capacitor derating</td><td class="wrap">DC bias, manufacturing tolerance,
     temperature and aging, grouped together. The results and the report list each one and
     whether it was applied (and why not: unticked, or no model on the rail has what it
@@ -2424,7 +2437,8 @@ and the results say so.</p>
     hot loops are drawn straight between the pads and there is no shared-ground
     coupling.</li>
   <li><b>Field solves per decade</b>: copper solves per decade of the harmonics; the board's
-    response in between is interpolated (default 10).</li>
+    response in between is interpolated (default 10). Where it is not smooth (the planes'
+    cavity resonances) the copper is solved at the harmonics themselves as well.</li>
   <li><b>Scan radius</b>: the scan looks at signal nets with a trace this close to the
     aggressor's parts (default 10 mm). <b>Scan: solve in full</b>: how many of the worst
     estimates are solved in full (default 10). <b>Scan: victim type</b> and <b>logic
@@ -2634,7 +2648,7 @@ plot below shows one of these three, from a different angle.</div>
     <td class="wrap">PCIe Gen 3: 8 Gb/s, UI = 125 ps</td></tr>
   <tr><td>Nyquist frequency</td><td class="wrap">Half the bit rate: the frequency of a
     1010… pattern, and where loss is usually judged.</td><td class="wrap">8 Gb/s → 4 GHz</td></tr>
-  <tr><td>Rise time</td><td class="wrap">How long an edge takes from 20 % to 80 % (or 10–90 %).
+  <tr><td>Rise time</td><td class="wrap">How long an edge takes from 20 % to 80 % (an interface's edge in Signal Integrity is this one; a 10–90 % time is about 1.5 times longer).
     Faster edges carry higher frequencies and see more reflections.</td>
     <td class="wrap">40 ps (PCIe), 300 ps (USB 2)</td></tr>
   <tr><td>dB</td><td class="wrap">A log ratio. For signal voltages: −6 dB is half,
@@ -3074,7 +3088,9 @@ models.</p>
     through one. A board read from the running KiCad gives its parts' DNP but not its
     variants: open the <code>.kicad_pcb</code> file for those.</li>
   <li><b>Section length</b> and <b>Neighbour window</b>: how finely traces are cut, and how
-    far either side copper is in their cross-section.</li>
+    far either side copper is in their cross-section, at least. A trace high over its
+    reference plane (a thick dielectric, a 2-layer board) is cut wider: 8 times that
+    height past its edge.</li>
   <li><b>Etch</b>: a trace's top narrower than its bottom by this, each side.</li>
   <li><b>Copper roughness</b>: Smooth, Hammerstad or Groisse (from the RMS roughness), or
     Huray (nodule radius and surface ratio). Rough copper adds loss as the skin depth
@@ -3470,7 +3486,8 @@ x86-64).</p></div>
   <li>Check every model's ESL and ESR units (nH and mΩ).</li>
   <li>Check the probe's ground pins are on the ground being simulated.</li>
   <li>Remember the VRM is not modeled: the low-frequency rise is expected.</li>
-  <li>Raise <b>Field solves per decade</b> if resonances look jagged.</li>
+  <li>Raise <b>Points per decade</b> if resonances look jagged: around them the copper is
+    solved at every point of the sweep.</li>
 </ul></div>
 </details>
 <details>

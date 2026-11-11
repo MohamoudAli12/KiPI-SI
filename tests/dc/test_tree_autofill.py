@@ -207,3 +207,124 @@ def test_noise_phases_and_frequency_from_the_tree():
     assert ph.input_caps == ["C1"] and ph.output_caps == ["C2"]
     assert buck.ground is None                      # the guess is not the VRM's
     assert switching_frequency(snap, buck) == pytest.approx(600e3)
+
+
+# Four ORed inputs on to VIN_OR, then a P-FET on to VIN: the Jetson carrier's supply.
+OR_PARTS = {
+    "J9": ("BARREL", {}), "Q5": ("PFET", {}), "Q3": ("PFET", {}), "Q4": ("PFET", {}),
+    "Q7": ("MIRROR", {}), "U20": ("POE_MODULE", {}), "U21": ("USB_PD", {}),
+    "R20": ("0R", {}), "R21": ("0R", {}), "R22": ("0R", {}),
+    "C20": ("10u", {}), "C21": ("10u", {}), "C22": ("10u", {}),
+}
+OR_PINS = [
+    ("J9", "1", "IN_J"), ("J9", "2", "GND"),
+    ("Q3", "1", "Net-(Q3-G)"), ("Q3", "2", "VIN_OR"), ("Q3", "3", "IN_J"),
+    ("Q4", "1", "Net-(Q4-G)"), ("Q4", "2", "VIN_OR"), ("Q4", "3", "POE"),
+    ("Q5", "1", "Net-(Q5-G)"), ("Q5", "2", "VIN_OR"), ("Q5", "3", "VIN"),
+    # A current mirror sensing Q3: on two of the path's nets, and no load.
+    ("Q7", "1", "VIN_OR"), ("Q7", "2", "Net-(Q7-Pad2)"), ("Q7", "3", "Net-(Q7-Pad2)"),
+    ("Q7", "4", "IN_J"), ("Q7", "6", "Net-(Q3-G)"),
+    ("U20", "1", "POE"), ("U20", "2", "GND"), ("U20", "3", "POE_CTRL"),
+    ("U21", "1", "PD1"), ("U21", "2", "PD2"), ("U21", "3", "GND"), ("U21", "4", "PD_CC"),
+    ("C20", "1", "POE"), ("C20", "2", "GND"),
+    ("C21", "1", "PD1"), ("C21", "2", "GND"), ("C22", "1", "PD2"), ("C22", "2", "GND"),
+    ("R20", "1", "PD1"), ("R20", "2", "VIN_OR"), ("R21", "1", "PD2"), ("R21", "2", "VIN_OR"),
+    # Bypass of the switch, not fitted.
+    ("R22", "1", "VIN_OR"), ("R22", "2", "VIN"),
+]
+
+
+def ored():
+    snap = board(OR_PARTS, OR_PINS, dnp={"R9", "R22"})
+    snap.pads = [p for p in snap.pads if p.footprint != "J1"]
+    snap.footprints = [f for f in snap.footprints if f.reference != "J1"]
+    snap.invalidate_index()
+    return snap
+
+
+def group_rows(found):
+    return {f.rail: f for f in found if f.or_group and f.kind == "source"}
+
+
+def test_ored_inputs_are_offered_not_guessed():
+    found = find_tree(ored(), PartsLibrary())
+    kinds = {f.ref: f.kind for f in found if f.ref in ("Q3", "Q4", "Q5")}
+    assert kinds == {"Q3": "switch", "Q4": "switch", "Q5": "switch"}   # no FET as a source
+    src = group_rows(found)
+    assert {(r, f.ref) for r, f in src.items()} == {
+        ("IN_J", "J9"), ("POE", "U20"), ("PD1", "U21"), ("PD2", "U21")}
+    assert not any(f.use for f in src.values())         # the user's to pick
+    assert {f.or_group for f in src.values()} == {"VIN_OR"}
+    assert src["IN_J"].branch == ["Q3"] and src["PD1"].branch == ["R20"]
+
+
+def pick(found, rail, volts):
+    f = group_rows(found)[rail]
+    f.use, f.voltage = True, volts
+    return found
+
+
+def test_ored_inputs_need_exactly_one_picked():
+    snap = ored()
+    found = find_tree(snap, PartsLibrary())
+    with pytest.raises(AutofillError, match="pick one input"):
+        autofill_tree(snap, found, PISetup(), PartsLibrary())
+    pick(pick(found, "IN_J", 12.0), "POE", 12.0)
+    with pytest.raises(AutofillError, match="pick one input"):
+        autofill_tree(snap, found, PISetup(), PartsLibrary())
+
+
+def test_only_the_picked_input_is_in_the_tree():
+    snap = ored()
+    found = pick(find_tree(snap, PartsLibrary()), "IN_J", 12.0)
+    s = autofill_tree(snap, found, PISetup(), PartsLibrary()).setup
+    assert [v.output.ref for v in s.vrms if v.kind == "source"] == ["J9"]
+    assert {k.side_a.ref for k in s.links} >= {"Q3", "Q5"}
+    assert not {"Q4", "R20", "R21"} & {k.side_a.ref for k in s.links}
+    assert not {"Q7", "U20", "U21"} & {l.supply.ref for l in s.loads}
+    assert not {"POE", "PD1", "PD2"} & set(s.nets)
+    assert validate(s) == []
+
+
+def test_changing_the_pick_replaces_the_source_and_is_remembered():
+    snap = ored()
+    lib = PartsLibrary()
+    first = autofill_tree(snap, pick(find_tree(snap, lib), "IN_J", 12.0), PISetup(), lib).setup
+    again = group_rows(find_tree(snap, lib, first))
+    assert again["IN_J"].use and again["IN_J"].voltage == 12.0
+    assert not again["POE"].use
+    second = autofill_tree(snap, pick(find_tree(snap, lib), "POE", 48.0), first, lib).setup
+    assert [(v.output.ref, v.voltage) for v in second.vrms if v.kind == "source"] == [("U20", 48.0)]
+    assert "IN_J" not in second.nets and "Q3" not in {k.side_a.ref for k in second.links}
+
+
+def test_one_input_behind_a_switch_is_the_source():
+    snap = board({"J9": ("BARREL", {}), "Q5": ("PFET", {})},
+                 [("J9", "1", "RAW"), ("J9", "2", "GND"),
+                  ("Q5", "1", "Net-(Q5-G)"), ("Q5", "2", "RAW"), ("Q5", "3", "VIN")])
+    snap.pads = [p for p in snap.pads if p.footprint != "J1"]
+    snap.footprints = [f for f in snap.footprints if f.reference != "J1"]
+    snap.invalidate_index()
+    f = by_ref(find_tree(snap, PartsLibrary()))
+    assert (f["J9"].kind, f["J9"].rail, f["J9"].use, f["J9"].or_group) == ("source", "RAW", True, "")
+    assert f["Q5"].kind == "switch" and f["Q5"].use
+
+
+def test_dialog_makes_the_user_pick_one_input():
+    from qtpy.QtCore import Qt
+    from qtpy.QtWidgets import QApplication, QDialogButtonBox
+    from kipi_si.dc.gui.tree_autofill_dialog import TreeAutofillDialog
+    _app = QApplication.instance() or QApplication([])
+    snap = ored()
+    d = TreeAutofillDialog(snap, PartsLibrary(), find_tree(snap, PartsLibrary()))
+    ok = d.buttons.button(QDialogButtonBox.Ok)
+    row = {(f.ref, f.rail): i for i, f in enumerate(d.rows)}
+    use = lambda key: d.table.item(row[key], 0)
+    q3, q4 = next(k for k in row if k[0] == "Q3"), next(k for k in row if k[0] == "Q4")
+    assert not ok.isEnabled() and "Pick the input to VIN_OR" in d.status.text()
+    use(("J9", "IN_J")).setCheckState(Qt.Checked)
+    assert use(q3).checkState() == Qt.Checked and use(q4).checkState() == Qt.Unchecked
+    use(("U20", "POE")).setCheckState(Qt.Checked)       # one at a time
+    assert use(("J9", "IN_J")).checkState() == Qt.Unchecked
+    assert use(q3).checkState() == Qt.Unchecked and use(q4).checkState() == Qt.Checked
+    assert not ok.isEnabled() and "U20 a voltage" in d.status.text()

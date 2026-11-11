@@ -22,8 +22,12 @@ How a regulator is recognised, first found wins:
 Each regulator's input rail (and the nets joined to it by series parts) that no regulator
 drives is fed by a **switch** when a transistor joins it to a rail that is fed (a P-FET
 load switch: a DC connection through the transistor), else gets a **source**: on the rail's
-connector, else the transistor or diode the power comes in through, else another part on
-it, marked for checking.
+connector. With none on it, the power is **traced back** through the transistors and series
+parts behind the rail, to a connector or the IC driving each branch. One input is the source,
+and the transistors on its way are switches. Several inputs are ORed, only one supplying the
+rail, so which is left for the user to pick (:attr:`Found.or_group`). When the trace finds
+nothing: the transistor or diode the power comes in through, else another part on it, marked
+for checking.
 
 Voltages: the part's ``PI_V`` field, the library, the rail's name; else left for the user.
 """
@@ -44,7 +48,8 @@ from kipi_si.dc.pi.autofill import (
     refs_on_net,
 )
 from kipi_si.dc.pi.importers.rail_autofill import (
-    DEFAULT_MAX_LINK_OHM, AutofillResult, PartEntry, PartsLibrary, _merge, _ref_key, _Walker,
+    DEFAULT_MAX_LINK_OHM, AutofillError, AutofillResult, PartEntry, PartsLibrary, _merge,
+    _ref_key, _Walker,
     library_paths, parse_quantity, part_voltage, vrm_kind,
 )
 from kipi_si.dc.pi.model import PinRef, PISetup, Vrm, VrmPhase
@@ -54,6 +59,7 @@ _FET_RE = re.compile(r"^(Q|M|T)\d", re.IGNORECASE)
 _CONN_RE = re.compile(r"^(J|P|CN|X|CON)\d", re.IGNORECASE)
 _DIODE_RE = re.compile(r"^D\d", re.IGNORECASE)
 _FB_RE = re.compile(r"(^|[^A-Z])V?FB|FEEDBACK|VSENSE", re.IGNORECASE)
+_GATE_RE = re.compile(r"-G\)|GATE", re.IGNORECASE)
 KINDS = ("source", "ldo", "smps", "switch")
 KIND_NAMES = {"source": "Source", "ldo": "LDO", "smps": "Switcher", "switch": "Switch"}
 
@@ -76,6 +82,12 @@ class Found:
     use: bool = True
     current_limit_a: Optional[float] = None
     fsw_hz: Optional[float] = None      # PI_FSW or the library, for Coupled Noise
+    # ORed inputs: the net they join on. The sources of a group are picked one of; a switch
+    # with it is on one input's own branch, so is in the tree only if that input is picked.
+    or_group: str = ""
+    branch: List[str] = field(default_factory=list)         # a source's own series parts
+    branch_nets: List[str] = field(default_factory=list)    # and the nets only it is on
+    bias: List[str] = field(default_factory=list)   # transistors sensing the path: no loads
 
     @property
     def rail(self) -> str:
@@ -412,6 +424,12 @@ def _sources(b: _Board, regs: List[Found]) -> List[Found]:
         if sw is not None:
             out.append(sw)
             continue
+        if _named_entry(b, net, devices)[0] is None:
+            inputs = _trace_inputs(b, net, outs | switch_nets, devices)
+            if inputs:
+                out += _traced_rows(b, regs, group, net, inputs)
+                covered |= {n for i in inputs for n in (i.net, *(p[2] for p in i.path))}
+                continue
         ref, how = _entry_part(b, net, devices)
         if ref is None:
             continue
@@ -453,17 +471,145 @@ def _fed(regs: List[Found], group: List[str]) -> str:
     return ", ".join(names) or "regulators"
 
 
-def _entry_part(b: _Board, net: str, devices: Set[str]) -> Tuple[Optional[str], str]:
-    """The part the power comes into ``net`` through, and how it was chosen."""
-    cands = [r for r in b.on(net) if r not in devices and not is_capacitor_ref(r)
-             and not re.match(r"^(R|L|FB|FL|TP)\d", r, re.IGNORECASE)
-             and b.role(r) != "ignore"]
+def _candidates(b: _Board, net: str, devices: Set[str]) -> List[str]:
+    """The parts on ``net`` the power could come in through."""
+    return [r for r in b.on(net) if r not in devices and not is_capacitor_ref(r)
+            and not re.match(r"^(R|L|FB|FL|TP)\d", r, re.IGNORECASE)
+            and b.role(r) != "ignore"]
+
+
+def _named_entry(b: _Board, net: str, devices: Set[str]) -> Tuple[Optional[str], str]:
+    """The part on ``net`` that is plainly an input: declared a source, or a connector."""
+    cands = _candidates(b, net, devices)
     declared = [r for r in cands if b.declared(r) == "source"]
     if declared:
         return declared[0], "its PI_VRM field says source"
     conns = [r for r in cands if _CONN_RE.match(r)]
     if conns:
         return conns[0], "its connector"
+    return None, ""
+
+
+def _gate(ns: Dict[str, List[str]]) -> Optional[str]:
+    """Which of a three-net transistor's nets is its gate: the one named so, else the one
+    of a single pin when another has several, else pin 1 (the gate of the usual packages)."""
+    named = [n for n in ns if _GATE_RE.search(n)]
+    if len(named) == 1:
+        return named[0]
+    lone = [n for n, pins in ns.items() if len(pins) == 1]
+    if len(lone) == 1:
+        return lone[0]
+    return next((n for n, pins in ns.items() if "1" in pins), None)
+
+
+def _fet_far(b: _Board, ref: str, net: str) -> Optional[str]:
+    """The net a transistor joins ``net`` to through its channel, or None."""
+    ns = b.nets(ref)
+    if not _FET_RE.match(ref) or len(ns) != 3 or net not in ns:
+        return None
+    gate = _gate(ns)
+    if gate is None or gate == net:
+        return None
+    far = next(n for n in ns if n not in (net, gate))
+    return None if b.ground(far) else far
+
+
+@dataclass
+class _Input:
+    """Where power comes in: part ``ref`` on ``net``, through ``path`` from the rail, each
+    step (part, the net towards the rail, the net towards the input)."""
+    ref: str
+    net: str
+    how: str
+    path: List[Tuple[str, str, str]]
+
+
+def _trace_inputs(b: _Board, rail: str, stop: Set[str], devices: Set[str]) -> List[_Input]:
+    """The inputs behind ``rail``. The first step is a transistor: a series part out of the
+    rail leads on down the tree. Each branch ends at a connector, or at the IC on the last
+    net with nowhere further to go; a branch into ``stop`` (a regulator's output) is dropped."""
+    found: List[_Input] = []
+
+    def walk(net: str, path: List[Tuple[str, str, str]], seen: Set[str]):
+        if path:
+            ref, how = _named_entry(b, net, devices)
+            if ref is not None:
+                found.append(_Input(ref, net, how, path))
+                return
+        crossed = {p[0] for p in path}
+        steps = []
+        for r in b.on(net):
+            if r in devices or r in crossed or b.role(r) == "ignore":
+                continue
+            far = _fet_far(b, r, net)
+            if far is None and path and b.series_out(r, net):
+                far = next(x for x in b.nets(r) if x != net)
+            if far is not None and far not in seen and far not in stop:
+                steps.append((r, far))
+        for r, far in steps:
+            walk(far, [*path, (r, net, far)], seen | {far})
+        if path and not steps and (b.cap_to_ground(net) or b.kinds.get(net) == "power"):
+            ics = [r for r in _candidates(b, net, devices) if _IC_RE.match(r)]
+            if ics:
+                found.append(_Input(ics[0], net, "the IC driving it", path))
+
+    walk(rail, [], {rail})
+    return found
+
+
+def _traced_rows(b: _Board, regs: List[Found], group: List[str], rail: str,
+                 inputs: List[_Input]) -> List[Found]:
+    """The source rows of ``inputs`` to ``rail``, then the switches on their way."""
+    shared = 0                          # steps every input's path has in common
+    if len(inputs) > 1:
+        for steps in zip(*(i.path for i in inputs)):
+            if len(set(steps)) > 1:
+                break
+            shared += 1
+    else:
+        shared = len(inputs[0].path)
+    join = inputs[0].path[shared - 1][2] if shared else rail
+    or_group = join if len(inputs) > 1 else ""
+    path_nets = {rail} | {p[2] for i in inputs for p in i.path}
+    crossed = {p[0] for i in inputs for p in i.path}
+    bias = sorted({r for n in path_nets for r in b.on(n)
+                   if r not in crossed and _FET_RE.match(r)
+                   and len(path_nets & set(b.nets(r))) > 1}, key=_ref_key)
+    names = ", ".join(f"{i.ref} on {i.net}" for i in inputs)
+    out, switches = [], {}
+    for i in inputs:
+        pins = b.nets(i.ref).get(i.net, [])
+        via = ", ".join(p[0] for p in i.path)
+        f = Found(i.ref, "source", PinRef(i.ref, i.net, list(pins)),
+                  ground=guess_ground_pins(b.snap, None, None, PinRef(i.ref, i.net)),
+                  why=f"source: {i.net} feeds {_fed(regs, group)} through {via}; {i.how}",
+                  check=f"one of the ORed inputs to {join} ({names}): pick the one in use"
+                  if or_group else f"traced back through {via}: check it is the input",
+                  use=not or_group, or_group=or_group, bias=bias)
+        if or_group:
+            f.branch = [p[0] for p in i.path[shared:]]
+            f.branch_nets = [p[2] for p in i.path[shared:]]
+        _voltage(b, f, i.net)
+        out.append(f)
+        for n, (r, near, far) in enumerate(i.path):
+            if r in switches or not _FET_RE.match(r):
+                continue
+            ns = b.nets(r)
+            switches[r] = Found(
+                r, "switch", PinRef(r, near, list(ns[near])), PinRef(r, far, list(ns[far])),
+                why=f"switch: {r} joins {far} to {near}, as a DC connection",
+                check="" if b.field(r, "PI_R") else
+                "its on-resistance is not known (PI_R): taken as a short",
+                or_group=or_group if n >= shared else "")
+    return out + list(switches.values())
+
+
+def _entry_part(b: _Board, net: str, devices: Set[str]) -> Tuple[Optional[str], str]:
+    """The part the power comes into ``net`` through, and how it was chosen."""
+    ref, how = _named_entry(b, net, devices)
+    if ref is not None:
+        return ref, how
+    cands = _candidates(b, net, devices)
 
     def path(r: str) -> bool:
         """In the power's path: on another net that is not a ground (not a TVS diode)."""
@@ -483,9 +629,28 @@ def _entry_part(b: _Board, net: str, devices: Set[str]) -> Tuple[Optional[str], 
 # The whole tree
 # ---------------------------------------------------------------------------
 
-def find_tree(snap: BoardSnapshot, library: Optional[PartsLibrary] = None) -> List[Found]:
+def _remember_pick(found: List[Found], setup: PISetup):
+    """Pick again the ORed input ``setup`` already has a source on, and its voltage."""
+    groups: Dict[str, List[Found]] = {}
+    for f in found:
+        if f.or_group and f.kind != "switch":
+            groups.setdefault(f.or_group, []).append(f)
+    for rows in groups.values():
+        hits = [(f, v) for f in rows for v in setup.vrms
+                if v.kind == "source" and v.output.net == f.rail]
+        if len(hits) != 1:
+            continue
+        f, v = hits[0]
+        f.use = True
+        if f.voltage is None:
+            f.voltage, f.voltage_from = v.voltage, "setup"
+
+
+def find_tree(snap: BoardSnapshot, library: Optional[PartsLibrary] = None,
+              base: Optional[PISetup] = None) -> List[Found]:
     """Every regulator on the board, then a source for each input rail none drives: the
-    sources first, then the regulators by their rails' order down the tree."""
+    sources first, then the regulators by their rails' order down the tree. ``base``: the
+    setup so far, whose choice among ORed inputs stands."""
     if library is None:
         library = PartsLibrary.load(library_paths(snap.project_dir))
     b = _Board(snap, library)
@@ -496,6 +661,8 @@ def find_tree(snap: BoardSnapshot, library: Optional[PartsLibrary] = None) -> Li
     regs += _declared(b, taken)
     # A part the user calls a source is a source, wherever it sits.
     srcs = _sources(b, regs)
+    if base is not None:
+        _remember_pick(srcs, base)
     return srcs + _tree_order(regs)
 
 
@@ -526,6 +693,29 @@ def to_vrm(f: Found, name: str, include_ground: bool) -> Vrm:
     return v
 
 
+def _ored_inputs(found: List[Found]) -> Tuple[Set[str], Set[str]]:
+    """(parts, nets) of the ORed inputs not picked, to leave out of the tree. An error
+    unless each group has exactly one picked."""
+    groups: Dict[str, List[Found]] = {}
+    for f in found:
+        if f.or_group and f.kind != "switch":
+            groups.setdefault(f.or_group, []).append(f)
+    parts: Set[str] = set()
+    nets: Set[str] = set()
+    for join, rows in groups.items():
+        picked = [f for f in rows if f.use]
+        if len(picked) != 1:
+            raise AutofillError(f"pick one input to {join}, of "
+                                f"{', '.join(f'{f.ref} on {f.rail}' for f in rows)}: they are ORed")
+        for f in rows:
+            if f is not picked[0]:
+                parts |= set(f.branch)
+                nets |= set(f.branch_nets)
+        parts -= set(picked[0].branch)
+        nets -= set(picked[0].branch_nets)
+    return parts, nets
+
+
 def autofill_tree(snap: BoardSnapshot, found: List[Found], base: Optional[PISetup] = None,
                   library: Optional[PartsLibrary] = None, include_ground: bool = False,
                   max_link_ohm: float = DEFAULT_MAX_LINK_OHM) -> AutofillResult:
@@ -534,14 +724,23 @@ def autofill_tree(snap: BoardSnapshot, found: List[Found], base: Optional[PISetu
     one rail. A part that is a VRM's input is not a load on the rail feeding it."""
     if library is None:
         library = PartsLibrary.load(library_paths(snap.project_dir))
+    left_out, left_nets = _ored_inputs(found)
+    left_out |= {r for f in found for r in f.bias}
     rows = [f for f in found if f.use and f.kind != "switch"]
     switches = {f.ref: (f.input.net, f.rail) for f in found
-                if f.use and f.kind == "switch" and f.input is not None}
+                if f.use and f.kind == "switch" and f.input is not None
+                and f.ref not in left_out}
     outs = {f.rail for f in rows}
     feeds = {x for f in rows for x in f.feeds()}
     inductors = {i for f in rows for i in f.inductors}
     switch_nets = {n for f in rows for n in f.switch_nets}
     setup = copy.deepcopy(base) if base is not None else PISetup()
+    # An input picked before and not now must not stay on as a second source.
+    setup.vrms = [v for v in setup.vrms if v.output.net not in left_nets]
+    setup.loads = [l for l in setup.loads if l.supply.net not in left_nets]
+    setup.links = [k for k in setup.links
+                   if k.side_a.net not in left_nets and k.side_b.net not in left_nets]
+    setup.nets = [n for n in (setup.nets or []) if n not in left_nets]
     notes: List[str] = []
     nets: List[str] = []
     missing: Dict[str, object] = {}
@@ -558,7 +757,7 @@ def autofill_tree(snap: BoardSnapshot, found: List[Found], base: Optional[PISetu
             notes.append(f"{name}: voltage not known, set to 1 V; set it on the VRMs tab")
         vrm = to_vrm(f, name, include_ground)
         w = _Walker(snap, f.rail, f.output.ref, library, include_ground, max_link_ohm,
-                    vrm=vrm, taken=f.refs() | inductors, feeds=feeds,
+                    vrm=vrm, taken=f.refs() | inductors | left_out, feeds=feeds,
                     stop=(outs - {f.rail}) | switch_nets, switches=switches)
         rail_nets = w.run()
         setup = _merge(setup, w, rail_nets)

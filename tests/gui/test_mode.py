@@ -48,7 +48,7 @@ def test_power_tree_buttons_are_pi_only(window):
         assert bar.btn_autofill.isHidden() is not shown
         assert bar.btn_import.isHidden() is not shown
         assert not bar.btn_save.isHidden()
-        # The Power tree tab, beside the 3D view, and its toolbar button.
+        # The Power tree tab, beside the 3D view, and its key.
         assert window.views.isTabVisible(tab) is shown
         assert window.act_power_tree.isVisible() is shown
 

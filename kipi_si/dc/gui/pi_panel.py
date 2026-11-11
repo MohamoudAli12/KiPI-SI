@@ -2447,34 +2447,79 @@ class PIPanel(QWidget, PartSelection):
 
     # ------------------------------------------------------------------ new items
     def _first_net(self) -> Optional[str]:
-        """The net a new item goes on: the one selected in the Nets list, else the first
-        ticked."""
-        if not self._nets:
-            self.lbl_errors.setText("• Tick nets in the Board panel first")
-            return None
+        """The net selected in the Nets list if it is ticked, else (nothing selected) the
+        first ticked; None, with the reason shown, when there is none."""
         if self.picked_nets:
             net = next((n for n in self.picked_nets if n in self._nets), None)
             if net is None:
-                self.lbl_errors.setText(f"• Tick {self.picked_nets[0]} in the Board panel first")
+                self.lbl_errors.setText(
+                    f"• {self.picked_nets[0]} is selected but not ticked: tick it in the "
+                    "Board panel's Nets list to add on it")
             return net
+        if not self._nets:
+            self.lbl_errors.setText("• No net is ticked: tick the net in the Board panel's "
+                                    "Nets list (or select a ticked one) to add on it")
+            return None
         return self._nets[0]
 
-    def _first_part(self, net) -> str:
-        parts = parts_on_net(self.snapshot, net)
-        return parts[0][0] if parts else ""
+    def _new_on_net(self, noun: str, make: Callable[[str], object]):
+        """A new item from ``make(net)``, which returns the item, or a string saying why
+        ``net`` takes no new one (it already has it). The net: the one selected in the Nets
+        list, else the first ticked rail (not a ground) that takes one, so pressing Add
+        again moves on to the next rail rather than repeating one. None, with the reason
+        shown, when there is none."""
+        if self.picked_nets:
+            net = self._first_net()
+            if net is None:
+                return None
+            obj = make(net)
+            if isinstance(obj, str):
+                self.lbl_errors.setText(f"• {obj}")
+                return None
+            return obj
+        if not self._nets:
+            self.lbl_errors.setText(f"• No net is ticked: tick the rail in the Board panel's "
+                                    f"Nets list (or select a ticked one) to add a {noun} on it")
+            return None
+        grounds = setup_grounds(self.setup)
+        rails = [n for n in self._nets if not looks_like_ground(self.snapshot, n, grounds)]
+        for net in rails:
+            obj = make(net)
+            if not isinstance(obj, str):
+                return obj
+        self.lbl_errors.setText(
+            f"• Every ticked rail already has a {noun}: tick another rail, or select a net "
+            f"in the Nets list to add one on it" if rails else
+            f"• Only ground nets are ticked: tick the rail in the Board panel's Nets list "
+            f"(or select it) to add a {noun} on it")
+        return None
 
     def _new_vrm(self):
-        net = self._first_net()
-        return None if net is None else new_vrm(self.snapshot, self.setup, self._nets, net)
+        def make(net):
+            v = next((v for v in self.setup.vrms
+                      if (v.output and v.output.net == net)
+                      or any(p.output.net == net for p in v.phases)), None)
+            if v is not None:
+                return (f"{net} already has a VRM ({v.name}): select another net in the "
+                        "Nets list, or use Duplicate to add another phase or source")
+            return new_vrm(self.snapshot, self.setup, self._nets, net)
+        return self._new_on_net("VRM", make)
 
     def _new_load(self):
-        net = self._first_net()
-        if net is None:
-            return None
-        ref = self._first_part(net)
-        supply = PinRef(ref, net)
-        return Load(_unique(ref or "LOAD1", [x.name for x in self.setup.loads]), supply, 0.1,
-                    ground=guess_ground_pins(self.snapshot, self.setup, self._nets, supply))
+        def make(net):
+            # The busiest part on the net that has no load on it yet; never a capacitor.
+            loaded = {l.supply.ref for l in self.setup.loads if l.supply.net == net}
+            refs = [r for r, _, _ in parts_on_net(self.snapshot, net)
+                    if not is_capacitor_ref(r)] or [""]
+            ref = next((r for r in refs if r not in loaded), None)
+            if ref is None:
+                return (f"Every part on {net} already has a load: select another net in "
+                        "the Nets list, or use Duplicate")
+            supply = PinRef(ref, net)
+            return Load(_unique(ref or "LOAD1", [x.name for x in self.setup.loads]), supply,
+                        0.1, ground=guess_ground_pins(self.snapshot, self.setup, self._nets,
+                                                      supply))
+        return self._new_on_net("load", make)
 
     def split_load_across_nets(self, ref: Optional[str] = None, dialog=None):
         """Share a part's total current over the supply nets the user ticks, as a load on
@@ -2552,8 +2597,17 @@ class PIPanel(QWidget, PartSelection):
             self.load_list.changed.emit()
 
     def _new_link(self):
-        net = self._first_net()
-        return None if net is None else new_link(self.snapshot, self.setup, self._nets, net)
+        def ends(k):
+            return frozenset(((k.side_a.ref, k.side_a.net), (k.side_b.ref, k.side_b.net)))
+
+        def make(net):
+            k = new_link(self.snapshot, self.setup, self._nets, net)
+            same = next((x for x in self.setup.links if ends(x) == ends(k)), None)
+            if same is not None:
+                return (f"The series link from {net} is already there ({same.name}): edit "
+                        "it below, select another net in the Nets list, or use Duplicate")
+            return k
+        return self._new_on_net("series link", make)
 
     @staticmethod
     def _describe_vrm(v: Vrm) -> str:

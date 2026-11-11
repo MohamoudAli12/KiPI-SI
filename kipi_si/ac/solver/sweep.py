@@ -3,7 +3,10 @@
 1. At the field-solve frequencies (``field_points_per_decade``), the copper model is
    factorized once and solved for every port: the board's port impedance matrix Z_b.
 2. jω·Z_b, smooth across frequency (the plane capacitance's 1/jω is taken out), is
-   interpolated onto the full sweep (PCHIP on log f, real and imaginary parts).
+   interpolated onto the full sweep (PCHIP on log f, real and imaginary parts). It is
+   smooth only below the planes' first cavity resonance: where a solved frequency is not
+   what its neighbours interpolate to, the copper is solved at the sweep's frequencies
+   between (:func:`refine_field`).
 3. At each sweep frequency the parts terminate their ports, and the impedance at each
    probe is Z_pp − Z_pE (Z_EE + diag Z_e)⁻¹ Z_Ep (the other probes stay open). A
    multi-pin part (#193) is a port from its side A to each other side, the ports sharing
@@ -14,6 +17,7 @@
 
 from __future__ import annotations
 
+import math
 import time
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -262,6 +266,86 @@ def _interpolate(f_field: np.ndarray, zb: np.ndarray, freqs: np.ndarray) -> np.n
     return (re + 1j * im) / (1j * 2 * np.pi * freqs)[:, None, None]
 
 
+# Adaptive field solves: a solved frequency its neighbours interpolate to within FIELD_TOL
+# (of the port matrix's largest entry there) needs no more around it.
+FIELD_TOL = 0.02
+FIELD_NEIGHBOURS = 3          # solved frequencies each side an interpolation is made from
+# With the sweep solved at its own points around a resonance, it is said to show it poorly
+# when a point is still this far from what its neighbours interpolate to.
+FIELD_NOTE_TOL = 0.1
+MAX_EXTRA_FIELD_SOLVES = 600
+
+
+def interpolation_error(f_field: np.ndarray, zb: np.ndarray) -> np.ndarray:
+    """How far each solved frequency's Z_b is from what the frequencies around it (without
+    it) interpolate to, over the largest entry of Z_b there; 0 at the two ends. It is
+    small where the sweep's interpolation holds, and large beside a resonance the solved
+    frequencies do not resolve."""
+    n = len(f_field)
+    err = np.zeros(n)
+    for k in range(1, n - 1):
+        near = np.r_[max(0, k - FIELD_NEIGHBOURS):k, k + 1:min(n, k + 1 + FIELD_NEIGHBOURS)]
+        zi = _interpolate(f_field[near], zb[near], f_field[k:k + 1])[0]
+        err[k] = np.abs(zi - zb[k]).max() / max(np.abs(zb[k]).max(), 1e-300)
+    return err
+
+
+def refine_field(solve, f_field: np.ndarray, zb: np.ndarray, freqs: np.ndarray,
+                 tol: float = FIELD_TOL, max_extra: int = MAX_EXTRA_FIELD_SOLVES,
+                 progress: ProgressReporter = NULL):
+    """Solve the copper at more frequencies until the interpolation between them holds.
+
+    ``solve(f)`` gives Z_b at one frequency. Each interval beside a solved frequency
+    whose :func:`interpolation_error` is over ``tol`` is halved, again and again, at one
+    of the sweep's own frequencies ``freqs`` (the one nearest its middle on log f): where
+    the copper resonates the sweep ends up solved at its own points, with nothing left to
+    interpolate, and no finer, which would show nothing more. At most ``max_extra`` more
+    solves. Returns (frequencies, Z_b, note): the note says what could not be resolved,
+    else it is ""."""
+    f_field, zb = np.asarray(f_field, dtype=float), np.asarray(zb)
+    freqs = np.asarray(freqs, dtype=float)
+    extra, note = 0, ""
+    while len(f_field) >= 3:
+        err = interpolation_error(f_field, zb)
+        new = set()
+        for k in np.flatnonzero(err > tol):
+            for a, b in ((k - 1, k), (k, k + 1)):
+                lo, hi = f_field[a] * (1 + 1e-9), f_field[b] * (1 - 1e-9)
+                inside = freqs[(freqs > lo) & (freqs < hi)]
+                if len(inside):
+                    mid = 0.5 * (math.log(f_field[a]) + math.log(f_field[b]))
+                    new.add(float(inside[np.argmin(np.abs(np.log(inside) - mid))]))
+        if not new:
+            if (err > max(tol, FIELD_NOTE_TOL)).any():
+                k = int(np.argmax(err))
+                note = (f"The impedance changes faster than the sweep's points resolve "
+                        f"around {fmt_hz(f_field[k])} (a resonance of the planes): more "
+                        "points per decade would show it better")
+            break
+        todo = sorted(new)
+        if extra + len(todo) > max_extra:
+            todo = todo[:max(max_extra - extra, 0)]
+            note = (f"The copper was solved at {max_extra} more frequencies and the "
+                    "interpolation between them still does not hold everywhere (many "
+                    "resonances of the planes in the sweep)")
+            if not todo:
+                break
+        progress.info(f"  the interpolation does not hold at {len(new)} interval(s): "
+                      f"solving {len(todo)} more frequencies, {fmt_hz(todo[0])} to "
+                      f"{fmt_hz(todo[-1])}")
+        z_new = []
+        for f in todo:
+            progress.check_cancel()
+            z_new.append(solve(f))
+        extra += len(todo)
+        f_all = np.concatenate([f_field, todo])
+        order = np.argsort(f_all)
+        f_field, zb = f_all[order], np.concatenate([zb, np.array(z_new)])[order]
+        if note:
+            break
+    return f_field, zb, note
+
+
 def terminate(zb: np.ndarray, freqs: np.ndarray, ports: List[PortDef]) -> np.ndarray:
     """Impedance at each probe port (columns), with every part on its port."""
     probe_idx = [i for i, p in enumerate(ports) if p.kind == "probe"]
@@ -461,6 +545,13 @@ def solve_ac(snap: BoardSnapshot, setup: PISetup, vrm_name: str, gnd: str,
             if k == 0:
                 progress.info(f"  first frequency took {time.perf_counter() - t1:.2f} s "
                               f"({system.stats.method})")
+        if s.field_adaptive and len(f_field) < len(freqs):
+            f_field, zb, why = refine_field(
+                lambda f: system.port_impedance(2 * np.pi * f, progress), f_field, zb,
+                freqs, progress=progress)
+            if why:
+                notes.append(why)
+                progress.warn(why)
     finally:
         system.close()
     system.stats.times["field"] = time.perf_counter() - t1

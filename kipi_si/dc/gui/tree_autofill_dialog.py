@@ -42,7 +42,8 @@ class TreeAutofillDialog(QDialog):
         intro = QLabel(
             "KiPI-SI found these sources, regulators and switches on the board. Check them, "
             "untick any to leave out, and give each a voltage; OK fills every rail's loads, "
-            "series parts and capacitors under them. Orange cells are guesses to check.", self)
+            "series parts and capacitors under them. Orange cells are guesses to check. Inputs "
+            "ORed on to one rail only supply it one at a time: tick the one in use.", self)
         intro.setWordWrap(True)
         lay.addWidget(intro)
         self.table = QTableWidget(len(self.rows), len(COLS), self)
@@ -55,7 +56,7 @@ class TreeAutofillDialog(QDialog):
         hdr.setSectionResizeMode(len(COLS) - 1, QHeaderView.Stretch)
         for i, f in enumerate(self.rows):
             self._fill_row(i, f)
-        self.table.itemChanged.connect(lambda it: self._update() if it.column() == 0 else None)
+        self.table.itemChanged.connect(self._item_changed)
         lay.addWidget(self.table, 1)
         form = QFormLayout()
         self.ground = QCheckBox("Include the ground pins (simulates the ground net too: slower)",
@@ -79,13 +80,16 @@ class TreeAutofillDialog(QDialog):
         self.buttons.rejected.connect(self.reject)
         lay.addWidget(self.buttons)
         self.resize(1100, 160 + 34 * min(len(self.rows), 14))
+        self._sync_branches()
         self._update()
 
     # ------------------------------------------------------------------ rows
     def _fill_row(self, i: int, f: Found):
         t = self.table
         use = QTableWidgetItem()
-        use.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+        # A switch on one ORed input's own branch follows the pick.
+        follows = f.kind == "switch" and f.or_group
+        use.setFlags(Qt.ItemIsEnabled if follows else Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
         use.setCheckState(Qt.Checked if f.use else Qt.Unchecked)
         t.setItem(i, 0, use)
         if f.kind == "source":
@@ -172,14 +176,49 @@ class TreeAutofillDialog(QDialog):
         self._shade(i)
         self._update()
 
+    def _item_changed(self, item: QTableWidgetItem):
+        if item.column() != 0:
+            return
+        f = self.rows[item.row()]
+        if f.or_group and f.kind != "switch" and item.checkState() == Qt.Checked:
+            self.table.blockSignals(True)
+            for i, other in enumerate(self.rows):
+                if other is not f and other.or_group == f.or_group and other.kind != "switch":
+                    self.table.item(i, 0).setCheckState(Qt.Unchecked)
+            self.table.blockSignals(False)
+        self._sync_branches()
+        self._update()
+
+    def _sync_branches(self):
+        """Tick the switches on the picked ORed inputs' branches, and only those."""
+        picked = {r for i, f in enumerate(self.rows)
+                  if f.or_group and f.kind != "switch" and self._used(i) for r in f.branch}
+        self.table.blockSignals(True)
+        for i, f in enumerate(self.rows):
+            if f.or_group and f.kind == "switch":
+                self.table.item(i, 0).setCheckState(Qt.Checked if f.ref in picked
+                                                    else Qt.Unchecked)
+        self.table.blockSignals(False)
+
+    def _unpicked(self) -> List[str]:
+        """A message for each group of ORed inputs with none ticked."""
+        groups = {}
+        for i, f in enumerate(self.rows):
+            if f.or_group and f.kind != "switch":
+                groups.setdefault(f.or_group, []).append((f"{f.ref} on {f.rail}", self._used(i)))
+        return [f"Pick the input to {join} in use: {', '.join(r for r, _ in refs)}."
+                for join, refs in groups.items() if not any(u for _, u in refs)]
+
     def _update(self):
         missing = [f.ref for i, f in enumerate(self.rows) if self._used(i)
                    and f.kind != "switch" and not f.voltage]
+        unpicked = self._unpicked()
         n = sum(self._used(i) for i in range(len(self.rows)))
-        self.buttons.button(QDialogButtonBox.Ok).setEnabled(n > 0 and not missing)
-        self.status.setText(f"Give {', '.join(missing)} a voltage." if missing else
-                            f"{n} of {len(self.rows)} in use.")
-        self.status.setStyleSheet("color: #d04040;" if missing else "color: #999;")
+        self.buttons.button(QDialogButtonBox.Ok).setEnabled(
+            n > 0 and not missing and not unpicked)
+        problems = unpicked + ([f"Give {', '.join(missing)} a voltage."] if missing else [])
+        self.status.setText(" ".join(problems) or f"{n} of {len(self.rows)} in use.")
+        self.status.setStyleSheet("color: #d04040;" if problems else "color: #999;")
 
     def _used(self, i: int) -> bool:
         it = self.table.item(i, 0)

@@ -94,7 +94,9 @@ def test_a_ferrite_between_the_grounds_is_in_the_loop(solved):
     # between, it is interpolated). The planes' kilohms at 100 kHz leave a residue of a
     # few parts per million.
     f = ferrite.freqs
-    solved_at = np.isclose(f[:, None], ferrite.field_freqs[None, :], rtol=1e-9).any(axis=1)
+    solved_at = np.ones(len(f), dtype=bool)          # in both solves (each adds its own)
+    for res in (short, ferrite):
+        solved_at &= np.isclose(f[:, None], res.field_freqs[None, :], rtol=1e-9).any(axis=1)
     zs, zf = short.probes[0].z[solved_at], ferrite.probes[0].z[solved_at]
     expected = 0.05 + 2j * np.pi * f[solved_at] * 2e-9
     assert solved_at.sum() >= 4

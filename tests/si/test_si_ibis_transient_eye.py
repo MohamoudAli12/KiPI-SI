@@ -9,7 +9,8 @@ import pytest
 from kipi_si.si import eye as eyes
 from kipi_si.si import ibis, sparams
 from kipi_si.si.network import Circuit
-from kipi_si.si.transient import Device, LinearPort, Stimulus, port_transfer, simulate
+from kipi_si.si.transient import (Device, LinearPort, Stimulus, impulse_responses, port_transfer,
+                                  simulate)
 
 C0_MM_S = 299792458e3
 
@@ -120,6 +121,40 @@ def test_transient_matched_line():
     t_cross = tr.t[np.argmax(v_far > 0.5)]
     assert t_cross == pytest.approx(1.5e-9 + delay + 50e-12, abs=60e-12)
     assert v_far.max() < 1.08
+
+
+def _lossy_line_y(r_ohm, z0, delay_s, freqs):
+    """Y of a line with series R, as a 2-port."""
+    w = 2 * np.pi * freqs
+    z = r_ohm + 1j * w * z0 * delay_s
+    yc = 1j * w * delay_s / z0
+    g = np.sqrt(z * yc)
+    zc = np.sqrt(z / yc)
+    a, b = 1 / (zc * np.tanh(g)), -1 / (zc * np.sinh(g))
+    return np.array([[[x, y_], [y_, x]] for x, y_ in zip(a, b)])
+
+
+def test_impulse_responses_sum_to_dc():
+    freqs = np.arange(1, 1001) * 2e7
+    s = sparams.s_from_y(_lossy_line_y(0.5, 42.0, 500e-12, freqs), 50.0)
+    h, _ = impulse_responses(freqs, s, 3e-12)
+    exact = np.array([[0.5 / 100.5, 100 / 100.5], [100 / 100.5, 0.5 / 100.5]])
+    assert np.allclose(h.sum(axis=-1), exact, atol=2e-3)
+
+
+def test_transient_starts_and_ends_settled_on_a_mismatched_line():
+    """A line that is not 50 Ω: its first point and its last are the DC divider."""
+    freqs = np.arange(1, 1001) * 2e7
+    y = _lossy_line_y(0.5, 42.0, 500e-12, freqs)
+    drv = ibis.buffer(ibis.generic_driver(1.0, 42.5, 67e-12, 0.5e-12))
+    rcv = ibis.buffer(ibis.generic_receiver(1.0, 0.5e-12))
+    devs = [Device(drv, Stimulus([1, 0, 1], 1e-9, 0.5e-9)),
+            Device(rcv, r_term=42.5, v_term=0.0)]
+    tr = simulate(freqs, y, devs, 12e-9, 5e-12)
+    tx, rx = 43.0 / 85.5, 42.5 / 85.5
+    for k in (0, -1):
+        assert tr.v[k, 0] == pytest.approx(tx, abs=6e-3)
+        assert tr.v[k, 1] == pytest.approx(rx, abs=6e-3)
 
 
 def test_linear_transfer_halves_into_a_match():

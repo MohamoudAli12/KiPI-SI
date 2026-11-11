@@ -175,3 +175,50 @@ def test_extraction_reuses_cuts_along_a_straight_run():
     ext = extract(snap, "SIG", ["SW"], 0.5, 3.0)
     assert len(ext.segments) == 25
     assert ext.solves < 12 and ext.cached > 20
+
+
+# ---------------------------------------------------------------- a victim high over its plane
+
+def _thick_board(h, two_layer, sw=True):
+    """A victim microstrip ``h`` over its ground plane, a switch node's pour 1 mm from its
+    edge."""
+    from shapely.geometry import box
+    from validation_boards import boards as vb
+    st = vb.stackup((vb.OZ1, vb.OZ1), (h,)) if two_layer else vb.stackup(diel=(h, 0.4, h))
+    w = 2.9 if two_layer else 0.35
+    b = vb.Board("thick", st)
+    b.track("SIG", vb.F, w, (10.0, 20.0), (50.0, 20.0))
+    if sw:
+        b.zone("SW", vb.F, box(20.0, 20.0 + w / 2 + 1.0, 40.0, 20.0 + w / 2 + 6.0))
+    b.zone("GND", vb.B if two_layer else vb.IN1, box(0, 0, 60, 40))
+    return b.snapshot(), vb, w
+
+
+def test_a_cut_reaches_past_a_victim_high_over_its_plane():
+    snap, vb, w = _thick_board(1.5, True)
+    cuts = BoardCuts(snap, "SIG", ["SW"], 3.0)
+    seg = Segment((29.5, 20.0), (30.5, 20.0), vb.F, w)
+    rects, _, box = cuts.section(seg)
+    assert box[1] == pytest.approx(13.5)                # 1.45 + 8 × 1.5 mm
+    plane = max((r for r in rects if r.group == "ground"), key=lambda r: r.x1 - r.x0)
+    assert plane.x1 - plane.x0 == pytest.approx(27.0)   # the plane cut again, as wide
+    assert box[3] - box[2] > 2 * 13.5                   # the lid and the floor as far off
+    thin, vb, w = _thick_board(0.2, False)
+    _, _, box = BoardCuts(thin, "SIG", ["SW"], 3.0).section(
+        Segment((29.5, 20.0), (30.5, 20.0), vb.F, w))
+    assert box[1] == pytest.approx(3.0)                 # near its plane: the window as set
+
+
+def test_a_victim_high_over_its_plane_has_its_impedance_and_coupling():
+    """On a 2-layer board the ±3 mm cut's grounded box stood in for the plane 1.5 mm
+    below: the victim read 43 Ω for 49, and the box took the switch node's field, which
+    left its coupling 45 % low."""
+    from kipi_si.si import closed_form as cf
+    snap, vb, w = _thick_board(1.5, True, sw=False)
+    seg = extract(snap, "SIG", [], 40.0, 3.0, vb.ER).segments[0]
+    z0, _ = cf.microstrip(w, 1.5, vb.ER, vb.OZ1)
+    assert seg.z0_ohm == pytest.approx(z0, rel=0.04)
+    snap, vb, w = _thick_board(1.5, True)
+    cm = extract(snap, "SIG", ["SW"], 40.0, 3.0, vb.ER).segments[0].cm["SW"]
+    far = extract(snap, "SIG", ["SW"], 40.0, 30.0, vb.ER).segments[0].cm["SW"]
+    assert cm == pytest.approx(far, rel=0.05)           # as a cut far wider gives

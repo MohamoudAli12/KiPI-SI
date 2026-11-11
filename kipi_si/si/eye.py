@@ -223,7 +223,7 @@ CONTOUR_BERS = (1e-3, 1e-6, 1e-9, 1e-12, 1e-15)
 
 
 def statistical_eye(p: Pulse, ber: float = 1e-12, rj_ui: float = 0.0, dj_ui: float = 0.0,
-                    noise_v: float = 0.0, levels: int = 512, eq: Optional[Equalizer] = None,
+                    noise_v: float = 0.0, levels: int = 1024, eq: Optional[Equalizer] = None,
                     xtalk: Sequence[Pulse] = (), swing: float = 1.0,
                     phases_per_ui: Optional[int] = None) -> EyeResult:
     """The statistical eye of NRZ 0/1 through pulse response ``p`` (per unit swing), on
@@ -291,14 +291,33 @@ def _centre(pv: np.ndarray) -> int:
     return (i0 + i1) // 2
 
 
+def _bin_shifts(c: np.ndarray, dv: float) -> np.ndarray:
+    """Each cursor's shift in whole bins of ``dv``. What rounding a cursor leaves over is
+    carried to the next cursor of its sign, the largest first, so the positive cursors'
+    sum and the negative ones' (the worst-case ISI either way) are kept to half a bin.
+    Rounding each on its own drops every cursor under half a bin: a long tail of small
+    reflections, which together close the eye, would count for nothing."""
+    c = np.atleast_1d(np.asarray(c, dtype=float))
+    out = np.zeros(len(c), dtype=int)
+    carry = {1: 0.0, -1: 0.0}
+    for k in np.argsort(-np.abs(c), kind="stable"):
+        if c[k] == 0:
+            continue
+        sign = 1 if c[k] > 0 else -1
+        x = abs(c[k]) / dv + carry[sign]
+        n = int(math.floor(x + 0.5))
+        carry[sign] = x - n
+        out[k] = sign * n
+    return out
+
+
 def _isi_pdf(c: np.ndarray, lv: np.ndarray, dv: float) -> np.ndarray:
     """The PDF over levels ``lv`` of Σ b_k·c_k, b_k ∈ {0, 1} equally likely."""
     n = len(lv)
     pdf = np.zeros(n)
     zero = int(round(-lv[0] / dv))
     pdf[min(max(zero, 0), n - 1)] = 1.0
-    for h in c:
-        s = int(round(h / dv))
+    for s in _bin_shifts(c, dv):
         if s == 0:
             continue
         moved = np.zeros(n)
@@ -311,9 +330,9 @@ def _isi_pdf(c: np.ndarray, lv: np.ndarray, dv: float) -> np.ndarray:
 
 
 def _convolve_pdf(pdf, cursors_x, lv):
+    """``pdf`` with each of ``cursors_x`` added or taken off, equally likely."""
     dv = lv[1] - lv[0]
-    for h in np.atleast_1d(cursors_x):
-        s = int(round(h / dv))
+    for s in _bin_shifts(np.abs(np.atleast_1d(cursors_x)), dv):
         if s == 0:
             continue
         a = np.roll(pdf, s)
@@ -461,7 +480,7 @@ def optimize(freqs: np.ndarray, h: np.ndarray, ui_s: float, rise_s: float,
             main_i = int(np.argmax(np.abs(taps)))
             eq = Equalizer(tuple(taps), main_i, float(g), dfe_taps)
             pl = Pulse(base.t, apply_ffe(base.v, spui, eq), ui_s, spui)
-            e = statistical_eye(pl, 1e-12, eq=eq, levels=256)
+            e = statistical_eye(pl, 1e-12, eq=eq, levels=512)
             if best is None or e.height_v > best[0]:
                 best = (e.height_v, eq, pl)
     return best[1], best[2]

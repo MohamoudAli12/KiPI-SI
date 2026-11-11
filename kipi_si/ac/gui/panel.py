@@ -34,7 +34,7 @@ from kipi_si.core.model.board import BoardSnapshot
 from kipi_si.core.model.nets import classify_nets, sorted_nets
 from kipi_si.dc.gui.pi_panel import (
     OPTIONAL, REQUIRED, ItemList, LinkEditor, PartSelection, PIPanel, VrmEditor, _Editor,
-    _spin, _unique, make_searchable, new_link, new_vrm, parts_on_net, tip,
+    _spin, _unique, make_searchable, parts_on_net, tip,
 )
 from kipi_si.dc.pi.autofill import guess_ground_pins, part_nets
 from kipi_si.dc.pi.load_model import apply_to_probe, new_items
@@ -1185,13 +1185,10 @@ class ACPanel(QWidget, PartSelection):
         parts = parts_on_net(self.snapshot, net)
         return parts[0][0] if parts else ""
 
-    def _new_vrm(self):
-        net = self._first_net()
-        return None if net is None else new_vrm(self.snapshot, self.setup, self._nets, net)
-
-    def _new_link(self):
-        net = self._first_net()
-        return None if net is None else new_link(self.snapshot, self.setup, self._nets, net)
+    # The VRMs and series links are the PI panel's, so Add picks their net as it does there.
+    _new_on_net = PIPanel._new_on_net
+    _new_vrm = PIPanel._new_vrm
+    _new_link = PIPanel._new_link
 
     def _new_cap(self):
         return new_cap(self.setup)

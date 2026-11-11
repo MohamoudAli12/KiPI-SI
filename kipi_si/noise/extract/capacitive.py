@@ -116,35 +116,77 @@ class BoardCuts:
         return LineString([seg.a, seg.b]).distance(self.agg_union) <= self.window
 
     def section(self, seg: Segment) -> Tuple[List[Rect], List[Band], tuple]:
-        """The cross-section at the segment's middle, x along the cut from its centre."""
-        from shapely.geometry import LineString
+        """The cross-section at the segment's middle, x along the cut from its centre.
+
+        The cut reaches the window to each side, at least: a trace high over its reference
+        (a thick dielectric, a 2-layer board) is cut wider (:meth:`window_for`), since the
+        grounded box that closes the cut would else stand in for the far-off plane and
+        take the field the switch node's copper should."""
         mx, my = (seg.a[0] + seg.b[0]) / 2, (seg.a[1] + seg.b[1]) / 2
         ux, uy = (seg.b[0] - seg.a[0]) / seg.length_mm, (seg.b[1] - seg.a[1]) / seg.length_mm
         nx, ny = -uy, ux
         w = self.window
-        cut = LineString([(mx - w * nx, my - w * ny), (mx + w * nx, my + w * ny)])
+        pieces = self._pieces(mx, my, nx, ny, w)
+        wide = self.window_for(seg, pieces)
+        if wide > w + 1e-9:
+            w = wide
+            pieces = self._pieces(mx, my, nx, ny, w)
         rects: List[Rect] = []
         vl = self.stack.layer(seg.layer)
         rects.append(Rect(-seg.width_mm / 2, seg.width_mm / 2, vl.z_bottom_mm, vl.z_top_mm,
                           VICTIM))
         keep_out = (-seg.width_mm / 2, seg.width_mm / 2)
+        for lay, (x0, x1), group in pieces:
+            if lay.id == seg.layer:              # not over the victim itself
+                x0, x1 = _clip_out(x0, x1, keep_out)
+                if x1 - x0 < 1e-4:
+                    continue
+            rects.append(Rect(x0, x1, lay.z_bottom_mm, lay.z_top_mm, group))
+        grow = max(2.0, w) - max(2.0, self.window)      # the lid and floor move out as far
+        box = (-w, w, self.z_range[0] - grow, self.z_range[1] + grow)
+        return rects, self.bands, box
+
+    def _pieces(self, mx, my, nx, ny, w: float) -> list:
+        """(copper layer, (x0, x1) along the cut, group) of the copper a cut ``w`` to each
+        side of (mx, my) crosses: the switch nodes' and the references'."""
+        from shapely.geometry import LineString
+        cut = LineString([(mx - w * nx, my - w * ny), (mx + w * nx, my + w * ny)])
+        out = []
         for lay in self.stack.copper:
-            pieces = []
             for n in self.switch_nets:
                 g = self.agg.get((n, lay.id))
                 if g is not None:
-                    pieces += [(iv, n) for iv in _intervals(cut, g, mx, my, nx, ny)]
+                    out += [(lay, iv, n) for iv in _intervals(cut, g, mx, my, nx, ny)]
             g = self.ref.get(lay.id)
             if g is not None:
-                pieces += [(iv, GROUND) for iv in _intervals(cut, g, mx, my, nx, ny)]
-            for (x0, x1), group in pieces:
-                if lay.id == seg.layer:          # not over the victim itself
-                    x0, x1 = _clip_out(x0, x1, keep_out)
-                    if x1 - x0 < 1e-4:
-                        continue
-                rects.append(Rect(x0, x1, lay.z_bottom_mm, lay.z_top_mm, group))
-        box = (-w, w, *self.z_range)
-        return rects, self.bands, box
+                out += [(lay, iv, GROUND) for iv in _intervals(cut, g, mx, my, nx, ny)]
+        return out
+
+    def window_for(self, seg: Segment, pieces: list) -> float:
+        """How far to each side the segment's cut must reach: the window, or
+        :data:`kipi_si.si.board.WINDOW_HEIGHTS` times its height over its reference past its
+        edge, if that is more (as :meth:`kipi_si.si.board.SIBoard.window_for`). The height
+        is to the farther of the nearest references above and below that cover its width;
+        with neither, the board's thickness. Rounded up to 0.5 mm."""
+        from kipi_si.si.board import WINDOW_HEIGHTS
+        half = seg.width_mm / 2
+        vl = self.stack.layer(seg.layer)
+        above = below = None
+        for lay, (x0, x1), group in pieces:
+            if group != GROUND or lay.id == seg.layer or x0 > -half - 1e-3 or x1 < half + 1e-3:
+                continue
+            if lay.z_bottom_mm >= vl.z_top_mm:
+                d = lay.z_bottom_mm - vl.z_top_mm
+                above = d if above is None else min(above, d)
+            else:
+                d = vl.z_bottom_mm - lay.z_top_mm
+                below = d if below is None else min(below, d)
+        ds = [d for d in (above, below) if d is not None]
+        h = max(ds) if ds else self.stack.board_thickness_mm
+        need = half + WINDOW_HEIGHTS * h
+        if need <= self.window:
+            return self.window
+        return math.ceil(need / 0.5 - 1e-9) * 0.5
 
 
 def _intervals(cut, geom, mx, my, nx, ny) -> List[Tuple[float, float]]:

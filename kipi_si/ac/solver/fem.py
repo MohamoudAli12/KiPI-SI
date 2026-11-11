@@ -20,6 +20,13 @@ For two facing planes this is exactly the plane-pair (cavity) model: loop induct
 and cavity resonances come out of the mesh. Via inductance comes out the same way: the
 current spreading from a barrel on the faces around it gives μ₀h/(2π)·ln(R/r).
 
+Narrow copper is not a plane pair: under a trace about as wide as its height over the
+return, much of the field fringes round it, and μ₀h per square would make it about twice
+too inductive. Each triangle's copper has a local width (:func:`local_width`), and the
+faces of copper under :data:`FRINGE_WIDE` heights wide take the height h·F(w/h)
+(:func:`fringe_factor`, fitted to the 2D field solve of a trace over a plane); a trace
+with a return on one side carries the rest on its other face.
+
 The two faces meet wherever current can pass from one to the other around the copper:
 on the copper boundary (plane edges, antipads, trace edges), drill rings and terminal
 pads. Capacitance ε₀ε_r/h·(1 − j·tanδ) per facing area is lumped onto the rail face nodes
@@ -39,6 +46,7 @@ field solve independent of the part values.
 
 from __future__ import annotations
 
+import math
 import time
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
@@ -68,6 +76,52 @@ SHIELDED_FACE_HEIGHT = 1000  # x board thickness: the inductance height of a shi
 # Copper at a temperature (#77): triangles whose resistivity is within this fraction share
 # one sheet impedance per frequency, so a board's temperature map costs a few evaluations.
 RHO_STEP = 1e-3
+
+
+# Narrow copper over its return. μ₀h per square is the loop inductance of a plane pair,
+# where the field between the two coppers is uniform. Under a trace not much wider than
+# its height h over the return, much of the field fringes out of the gap and round the
+# trace: its inductance is well under the parallel-plate μ₀h/w (about half at w = h, a
+# third at w = h/2). Copper of local width w looking at a return h away takes the height
+# h·F(w/h) (ACSystem._fringe), F by FRINGE_U and FRINGE_F (straight lines on log w/h).
+# F is fitted: with it, a trace over a wide plane has the inductance per length of the 2D
+# field solve of its cross-section (kipi_si.si.xsection) at 100 MHz, for h = 0.1, 0.2 and
+# 0.5 mm under 1 oz copper, to about ±7 %. Between 4 and 40 heights wide it is a little
+# over 1: there the return's spread in the plane, as the sheet model has it, is too wide.
+# Copper over FRINGE_WIDE heights wide is a plane: F = 1.
+FRINGE_U = (0.25, 0.5, 1.0, 1.5, 2.5, 4.0, 6.0, 10.0, 20.0, 40.0, 80.0)
+FRINGE_F = (0.20, 0.345, 0.553, 0.70, 0.875, 1.03, 1.12, 1.20, 1.18, 1.05, 1.0)
+FRINGE_WIDE = FRINGE_U[-1]
+WIDTH_MIN_MM = 0.04           # the narrowest copper told apart
+WIDTH_STEP = 1.25             # each width tried is this much wider than the last
+
+
+def fringe_factor(u):
+    """The share F of the parallel-plate height the face of copper ``u`` = w/h wide takes
+    (see :data:`FRINGE_U`)."""
+    u = np.maximum(np.asarray(u, dtype=float), 1e-6)
+    return np.interp(np.log(u), np.log(FRINGE_U), FRINGE_F)
+
+
+def local_width(geom, xy: np.ndarray, w_max: float) -> np.ndarray:
+    """The width of the copper ``geom`` (a shapely geometry) around each point of ``xy``
+    ((N, 2) mm): the widest disc that fits in the copper and still covers the point is
+    that wide (a trace's width, a neck's, the gap between two cut-outs of a plane). Found
+    by opening the copper (eroding it by w/2, then growing it back) with widths growing
+    by :data:`WIDTH_STEP`: a point the opening loses lies in copper narrower than w.
+    ``inf`` where the copper is wider than ``w_max``, and for points not in the copper."""
+    xy = np.asarray(xy, dtype=float).reshape(-1, 2)
+    out = np.full(len(xy), np.inf)
+    todo = np.flatnonzero(shapely.contains_xy(geom.buffer(1e-3), xy[:, 0], xy[:, 1]))
+    w_prev, w = WIDTH_MIN_MM / WIDTH_STEP, WIDTH_MIN_MM
+    while len(todo) and w_prev < w_max:
+        opened = geom.buffer(-w / 2, join_style=2).buffer(w / 2 * 1.001 + 1e-6, join_style=2)
+        inside = (shapely.contains_xy(opened, xy[todo, 0], xy[todo, 1])
+                  if not opened.is_empty else np.zeros(len(todo), dtype=bool))
+        out[todo[~inside]] = math.sqrt(w_prev * w)
+        todo = todo[inside]
+        w_prev, w = w, w * WIDTH_STEP
+    return out
 
 
 class ACError(RuntimeError):
@@ -490,6 +544,7 @@ class ACSystem:
         h_far = max(st.board_thickness_mm, 0.5)
         h_ext = np.full((len(tris), 2), h_far)
         cap_tri, cap_face, cap_layer, cap_c = [], [], [], []
+        faced = []                              # (triangles, face, gap) looking at a return
         for li in np.unique(tri_li):
             sel = np.flatnonzero(tri_li == li)
             for face, step in ((0, -1), (1, +1)):          # top looks up, bottom down
@@ -507,6 +562,7 @@ class ACSystem:
                         opposite = np.where(tri_kind[tri_here] == 0, hit_g[hit], hit_r[hit])
                         gap, er = self._gap(li, j)
                         h_ext[tri_here[opposite], face] = gap
+                        faced.append((tri_here[opposite], face, gap))
                         rail_faces = tri_here[opposite & (tri_kind[tri_here] == 0)]
                         if len(rail_faces):
                             cap_tri.append(rail_faces)
@@ -515,12 +571,14 @@ class ACSystem:
                             cap_c.append(EPS0_F_PER_MM * er / gap * area[rail_faces])
                     todo = todo[~hit]
                     j += step
+        facing = h_ext < h_far
+        open_face = self._fringe(h_ext, faced, cen, tri_li, tri_kind, geom)
         # A face that sees no return while the sheet's other face does is shielded: the
         # field lives in the cavity on the other side, so it carries almost no current at
         # high frequency (on a plane pair, the outer faces). Splitting the current in
         # inverse proportion to a "board thickness" height there made the loop inductance
         # of a plane pair about 12% low.
-        facing = h_ext < h_far
+        facing = facing | open_face
         one_sided = facing.any(axis=1) & ~facing.all(axis=1)
         h_ext[one_sided & ~facing[:, 0], 0] = SHIELDED_FACE_HEIGHT * h_far
         h_ext[one_sided & ~facing[:, 1], 1] = SHIELDED_FACE_HEIGHT * h_far
@@ -559,8 +617,48 @@ class ACSystem:
         self.total_plane_capacitance = float(self._cap_c.sum())
         progress.info(f"Dielectric εr, top to bottom: "
                       f"{dielectric_summary(self.snap.stackup, self.ac.default_er)}")
+        if self.narrow_faces:
+            progress.info(f"Narrow copper (under {FRINGE_WIDE:g} heights wide over its "
+                          f"return): {self.narrow_faces} triangle faces take the fringing "
+                          "field's inductance")
         progress.info(f"Rail-to-ground plane capacitance "
                       f"{self.total_plane_capacitance * 1e9:.3f} nF")
+
+    def _fringe(self, h_ext, faced, cen, tri_li, tri_kind, geom) -> np.ndarray:
+        """Lower the inductance of narrow copper that looks at a return (``faced``:
+        triangles, face, gap) by the fringing of the field around it: F =
+        :func:`fringe_factor` of each triangle's :func:`local_width` over the gap.
+
+        Copper with a return on one side only keeps the gap as that face's height, and its
+        other face, which a plane's is shielded at, takes the rest of the field: the height
+        h·F/(1 − F), so that the two faces together are h·F (the current of a narrow trace
+        flows on both its faces, which also shares the copper's internal inductance
+        between them). Returns those other faces, (triangles, 2) bool. Copper between two
+        returns, and F above 1, scale each facing height by F."""
+        layers = self.snap.stackup.copper
+        tri_gap = np.zeros(len(cen))
+        sees = np.zeros((len(cen), 2), dtype=bool)
+        for tris, face, gap in faced:
+            tri_gap[tris] = np.maximum(tri_gap[tris], gap)
+            sees[tris, face] = True
+        width = np.full(len(cen), np.inf)
+        for li in np.unique(tri_li[tri_gap > 0]):
+            for kind in (0, 1):
+                sel = np.flatnonzero((tri_li == li) & (tri_kind == kind) & (tri_gap > 0))
+                g = geom[kind].get(layers[li].id)
+                if len(sel) and g is not None:
+                    width[sel] = local_width(g, cen[sel], FRINGE_WIDE * tri_gap[sel].max())
+        open_face = np.zeros((len(cen), 2), dtype=bool)
+        narrow = 0
+        for tris, face, gap in faced:
+            f = fringe_factor(width[tris] / gap)
+            one = ~sees[tris, 1 - face] & (f < 0.999)
+            h_ext[tris[~one], face] = gap * f[~one]
+            h_ext[tris[one], 1 - face] = gap * f[one] / (1 - f[one])
+            open_face[tris[one], 1 - face] = True
+            narrow += int((np.abs(f - 1) > 1e-3).sum())
+        self.narrow_faces = narrow
+        return open_face
 
     def _gap(self, i: int, j: int) -> Tuple[float, float]:
         """Distance between the facing faces of copper layers i and j (stack indices) and

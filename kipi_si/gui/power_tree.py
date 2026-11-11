@@ -71,7 +71,11 @@ def _frame_title(d: Diagram, c) -> str:
     return f"{len(blocks)} capacitor groups"
 
 class _View(QGraphicsView):
-    """Drag to pan, Ctrl + wheel (or plain wheel with no scroll bars) to zoom."""
+    """Drag (left or middle button) to pan, the wheel to zoom about the pointer, Shift +
+    wheel to scroll sideways; + / - zoom about the centre and 0 fits the tree."""
+
+    STEP = 1.2
+    MIN_ZOOM, MAX_ZOOM = 0.05, 8.0
 
     def __init__(self, scene, parent=None):
         super().__init__(scene, parent)
@@ -79,14 +83,78 @@ class _View(QGraphicsView):
         self.setRenderHint(QPainter.TextAntialiasing)
         self.setDragMode(QGraphicsView.ScrollHandDrag)
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+        self.setResizeAnchor(QGraphicsView.AnchorViewCenter)
+        self.setFocusPolicy(Qt.StrongFocus)
+        self._mid_pan = None                   # where a middle-button drag last was
+
+    def zoom(self) -> float:
+        return self.transform().m11()
+
+    def zoom_by(self, f: float, at_pointer: bool = False):
+        """Scale by ``f``, kept within MIN_ZOOM..MAX_ZOOM."""
+        z = self.zoom()
+        f = max(self.MIN_ZOOM / z, min(self.MAX_ZOOM / z, f))
+        if abs(f - 1.0) < 1e-9:
+            return
+        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse if at_pointer
+                                     else QGraphicsView.AnchorViewCenter)
+        self.scale(f, f)
+        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+
+    def zoom_in(self):
+        self.zoom_by(self.STEP)
+
+    def zoom_out(self):
+        self.zoom_by(1 / self.STEP)
 
     def wheelEvent(self, e):
-        if e.modifiers() & Qt.ControlModifier:
-            f = 1.15 if e.angleDelta().y() > 0 else 1 / 1.15
-            self.scale(f, f)
+        dy = e.angleDelta().y()
+        if e.modifiers() & Qt.ShiftModifier or not dy:
+            super().wheelEvent(e)              # sideways scroll
+            return
+        self.zoom_by(self.STEP ** (dy / 120.0), at_pointer=True)
+        e.accept()
+
+    def mousePressEvent(self, e):
+        if e.button() == Qt.MiddleButton:
+            self._mid_pan = e.position() if hasattr(e, "position") else QPointF(e.pos())
+            self.viewport().setCursor(Qt.ClosedHandCursor)
             e.accept()
+            return
+        super().mousePressEvent(e)
+
+    def mouseMoveEvent(self, e):
+        if self._mid_pan is not None:
+            p = e.position() if hasattr(e, "position") else QPointF(e.pos())
+            d = p - self._mid_pan
+            self._mid_pan = p
+            h, v = self.horizontalScrollBar(), self.verticalScrollBar()
+            h.setValue(h.value() - int(d.x()))
+            v.setValue(v.value() - int(d.y()))
+            e.accept()
+            return
+        super().mouseMoveEvent(e)
+
+    def mouseReleaseEvent(self, e):
+        if e.button() == Qt.MiddleButton and self._mid_pan is not None:
+            self._mid_pan = None
+            self.viewport().unsetCursor()
+            e.accept()
+            return
+        super().mouseReleaseEvent(e)
+
+    def keyPressEvent(self, e):
+        k = e.key()
+        if k in (Qt.Key_Plus, Qt.Key_Equal):
+            self.zoom_in()
+        elif k in (Qt.Key_Minus, Qt.Key_Underscore):
+            self.zoom_out()
+        elif k == Qt.Key_0:
+            self.fit()
         else:
-            super().wheelEvent(e)
+            super().keyPressEvent(e)
+            return
+        e.accept()
 
     def fit(self):
         r = self.scene().itemsBoundingRect().adjusted(-20, -20, 20, 20)
@@ -111,8 +179,14 @@ class PowerTreeView(QWidget):
 
         self.lbl_notes = QLabel(self)
         self.lbl_notes.setWordWrap(True)
+        btn_zoom_in = QPushButton("Zoom in", self)
+        btn_zoom_in.setToolTip("Zoom in (+, or the wheel over the diagram)")
+        btn_zoom_in.clicked.connect(self.view.zoom_in)
+        btn_zoom_out = QPushButton("Zoom out", self)
+        btn_zoom_out.setToolTip("Zoom out (-, or the wheel over the diagram)")
+        btn_zoom_out.clicked.connect(self.view.zoom_out)
         btn_fit = QPushButton("Fit", self)
-        btn_fit.setToolTip("Fit the whole tree in the window (Ctrl + wheel zooms)")
+        btn_fit.setToolTip("Fit the whole tree in the window (0). Drag to pan.")
         btn_fit.clicked.connect(self.view.fit)
         btn_refresh = QPushButton("Refresh", self)
         btn_refresh.setToolTip("Redraw from the current setup")
@@ -122,7 +196,7 @@ class PowerTreeView(QWidget):
         btn_save.clicked.connect(self.save_image)
         bar = QHBoxLayout()
         bar.addWidget(self.lbl_notes, 1)
-        for b in (btn_fit, btn_refresh, btn_save):
+        for b in (btn_zoom_in, btn_zoom_out, btn_fit, btn_refresh, btn_save):
             bar.addWidget(b)
         lay = QVBoxLayout(self)
         lay.addWidget(self.view, 1)
