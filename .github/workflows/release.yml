@@ -2,7 +2,7 @@ name: Release zip
 
 # Attaches KiPI-SI-<tag>.zip to each published release. GitHub counts downloads of uploaded
 # assets only, not of the automatic "Source code" archives, so this is what makes release
-# downloads countable (stats.yml adds them up). Run it by hand with a tag to add the zip
+# downloads countable. Run it by hand with a tag to add the zip
 # to an existing release.
 
 on:

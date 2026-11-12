@@ -110,7 +110,8 @@ def test_without_xdg_open_linux_falls_back_to_qt(app, monkeypatch, tmp_path):
     monkeypatch.setattr(browser.QDesktopServices, "openUrl",
                         lambda url: opened.append(url.toLocalFile()) or True)
     assert browser.open_in_browser(tmp_path / "r.html")
-    assert opened == [str((tmp_path / "r.html").resolve())]
+    # Qt gives the local file with forward slashes, on Windows too.
+    assert [Path(p) for p in opened] == [(tmp_path / "r.html").resolve()]
 
 
 def test_open_help_without_the_guide_points_online(app, monkeypatch):

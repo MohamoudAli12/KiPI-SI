@@ -1,0 +1,15 @@
+# Git hooks run by prek (https://prek.j178.dev). Install them once per clone:
+#     uv run prek install
+# Run them on every file:  uv run prek run --all-files
+
+[[repos]]
+repo = "local"
+
+# The same ruff, pinned in pyproject.toml's lint group, and the same check CI's lint job runs.
+[[repos.hooks]]
+id = "ruff"
+name = "ruff check"
+language = "system"
+entry = "uv run --locked --only-group lint ruff check --force-exclude"
+types_or = ["python", "pyi"]
+require_serial = true

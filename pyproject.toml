@@ -66,7 +66,13 @@ test = [
     "pytest>=8",
     "pytest-timeout>=2.3",   # ends a test that hangs instead of holding a CI runner (#115)
 ]
-dev = ["kipi_si[kicad]", { include-group = "lint" }, { include-group = "test" }]
+dev = [
+    "kipi_si[kicad]",
+    "prek>=0.5.10",              # git hooks (prek.toml): `uv run prek install` once per clone
+    "bump-my-version>=1.8.1",    # `uv run bump-my-version bump patch|minor|major`
+    { include-group = "lint" },
+    { include-group = "test" },
+]
 docs = [
     "myst-parser>=4",
     "pydata-sphinx-theme>=0.16",
@@ -96,10 +102,43 @@ kipi_si = "kipi_si.__main__:main"
 module-name = "kipi_si"
 module-root = ""
 
+[tool.bumpversion]
+# Every place the version is written; tests/core/test_requirements.py keeps the first two equal.
+# docs/CHANGELOG.md is left to edit by hand.
+current_version = "0.9.3"
+commit = false
+tag = false
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "kipi_si/__init__.py"
+search = '__version__ = "{current_version}"'
+replace = '__version__ = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "README.md"
+search = "**Status: {current_version} "
+replace = "**Status: {new_version} "
+
+[[tool.bumpversion.files]]
+filename = "uv.lock"
+search = """
+name = "kipi-si"
+version = "{current_version}"
+"""
+replace = """
+name = "kipi-si"
+version = "{new_version}"
+"""
+
 [tool.ruff]
 target-version = "py310"
 line-length = 110
-extend-exclude = ["build"]
+extend-exclude = ["build", "examples"]   # examples/: generator scripts, kept as KiCad writes
 
 [tool.ruff.lint]
 # Pinned explicitly so a ruff upgrade does not change what CI enforces.

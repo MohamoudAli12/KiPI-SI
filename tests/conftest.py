@@ -1,7 +1,14 @@
 # Portions Copyright (c) 2026 Tomachie LLC.
 """Shared test fixtures."""
 
+import os
+
 import pytest
+
+# KiPI-SI always draws with Fusion (gui/app.py start_app); the tests build their own
+# QApplication, which would otherwise take the platform's style. Windows' windows11 style
+# draws spin boxes and combo boxes far wider, so sizes measured there are not the app's.
+os.environ["QT_STYLE_OVERRIDE"] = "Fusion"
 
 
 @pytest.fixture(autouse=True)
