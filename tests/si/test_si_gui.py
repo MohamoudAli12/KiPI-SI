@@ -8,7 +8,7 @@ import pytest
 pytest.importorskip("qtpy")
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from qtpy.QtWidgets import QApplication, QFormLayout  # noqa: E402
+from qtpy.QtWidgets import QApplication  # noqa: E402
 
 from helpers.si_boards import make_board  # noqa: E402
 from kipi_si.dc.pi.model import PISetup  # noqa: E402
@@ -62,6 +62,23 @@ def test_a_scanned_net_becomes_a_channel(panel, solved):
     assert panel.btn_solve.isEnabled()
     panel.btn_to_channel.click()                # the same net again: no second channel
     assert len(panel.setup.si_channels) == 1
+
+
+def test_the_nets_ticked_in_the_scan_become_channels(panel, solved):
+    from qtpy.QtCore import Qt
+    _, _, _, sc = solved
+    panel.show_scan(sc)
+    t = panel.tbl_scan
+    assert not panel.btn_to_channel.isEnabled()  # nothing ticked or selected
+    for r in range(t.rowCount()):                # a pair's two legs: one channel
+        if t.item(r, 0).data(Qt.UserRole) in ("CLK", "USB_P", "USB_N"):
+            t.item(r, 0).setCheckState(Qt.Checked)
+    assert panel.btn_to_channel.isEnabled()
+    panel.btn_to_channel.click()
+    names = sorted(c.name for c in panel.setup.si_channels)
+    assert names == ["CLK", "USB_P/USB_N"]
+    panel.btn_to_channel.click()                # the same nets again: no more channels
+    assert len(panel.setup.si_channels) == 2
 
 
 def test_add_makes_channels_for_the_nets_ticked_in_board(panel):

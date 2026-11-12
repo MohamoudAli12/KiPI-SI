@@ -714,12 +714,14 @@ class SIPanel(QWidget, SolveTab):
         self.tbl_scan.verticalHeader().setVisible(False)
         self.tbl_scan.setSortingEnabled(True)
         self.tbl_scan.itemSelectionChanged.connect(self._scan_selected)
+        self.tbl_scan.itemChanged.connect(self._scan_ticked)
         v.addWidget(self.tbl_scan, 2)
         row = QHBoxLayout()
         row.addStretch(1)
         self.btn_to_channel = QPushButton("Make a channel")
-        self.btn_to_channel.setToolTip("Add the selected net (and its pair) as a channel, "
-                                       "its worst neighbour as an aggressor")
+        self.btn_to_channel.setToolTip("Add a channel for each net ticked (else the selected "
+                                       "one), with its pair, its worst neighbour as an "
+                                       "aggressor")
         self.btn_to_channel.clicked.connect(self._scan_to_channel)
         self.btn_to_channel.setEnabled(False)
         row.addWidget(self.btn_to_channel)
@@ -1155,6 +1157,8 @@ class SIPanel(QWidget, SolveTab):
 
             name = QTableWidgetItem(ns.net + (f" / {ns.partner}" if ns.partner else ""))
             name.setData(Qt.UserRole, ns.net)
+            name.setFlags(name.flags() | Qt.ItemIsUserCheckable)
+            name.setCheckState(Qt.Unchecked)
             t.setItem(r, 0, name)
             t.setItem(r, 1, _status_item(ns.status))
             z = QTableWidgetItem(f"{ns.z_min:.1f}–{ns.z_max:.1f}" if ns.z_max else "")
@@ -1169,13 +1173,14 @@ class SIPanel(QWidget, SolveTab):
             t.setItem(r, 8, num(ns.skew_mm, "{:.2f}"))
         t.setSortingEnabled(True)
         t.resizeColumnsToContents()
+        self._scan_selected()
         n = len(scan.nets)
         fails = sum(ns.status == "FAIL" for ns in scan.nets)
         warns = sum(ns.status == "WARN" for ns in scan.nets)
         self.txt_scan.setHtml(f"{n} net(s) in {scan.seconds:.1f} s: "
                               f'<span style="color:{STATUS_COLORS["FAIL"]}">{fails} FAIL</span>'
                               f', <span style="color:{STATUS_COLORS["WARN"]}">{warns} WARN'
-                              "</span>. Select a net for its findings."
+                              "</span>. Select a net for its findings; tick nets to make channels of them."
                               + _skipped_html(getattr(scan, "skipped_slow", [])))
 
     def _scan_net(self):
@@ -1192,9 +1197,27 @@ class SIPanel(QWidget, SolveTab):
             return None
         return [ns.net] + ([ns.partner] if ns.partner else [])
 
+    def _scan_ticked_nets(self) -> list:
+        """The ticked rows' scans, in table order."""
+        if self.scan_result is None:
+            return []
+        by_net, out = self.scan_result.by_net(), []
+        for r in range(self.tbl_scan.rowCount()):
+            it = self.tbl_scan.item(r, 0)
+            if it is not None and it.checkState() == Qt.Checked:
+                ns = by_net.get(it.data(Qt.UserRole))
+                if ns is not None:
+                    out.append(ns)
+        return out
+
+    def _scan_ticked(self, item):
+        if item.column() == 0:
+            self.btn_to_channel.setEnabled(bool(self._scan_ticked_nets()) or
+                                           self._scan_net() is not None)
+
     def _scan_selected(self):
         ns = self._scan_net()
-        self.btn_to_channel.setEnabled(ns is not None)
+        self.btn_to_channel.setEnabled(ns is not None or bool(self._scan_ticked_nets()))
         if ns is None:
             return
         lines = [f"<b>{html.escape(ns.net)}</b>"
@@ -1210,23 +1233,29 @@ class SIPanel(QWidget, SolveTab):
         self.overlay_changed.emit()
 
     def _scan_to_channel(self):
-        ns = self._scan_net()
-        if ns is None:
+        """A channel for each net ticked in the scan (else the selected one); a net that
+        has one already just selects it."""
+        scans = self._scan_ticked_nets()
+        if not scans:
+            ns = self._scan_net()
+            scans = [ns] if ns is not None else []
+        if not scans:
             return
-        net, partner = ns.net, ns.partner
-        if partner and partner < net and not net.endswith(("P", "+", "_p")):
-            net, partner = partner, net
-        existing = next((c for c in self.setup.si_channels if c.net in (net, partner)), None)
-        if existing is None:
-            ch = self._unique(new_channel(net, partner))
-            if ns.worst_aggressor and ns.worst_kb >= 0.5 * self.setup.si.kb_limit:
-                ch.aggressors = [ns.worst_aggressor]
-            self.ch_list.add(ch)
-            existing = ch
+        last = None
+        for ns in scans:
+            net, partner = ns.net, ns.partner
+            if partner and partner < net and not net.endswith(("P", "+", "_p")):
+                net, partner = partner, net
+            last = next((c for c in self.setup.si_channels if c.net in (net, partner)), None)
+            if last is None:
+                last = self._unique(new_channel(net, partner))
+                if ns.worst_aggressor and ns.worst_kb >= 0.5 * self.setup.si.kb_limit:
+                    last.aggressors = [ns.worst_aggressor]
+                self.ch_list.add(last)
         self._fill_channels()
-        self.cmb_channel.setCurrentIndex(self.cmb_channel.findData(existing.name))
+        self.cmb_channel.setCurrentIndex(self.cmb_channel.findData(last.name))
         self.tabs.setCurrentWidget(self.ch_list)
-        self.ch_list.select_name(existing.name)
+        self.ch_list.select_name(last.name)
 
     def _add_bus(self):
         if self.snapshot is None:
