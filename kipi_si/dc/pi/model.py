@@ -410,11 +410,11 @@ class PISetup:
     thermal: ThermalSettings = field(default_factory=ThermalSettings)   # off by default
     html_report: bool = False                     # unused: reports on demand (#185)
     report_format: str = "html"                   # "html" or "pdf" (#119)
-    # Nets ticked in the Board panel (the nets in scope). None = never chosen, so the
-    # GUI guesses the main power and ground planes; [] = the user unticked them all.
+    # Nets ticked in the Board panel (the nets in scope). None = never chosen: the GUI
+    # ticks none, or the nets the VRMs, loads and links are on; [] = none ticked.
     nets: Optional[List[str]] = None
     # The same for Signal Integrity mode, which has its own: its data nets are no part of
-    # the power analyses' scope. None = never chosen (the channels' nets, or the pairs).
+    # the power analyses' scope. None = never chosen (none, or the channels' nets).
     si_nets: Optional[List[str]] = None
     # DC: net groups with any of these nets are left out of the solve (see active_setup).
     excluded_nets: List[str] = field(default_factory=list)

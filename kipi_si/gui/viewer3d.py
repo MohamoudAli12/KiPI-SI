@@ -12,8 +12,9 @@ from vtkmodules.vtkCommonCore import vtkPoints, vtkStringArray
 from vtkmodules.vtkCommonDataModel import vtkCellArray, vtkPolyData
 from vtkmodules.vtkRenderingCore import vtkActor, vtkActor2D, vtkCellPicker, vtkPolyDataMapper
 from vtkmodules.vtkRenderingLabel import vtkLabeledDataMapper
-from qtpy.QtCore import QTimer, Signal
-from qtpy.QtWidgets import QVBoxLayout, QWidget
+from qtpy.QtCore import QEvent, QTimer, Signal
+from qtpy.QtGui import QPalette
+from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 from kipi_si.core.viz.batch import Chunk, MeshBatcher
 from kipi_si.core.viz.polydata import arrays, set_cell_array, set_point_array, triangles
@@ -98,10 +99,27 @@ _BAR_WIDTH = 0.03
 _BAR_Y, _BAR_HEIGHT = 0.25, 0.5
 
 
+# The view's background (bottom, top of the gradient), the color of its text (the color
+# bars' labels and titles, the axes' letters) and of the board's outline, dark or light
+# with the windows' theme.
+SCHEMES = {
+    True: dict(background=("#1e1f24", "#3a3d46"), text=(1.0, 1.0, 1.0), outline="#9fd39f"),
+    False: dict(background=("#e9ebef", "#c3c8d1"), text=(0.08, 0.09, 0.11),
+                outline="#2f7a3a"),
+}
+_scheme = SCHEMES[True]          # the shown one: set by Viewer3D.apply_theme
+
+
+def palette_is_dark(pal: Optional[QPalette] = None) -> bool:
+    """Whether the windows are dark: their background is darker than mid-grey."""
+    pal = pal or QApplication.instance().palette()
+    return pal.color(QPalette.Window).lightness() < 128
+
+
 def _bar_args(title: str, fmt: str) -> dict:
     return dict(title=title, vertical=True, position_x=_BAR_RIGHT - _BAR_WIDTH,
                 position_y=_BAR_Y, height=_BAR_HEIGHT, width=_BAR_WIDTH, fmt=fmt,
-                title_font_size=14, color="white", label_font_size=12, n_labels=6)
+                title_font_size=14, color=_scheme["text"], label_font_size=12, n_labels=6)
 
 
 def _bar_title_actor(title: str):
@@ -112,7 +130,7 @@ def _bar_title_actor(title: str):
     actor.SetInput(title)
     prop = actor.GetTextProperty()
     prop.SetFontSize(14)
-    prop.SetColor(1.0, 1.0, 1.0)
+    prop.SetColor(*_scheme["text"])
     prop.SetJustificationToRight()
     prop.SetVerticalJustificationToBottom()
     actor.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport()
@@ -320,10 +338,10 @@ class Viewer3D(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         self.plotter = QtInteractor(self)
         layout.addWidget(self.plotter.interactor)
-        self.plotter.set_background("#1e1f24", top="#3a3d46")
         # FXAA is a cheap post-process; SSAA re-renders the scene several times per frame.
         self.plotter.enable_anti_aliasing("fxaa")
         self.plotter.add_axes()
+        self._dark: Optional[bool] = None
 
         self._batch = MeshBatcher()
         self._chunk_actors: Dict[Chunk, vtkActor] = {}
@@ -402,6 +420,43 @@ class Viewer3D(QWidget):
         iren.add_observer("LeftButtonPressEvent", self._on_left_press)
         iren.add_observer("LeftButtonReleaseEvent", self._on_left_release)
 
+        self.apply_theme(palette_is_dark())
+
+    # ------------------------------------------------------------------ theme
+    def changeEvent(self, event):
+        """Follow the windows' dark or light theme (:mod:`kipi_si.gui.theme`)."""
+        if event.type() in (QEvent.PaletteChange, QEvent.ApplicationPaletteChange):
+            self.apply_theme(palette_is_dark())
+        super().changeEvent(event)
+
+    def apply_theme(self, dark: bool):
+        """A dark or light background, and text that reads on it: the color bars' labels
+        and titles and the axes' letters, those drawn already and those to come."""
+        global _scheme
+        if dark == self._dark:
+            return
+        self._dark = dark
+        _scheme = SCHEMES[dark]
+        bottom, top = _scheme["background"]
+        text = _scheme["text"]
+        p = self.plotter
+        p.set_background(bottom, top=top)
+        for bar in p.scalar_bars.values():
+            bar.GetLabelTextProperty().SetColor(*text)
+            bar.GetTitleTextProperty().SetColor(*text)
+        for actor in [*self._bar_titles, self._coupling_title, self._field_title]:
+            if actor is not None:
+                actor.GetTextProperty().SetColor(*text)
+        axes = getattr(p.renderer, "axes_actor", None)
+        if axes is not None:
+            for cap in (axes.GetXAxisCaptionActor2D(), axes.GetYAxisCaptionActor2D(),
+                        axes.GetZAxisCaptionActor2D()):
+                cap.GetCaptionTextProperty().SetColor(*text)
+        outline = p.actors.get("outline")
+        if outline is not None:
+            outline.prop.color = _scheme["outline"]
+        p.render()
+
     # ------------------------------------------------------------------ scene
     def set_board(self, body: Optional[pv.PolyData], outline: Optional[pv.PolyData],
                   reset_view: bool = True):
@@ -439,7 +494,8 @@ class Viewer3D(QWidget):
                                                  name="board", pickable=False,
                                                  reset_camera=False, render=False))
         if outline is not None:
-            self._board_actors.append(p.add_mesh(outline, color="#9fd39f", line_width=1.5,
+            self._board_actors.append(p.add_mesh(outline, color=_scheme["outline"],
+                                                 line_width=1.5,
                                                  name="outline", pickable=False,
                                                  reset_camera=False, render=False))
         for a in self._board_actors:

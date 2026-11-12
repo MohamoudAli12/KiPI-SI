@@ -68,7 +68,7 @@ def test_add_makes_channels_for_the_nets_ticked_in_board(panel):
     add = panel.ch_list.buttons.itemAt(0).widget()
     add.click()                                 # nothing ticked: nothing added, and why
     assert panel.setup.si_channels == []
-    assert "Tick the nets" in panel.lbl_errors.text()
+    assert "Tick the nets" in panel.lbl_notice.text()
     panel.set_nets(["USB_N", "CLK", "GND"])     # a pair's one leg: the pair, P its net
     add.click()
     chans = [(c.net, c.partner) for c in panel.setup.si_channels]
@@ -76,7 +76,7 @@ def test_add_makes_channels_for_the_nets_ticked_in_board(panel):
     assert panel.ch_list.current().net == "CLK"
     add.click()                                 # the same nets again: no second channel
     assert len(panel.setup.si_channels) == 2
-    assert "has a channel already" in panel.lbl_errors.text()
+    assert "has a channel already" in panel.lbl_notice.text()
 
 
 def test_the_editor_writes_overrides(panel):
@@ -249,13 +249,12 @@ def test_the_3d_view_settings(panel, solved):
                                            panel.chk_end_labels))
 
 
-def test_solve_is_under_the_channel_settings(panel):
-    # Set a channel up and solve it without leaving its settings: Solve is the form's
-    # last row, below the buffers.
+def test_solve_is_in_the_solve_tab_not_the_channel_settings(panel):
+    # Set the channels up, then solve them in the last tab, with their results.
     ed = panel.ch_list.editor
-    assert panel.btn_solve is ed.btn_solve
-    last = ed.form.itemAt(ed.form.rowCount() - 1, QFormLayout.ItemRole.SpanningRole)
-    assert last is not None and last.widget() is panel.btn_solve
+    assert not ed.isAncestorOf(panel.btn_solve)
+    assert panel.solve_page.isAncestorOf(panel.btn_solve)
+    assert panel.tabs.widget(panel.tabs.count() - 1) is panel.solve_page
 
 
 def test_not_fitted_parts_round_trip(panel):

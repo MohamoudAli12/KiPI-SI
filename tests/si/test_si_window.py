@@ -108,7 +108,7 @@ def test_selected_nets_are_picked_out(app, no_3d, tmp_path):
         it.setSelected(True)                               # the Nets list's pick wins
         assert focus() == {"USB_P"}
         w.net_list.clearSelection()
-        panel.tabs.setCurrentWidget(panel.tabs.widget(3))  # Settings: no net in focus
+        panel.tabs.setCurrentWidget(panel.tabs.widget(2))  # Settings: no net in focus
         assert focus() is None
     finally:
         w.close()

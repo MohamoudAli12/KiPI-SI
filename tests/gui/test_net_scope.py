@@ -1,6 +1,6 @@
 # Portions Copyright (c) 2026 Tomachie LLC.
 """The nets ticked in the Board panel are part of the setup: saved, restored, and kept
-when the board is re-read from KiCad. Only a board with no choice yet gets a guess."""
+when the board is re-read from KiCad. A new board starts with none ticked."""
 
 import json
 import os
@@ -99,6 +99,18 @@ def test_unticking_every_net_is_restored_as_empty_not_guessed(app, tmp_path):
     w._save_setup()
     w.close()
     w = _window(app, _board(tmp_path))
+    assert w._checked_nets() == []
+    w.close()
+
+
+def test_a_new_board_starts_with_no_nets_ticked(app, tmp_path):
+    # Its planes (VIN, VOUT and GND) are not guessed: the user picks the nets to analyse,
+    # for the power analyses and for Signal Integrity alike.
+    w = _window(app, _board(tmp_path))
+    assert w._checked_nets() == []
+    assert w.solve_panel.setup.nets == []
+    w.set_mode("si")
+    _idle(app, w)
     assert w._checked_nets() == []
     w.close()
 

@@ -26,7 +26,7 @@ from qtpy.QtWidgets import (
     QAbstractItemView, QCheckBox, QComboBox, QCompleter, QDialog, QDialogButtonBox,
     QDoubleSpinBox, QFormLayout, QGroupBox,
     QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMenu, QMessageBox,
-    QPushButton, QScrollArea, QSpinBox, QSplitter, QTableWidget, QTabWidget,
+    QPushButton, QScrollArea, QSpinBox, QTableWidget, QTabWidget,
     QTextBrowser, QToolButton, QVBoxLayout, QWidget,
 )
 
@@ -443,7 +443,7 @@ class _Editor(QWidget):
         text = NEED_LEGEND + (NEED_LEGEND_UNUSED if unused else "")
         lbl = QLabel(text)
         lbl.setWordWrap(True)
-        lbl.setStyleSheet("color: #999;")
+        lbl.setStyleSheet("color: #8c8c8c; font-size: 8pt; padding-bottom: 4px;")
         self.form.insertRow(0, lbl)
         self.lbl_legend = lbl
 
@@ -1465,29 +1465,31 @@ class ItemList(QWidget):
         self.lst.setToolTip(f"Select a {noun} to edit it below")
         #: The Add / Duplicate / Remove row, for panels that add buttons of their own.
         self.buttons = row = QHBoxLayout()
-        for text, slot, what in (("Add", self._add, f"Add a new {noun}"),
-                                 ("Duplicate", self._dup, f"Add a copy of the selected {noun}"),
-                                 ("Remove", self._remove, f"Delete the selected {noun}")):
+        from kipi_si.gui import icons
+        for text, slot, what, icon in (
+                ("Add", self._add, f"Add a new {noun}", "plus"),
+                ("Duplicate", self._dup, f"Add a copy of the selected {noun}", "copy"),
+                ("Remove", self._remove, f"Delete the selected {noun}", "trash")):
             b = QPushButton(text, self)
             b.setToolTip(what)
+            icons.attach(b, icon)
             b.clicked.connect(slot)
             row.addWidget(b)
-        split = QSplitter(Qt.Vertical, self)
-        top = QWidget()
-        tl = QVBoxLayout(top)
-        tl.setContentsMargins(0, 0, 0, 0)
-        tl.addWidget(self.lst)
-        tl.addLayout(row)
-        split.addWidget(top)
+        # The list's own buttons at the left; a panel's extra ones go at the right.
+        row.addStretch(1)
+        lay.addWidget(self.lst)
+        lay.addLayout(row)
         # The editor scrolls rather than setting the window's minimum height: a VRM's form
         # alone is taller than a 1080p screen leaves once the rest of the window is laid out.
+        # The list and the editor each get a grip under them (kipi_si.gui.height_grip).
         scroll = QScrollArea(self)
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QScrollArea.NoFrame)
         scroll.setWidget(editor)
-        split.addWidget(scroll)
-        split.setSizes([120, 280])
-        lay.addWidget(split)
+        scroll.setProperty("grip", True)
+        scroll.setProperty("grip_default", 320)
+        self.lst.setProperty("grip_default", 140)
+        lay.addWidget(scroll)
         editor.changed.connect(self._edited)
         editor.setEnabled(False)
 
@@ -1669,7 +1671,58 @@ class PartSelection:
         return True
 
 
-class PIPanel(QWidget, PartSelection):
+class SolveTab:
+    """The panel's last tab: Solve and the results, once the problem is set up in the tabs
+    before it (the DC, AC and Coupled Noise panels). While something stops the solve the
+    tab's title is red and its tooltip lists what; a solve's results, or its failure, bring
+    the tab to the front. Why an Add button added nothing shows under the tabs, in view
+    whichever tab is open. The panel has ``tabs`` and sets ``solve_tab_tip``."""
+    solve_tab_tip = ""
+
+    def _notice_label(self) -> QLabel:
+        """The line under the tabs for an Add button's reason for adding nothing."""
+        self.lbl_notice = QLabel(self)
+        self.lbl_notice.setWordWrap(True)
+        self.lbl_notice.setTextInteractionFlags(Qt.TextSelectableByMouse |
+                                                Qt.TextSelectableByKeyboard)
+        self.lbl_notice.setStyleSheet("color: #ff8080;")
+        self.lbl_notice.setVisible(False)
+        return self.lbl_notice
+
+    def notice(self, text: str):
+        """Show ``text`` under the tabs; "" hides the line."""
+        self.lbl_notice.setText(text)
+        self.lbl_notice.setVisible(bool(text))
+
+    def _solve_page(self) -> QVBoxLayout:
+        """The Solve tab's page, not yet added (:meth:`_add_solve_tab`), and its layout."""
+        self.solve_page = QWidget()
+        v = QVBoxLayout(self.solve_page)
+        v.setContentsMargins(4, 4, 4, 4)
+        return v
+
+    def _add_solve_tab(self):
+        i = self.tabs.addTab(self.solve_page, "Solve")
+        self.tabs.setTabToolTip(i, self.solve_tab_tip)
+        self.tabs.currentChanged.connect(lambda _i: self.notice(""))
+
+    def flag_solve_tab(self, errors: List[str]):
+        """Mark the Solve tab while ``errors`` stop the solve, and list them in its tooltip."""
+        page = getattr(self, "solve_page", None)
+        i = self.tabs.indexOf(page) if page is not None else -1
+        if i < 0:                       # still being built
+            return
+        self.tabs.tabBar().setTabTextColor(i, QColor("#ff8080") if errors else QColor())
+        self.tabs.setTabToolTip(i, self.solve_tab_tip + (
+            "\n\nNot ready to solve:\n" + "\n".join(f"• {e}" for e in errors)
+            if errors else ""))
+
+    def show_solve_tab(self):
+        """Bring the Solve tab, with the Solve button and the results, to the front."""
+        self.tabs.setCurrentWidget(self.solve_page)
+
+
+class PIPanel(QWidget, PartSelection, SolveTab):
     solve_requested = Signal(object)      # PISetup
     field_changed = Signal(str)
     scale_changed = Signal(object)         # (min, max) of the color scale, or None: auto
@@ -1683,6 +1736,8 @@ class PIPanel(QWidget, PartSelection):
     export_requested = Signal(str)         # "csv", "vtk" or "results"
     report_requested = Signal(str)         # a report of the shown results, "html" or "pdf"
     setup_changed = Signal()               # any edit to the setup
+    solve_tab_tip = ("Solve the ticked rails, once the VRMs, loads, series links, mesh and "
+                     "thermal are set up, and see the results")
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1716,15 +1771,16 @@ class PIPanel(QWidget, PartSelection):
         self.tabs.addTab(self.vrm_list, "VRMs")
         self.tabs.addTab(self.load_list, "Loads")
         self.tabs.addTab(self.link_list, "Series links")
-        self.tabs.addTab(self._solve_tab(), "Solve")
         self.tabs.addTab(self._settings_tab(), "Mesh")
         self.tabs.addTab(self._thermal_tab(), "Thermal")
+        # Last, once the problem is set up: what to solve, Solve, and the results.
+        self._solve_tab()
+        self._add_solve_tab()
         for i, text in enumerate((
                 "Regulators and supplies: where each rail is driven, and from where",
                 "Consumers: the current each part draws, and its voltage tolerance",
                 "Parts in series between two nets (sense resistors, ferrites, fuses, load "
                 "switches, 0 Ω links)",
-                "Choose which net groups to solve",
                 "Mesh density and via barrel plating",
                 "Electro-thermal co-simulation: losses heat the board, hot copper "
                 "resists more")):
@@ -1738,113 +1794,8 @@ class PIPanel(QWidget, PartSelection):
         self.vrm_list.lst.setToolTip("Select a VRM to edit it below; untick a VRM to leave "
                                      "its rail out of the solve (the Solve tab's net groups)")
         self._watch_part_lists()
-        lay.addWidget(self.tabs, 3)
-
-        self.lbl_errors = QLabel(self)
-        self.lbl_errors.setWordWrap(True)
-        self.lbl_errors.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
-        self.lbl_errors.setStyleSheet("color: #ff8080;")
-        lay.addWidget(self.lbl_errors)
-        row = QHBoxLayout()
-        self.btn_solve = QPushButton("Solve all", self)
-        self.btn_solve.setStyleSheet(SOLVE_BUTTON_STYLE)
-        self.btn_solve.setToolTip("Save the setup, then mesh and solve every ticked net group. "
-                                  "Problems that stop the solve are listed above in red.")
-        self.btn_solve.clicked.connect(lambda: self.solve_requested.emit(self.setup))
-        self.report_option = ReportOption("3D view, per-layer maps and tables",
-                                          self.report_requested.emit, self._report_changed,
-                                          self)
-        self.btn_report = QPushButton("Open report", self)
-        self.btn_report.setToolTip("Open the last report in your browser or PDF viewer")
-        self.btn_report.setVisible(False)
-        self.btn_report.clicked.connect(self._open_report)
-        self.report_path = None
-        row.addWidget(self.btn_solve, 1)
-        row.addWidget(self.report_option)
-        row.addWidget(self.btn_report)
-        lay.addLayout(row)
-
-        g_res = QGroupBox("Results", self)
-        lr = QVBoxLayout(g_res)
-        row = QHBoxLayout()
-        self.cmb_group = QComboBox(g_res)
-        self.cmb_group.setToolTip("Net group shown in 3D")
-        self.cmb_group.currentTextChanged.connect(
-            lambda t: t and self.group_changed.emit(t))
-        self.cmb_field = QComboBox(g_res)
-        self.cmb_field.setToolTip("Result shown on the copper in 3D")
-        for key, (_, _, label, unit) in FIELDS.items():
-            if key != "temperature":           # added once a thermal solve exists
-                self.cmb_field.addItem(f"{label} ({unit})", key)
-        self.cmb_field.currentIndexChanged.connect(
-            lambda i: self.field_changed.emit(self.cmb_field.itemData(i)))
-        self.cmb_field.currentIndexChanged.connect(self._update_arrow_box)
-        self.chk_arrows = QCheckBox("Arrows", g_res)
-        self.chk_arrows.setToolTip("Show current-flow arrows over the copper")
-        self.chk_arrows.toggled.connect(self.arrows_toggled.emit)
-        self._update_arrow_box()
-        b_export = QPushButton("Export ▾", g_res)
-        menu = QMenu(b_export)
-        menu.addAction("Tables as CSV…", lambda: self.export_requested.emit("csv"))
-        menu.addAction("3D results for ParaView (.vtm)…", lambda: self.export_requested.emit("vtk"))
-        menu.addAction("Save results…", lambda: self.export_requested.emit("results"))
-        b_export.setMenu(menu)
-        b_export.setToolTip("Export the tables as CSV, the 3D results for ParaView, or save the "
-                            "results to reopen later")
-        self.btn_export = b_export
-        b_export.setEnabled(False)
-        b_geom = QPushButton("Show copper", g_res)
-        b_geom.setToolTip("Back to the plain copper view. Pick a net group or field to see the "
-                          "results again.")
-        b_geom.clicked.connect(self.show_geometry.emit)
-        row.addWidget(self.cmb_group, 2)
-        row.addWidget(self.cmb_field, 2)
-        row.addWidget(self.chk_arrows)
-        row.addWidget(b_geom)
-        row.addWidget(b_export)
-        lr.addLayout(row)
-        lr.addLayout(self._scale_row(g_res))
-        self.res_tabs = QTabWidget(g_res)
-        # The results' voltages in volts, or in mV or % from the target voltage (#177).
-        self.cmb_vunit = QComboBox(g_res)
-        for unit, label in vunits.UNITS:
-            self.cmb_vunit.addItem(label, unit)
-        self.cmb_vunit.setToolTip(
-            "Show the voltages in the Loads and VRMs tables in mV from the target voltage "
-            "(the VRM's), in % of it from the target, or in volts. From the target, negative "
-            "is a drop below it and positive a boost above it.")
-        self.cmb_vunit.currentIndexChanged.connect(self._vunit_changed)
-        self.res_tabs.setCornerWidget(self.cmb_vunit)
-        self.tbl_loads = self._table(self._load_headers(), sortable=True)
-        self.tbl_loads.setToolTip(
-            "Each load's mean voltage, its lowest and highest supply pins (less the ground "
-            "pins), its tolerance and its margin: how far its pins are inside the tolerance, "
-            "negative when outside. A load passes when every pin is within its tolerance.")
-        self.tbl_vrms = self._table(self._vrm_headers(), sortable=True)
-        self.tbl_vrms.setToolTip("Each VRM's solved output and input, conversion loss, the "
-                                 "lowest voltage anywhere on the copper of the rail it drives "
-                                 "(the ground's own drop not included), and PASS/FAIL against "
-                                 "its output current limit; a row per phase under a "
-                                 "multi-phase VRM")
-        self.tbl_links = self._table(["Part", "Group", "R (mΩ)", "I (A)", "P (mW)"],
-                                      sortable=True)
-        self.tbl_links.setToolTip("Current through, and power in, each series link")
-        self.txt_notes = QTextBrowser(g_res)
-        self.res_tabs.addTab(self.tbl_loads, "Loads")
-        self.res_tabs.addTab(self.tbl_vrms, "VRMs")
-        self.res_tabs.addTab(self.tbl_links, "Series links")
-        self.res_tabs.addTab(self._vias_tab(), "Vias")
-        self.tbl_losses = self._table(["Group"], sortable=True)
-        self.tbl_losses.setToolTip("Power lost in the copper of each net group, by layer, in "
-                                   "its vias and series links, and in VRM conversion")
-        self.res_tabs.addTab(self.tbl_losses, "Losses")
-        self.thermal_res = self._thermal_results_tab()   # shown after an electro-thermal solve
-        self.res_tabs.addTab(self.txt_notes, "Notes")
-        self.txt_notes.setToolTip("Solve details: the net groups, pin groups, warnings and "
-                                  "the thermal iteration history")
-        self.tbl_loads.cellDoubleClicked.connect(self._row_to_group)
-        lr.addWidget(self.res_tabs)
-        lay.addWidget(g_res, 2)
+        lay.addWidget(self.tabs, 1)
+        lay.addWidget(self._notice_label())
         self.setEnabled(False)
 
     # ------------------------------------------------------------------ widgets
@@ -2236,29 +2187,141 @@ class PIPanel(QWidget, PartSelection):
             self._fill_thermal()        # the limits grade the last solve straight away
         self._on_changed()
 
-    def _solve_tab(self) -> QWidget:
-        w = QWidget()
-        v = QVBoxLayout(w)
-        note = QLabel("Net groups to solve. Untick the ones that are not modeled or routed yet "
-                      "to solve the rest.")
+    def _solve_tab(self):
+        """The last tab, once the VRMs, loads, series links, mesh and thermal are set up:
+        the net groups to solve (a VRM's tick is its rail's tick here), the problems that
+        stop the solve, Solve with the report, and the results."""
+        v = self._solve_page()
+        w = self.solve_page
+        g_groups = QGroupBox("Net groups to solve", w)
+        gv = QVBoxLayout(g_groups)
+        note = QLabel("The rails of the VRMs ticked in the VRMs tab, with their grounds. Untick "
+                      "the ones that are not modeled or routed yet to solve the rest.")
         note.setWordWrap(True)
         note.setStyleSheet("color: #999;")
-        v.addWidget(note)
-        self.lst_groups = QListWidget(w)
+        gv.addWidget(note)
+        self.lst_groups = QListWidget(g_groups)
         self.lst_groups.setToolTip("Untick a net group to leave it out of the solve. VRMs "
                                    "feeding or fed by it are replaced by an ideal source or a "
                                    "constant load; the Notes tab lists what changed.")
+        self.lst_groups.setProperty("grip_default", 110)
         self.lst_groups.itemChanged.connect(self._store_ticks)
-        v.addWidget(self.lst_groups, 1)
+        gv.addWidget(self.lst_groups, 1)
         row = QHBoxLayout()
         for text, on in (("All", True), ("None", False)):
-            b = QPushButton(text, w)
+            b = QPushButton(text, g_groups)
             b.setToolTip("Tick every net group" if on else "Untick every net group")
             b.clicked.connect(partial(self._tick_all_groups, on))
             row.addWidget(b)
         row.addStretch(1)
+        gv.addLayout(row)
+        v.addWidget(g_groups)
+
+        self.lbl_errors = QLabel(w)
+        self.lbl_errors.setWordWrap(True)
+        self.lbl_errors.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
+        self.lbl_errors.setStyleSheet("color: #ff8080;")
+        v.addWidget(self.lbl_errors)
+        row = QHBoxLayout()
+        self.btn_solve = QPushButton("Solve all", w)
+        self.btn_solve.setStyleSheet(SOLVE_BUTTON_STYLE)
+        self.btn_solve.setToolTip("Save the setup, then mesh and solve every ticked net group. "
+                                  "Problems that stop the solve are listed above in red.")
+        self.btn_solve.clicked.connect(lambda: self.solve_requested.emit(self.setup))
+        self.report_option = ReportOption("3D view, per-layer maps and tables",
+                                          self.report_requested.emit, self._report_changed,
+                                          w)
+        self.btn_report = QPushButton("Open report", w)
+        self.btn_report.setToolTip("Open the last report in your browser or PDF viewer")
+        self.btn_report.setVisible(False)
+        self.btn_report.clicked.connect(self._open_report)
+        self.report_path = None
+        row.addWidget(self.btn_solve, 1)
+        row.addWidget(self.report_option)
+        row.addWidget(self.btn_report)
         v.addLayout(row)
-        return w
+
+        g_res = QGroupBox("Results", w)
+        lr = QVBoxLayout(g_res)
+        row = QHBoxLayout()
+        self.cmb_group = QComboBox(g_res)
+        self.cmb_group.setToolTip("Net group shown in 3D")
+        self.cmb_group.currentTextChanged.connect(
+            lambda t: t and self.group_changed.emit(t))
+        self.cmb_field = QComboBox(g_res)
+        self.cmb_field.setToolTip("Result shown on the copper in 3D")
+        for key, (_, _, label, unit) in FIELDS.items():
+            if key != "temperature":           # added once a thermal solve exists
+                self.cmb_field.addItem(f"{label} ({unit})", key)
+        self.cmb_field.currentIndexChanged.connect(
+            lambda i: self.field_changed.emit(self.cmb_field.itemData(i)))
+        self.cmb_field.currentIndexChanged.connect(self._update_arrow_box)
+        self.chk_arrows = QCheckBox("Arrows", g_res)
+        self.chk_arrows.setToolTip("Show current-flow arrows over the copper")
+        self.chk_arrows.toggled.connect(self.arrows_toggled.emit)
+        self._update_arrow_box()
+        b_export = QPushButton("Export ▾", g_res)
+        menu = QMenu(b_export)
+        menu.addAction("Tables as CSV…", lambda: self.export_requested.emit("csv"))
+        menu.addAction("3D results for ParaView (.vtm)…", lambda: self.export_requested.emit("vtk"))
+        menu.addAction("Save results…", lambda: self.export_requested.emit("results"))
+        b_export.setMenu(menu)
+        b_export.setToolTip("Export the tables as CSV, the 3D results for ParaView, or save the "
+                            "results to reopen later")
+        self.btn_export = b_export
+        b_export.setEnabled(False)
+        b_geom = QPushButton("Show copper", g_res)
+        b_geom.setToolTip("Back to the plain copper view. Pick a net group or field to see the "
+                          "results again.")
+        b_geom.clicked.connect(self.show_geometry.emit)
+        row.addWidget(self.cmb_group, 2)
+        row.addWidget(self.cmb_field, 2)
+        row.addWidget(self.chk_arrows)
+        row.addWidget(b_geom)
+        row.addWidget(b_export)
+        lr.addLayout(row)
+        lr.addLayout(self._scale_row(g_res))
+        self.res_tabs = QTabWidget(g_res)
+        # The results' voltages in volts, or in mV or % from the target voltage (#177).
+        self.cmb_vunit = QComboBox(g_res)
+        for unit, label in vunits.UNITS:
+            self.cmb_vunit.addItem(label, unit)
+        self.cmb_vunit.setToolTip(
+            "Show the voltages in the Loads and VRMs tables in mV from the target voltage "
+            "(the VRM's), in % of it from the target, or in volts. From the target, negative "
+            "is a drop below it and positive a boost above it.")
+        self.cmb_vunit.currentIndexChanged.connect(self._vunit_changed)
+        self.res_tabs.setCornerWidget(self.cmb_vunit)
+        self.tbl_loads = self._table(self._load_headers(), sortable=True)
+        self.tbl_loads.setToolTip(
+            "Each load's mean voltage, its lowest and highest supply pins (less the ground "
+            "pins), its tolerance and its margin: how far its pins are inside the tolerance, "
+            "negative when outside. A load passes when every pin is within its tolerance.")
+        self.tbl_vrms = self._table(self._vrm_headers(), sortable=True)
+        self.tbl_vrms.setToolTip("Each VRM's solved output and input, conversion loss, the "
+                                 "lowest voltage anywhere on the copper of the rail it drives "
+                                 "(the ground's own drop not included), and PASS/FAIL against "
+                                 "its output current limit; a row per phase under a "
+                                 "multi-phase VRM")
+        self.tbl_links = self._table(["Part", "Group", "R (mΩ)", "I (A)", "P (mW)"],
+                                      sortable=True)
+        self.tbl_links.setToolTip("Current through, and power in, each series link")
+        self.txt_notes = QTextBrowser(g_res)
+        self.res_tabs.addTab(self.tbl_loads, "Loads")
+        self.res_tabs.addTab(self.tbl_vrms, "VRMs")
+        self.res_tabs.addTab(self.tbl_links, "Series links")
+        self.res_tabs.addTab(self._vias_tab(), "Vias")
+        self.tbl_losses = self._table(["Group"], sortable=True)
+        self.tbl_losses.setToolTip("Power lost in the copper of each net group, by layer, in "
+                                   "its vias and series links, and in VRM conversion")
+        self.res_tabs.addTab(self.tbl_losses, "Losses")
+        self.thermal_res = self._thermal_results_tab()   # shown after an electro-thermal solve
+        self.res_tabs.addTab(self.txt_notes, "Notes")
+        self.txt_notes.setToolTip("Solve details: the net groups, pin groups, warnings and "
+                                  "the thermal iteration history")
+        self.tbl_loads.cellDoubleClicked.connect(self._row_to_group)
+        lr.addWidget(self.res_tabs)
+        v.addWidget(g_res, 1)
 
     def _fill_groups(self):
         """One checkable row per net group in the setup: rails, then grounds, then the rest."""
@@ -2443,6 +2506,8 @@ class PIPanel(QWidget, PartSelection):
         self.lbl_errors.setText("\n".join(f"• {e}" for e in errors))
         self.btn_solve.setEnabled(not errors)
         self.btn_solve.setText(self._solve_label())
+        self.flag_solve_tab(errors)
+        self.notice("")
         self.setup_changed.emit()
 
     # ------------------------------------------------------------------ new items
@@ -2452,12 +2517,12 @@ class PIPanel(QWidget, PartSelection):
         if self.picked_nets:
             net = next((n for n in self.picked_nets if n in self._nets), None)
             if net is None:
-                self.lbl_errors.setText(
+                self.notice(
                     f"• {self.picked_nets[0]} is selected but not ticked: tick it in the "
                     "Board panel's Nets list to add on it")
             return net
         if not self._nets:
-            self.lbl_errors.setText("• No net is ticked: tick the net in the Board panel's "
+            self.notice("• No net is ticked: tick the net in the Board panel's "
                                     "Nets list (or select a ticked one) to add on it")
             return None
         return self._nets[0]
@@ -2474,11 +2539,11 @@ class PIPanel(QWidget, PartSelection):
                 return None
             obj = make(net)
             if isinstance(obj, str):
-                self.lbl_errors.setText(f"• {obj}")
+                self.notice(f"• {obj}")
                 return None
             return obj
         if not self._nets:
-            self.lbl_errors.setText(f"• No net is ticked: tick the rail in the Board panel's "
+            self.notice(f"• No net is ticked: tick the rail in the Board panel's "
                                     f"Nets list (or select a ticked one) to add a {noun} on it")
             return None
         grounds = setup_grounds(self.setup)
@@ -2487,7 +2552,7 @@ class PIPanel(QWidget, PartSelection):
             obj = make(net)
             if not isinstance(obj, str):
                 return obj
-        self.lbl_errors.setText(
+        self.notice(
             f"• Every ticked rail already has a {noun}: tick another rail, or select a net "
             f"in the Nets list to add one on it" if rails else
             f"• Only ground nets are ticked: tick the rail in the Board panel's Nets list "
@@ -2653,6 +2718,7 @@ class PIPanel(QWidget, PartSelection):
         self.cmb_group.blockSignals(False)
 
     def show_error(self, message: str):
+        self.show_solve_tab()
         self.res_tabs.setCurrentWidget(self.txt_notes)
         self.txt_notes.setHtml(f'<span style="color:#ff7070"><b>Cannot solve:</b><br>'
                                f'{html.escape(message).replace(chr(10), "<br>")}</span>'
@@ -2727,6 +2793,7 @@ class PIPanel(QWidget, PartSelection):
             r += 1
 
     def show_results(self, tree, initial_group: str):
+        self.show_solve_tab()
         reset_sort(self.tbl_links)                # new results show in their natural order
         self._fill_loads_vrms(tree)
         rows = [(g.name, s) for g in tree.groups.values() for s in g.result.fields.series]

@@ -24,7 +24,7 @@ from qtpy.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDoubleSpin
                             QTabWidget, QTextBrowser, QVBoxLayout, QWidget)
 
 from kipi_si.core.model.board import BoardSnapshot
-from kipi_si.dc.gui.pi_panel import ItemList, _Editor
+from kipi_si.dc.gui.pi_panel import ItemList, SolveTab, _Editor
 from kipi_si.dc.pi.model import PISetup
 from kipi_si.gui.report_option import ReportOption
 from kipi_si.gui.theme import SOLVE_BUTTON_STYLE
@@ -319,12 +319,6 @@ class ChannelEditor(_Editor):
         f.addRow(b_match)
         f.addRow(self.drv)
         f.addRow(self.rcv)
-        # Last, under the settings it uses: set them, then solve.
-        self.btn_solve = QPushButton("Solve")
-        self.btn_solve.setStyleSheet(SOLVE_BUTTON_STYLE)
-        self.btn_solve.setToolTip("Extract the channel and work out its S-parameters, TDR, "
-                                  "eye, waveforms and checks")
-        f.addRow(self.btn_solve)
         self.drv.changed.connect(self._store)
         self.rcv.changed.connect(self._store)
         self._watch(self.ed_name, self.ed_agg, self.ed_nofit, self.spin_series,
@@ -616,7 +610,7 @@ def _skipped_html(nets) -> str:
             f"({names}{more}): tick <b>Slow nets</b> to scan them too.</span>")
 
 
-class SIPanel(QWidget):
+class SIPanel(QWidget, SolveTab):
     solve_requested = Signal(object, object)       # PISetup, channel names (a list)
     scan_requested = Signal(object, object)        # PISetup, nets (None: every signal net)
     result_selected = Signal(object)               # ChannelResult shown; None clears
@@ -631,6 +625,8 @@ class SIPanel(QWidget):
     touchstone_requested = Signal(object)          # the shown ChannelResult
     spice_requested = Signal(object)               # the shown ChannelResult
     part_selected = Signal(str, str, bool)         # for the main window; none here
+    solve_tab_tip = ("Solve the ticked channels (else the one picked), once the channels and "
+                     "settings are set up, and see the results")
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -652,20 +648,12 @@ class SIPanel(QWidget):
         self.cmb_channel.currentIndexChanged.connect(self._channel_changed)
         top.addWidget(self.cmb_channel, 1)
         lay.addLayout(top)
-        self.lbl_errors = QLabel()
-        self.lbl_errors.setWordWrap(True)
-        self.lbl_errors.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
-        self.lbl_errors.setStyleSheet("color: #ff9060;")
-        lay.addWidget(self.lbl_errors)
 
         self.tabs = QTabWidget(self)
         lay.addWidget(self.tabs, 1)
+        lay.addWidget(self._notice_label())
         self.tabs.addTab(self._build_scan(), "Quick Scan")
         editor = ChannelEditor(self)
-        # Solve sits at the foot of the channel's settings; the picker above and the
-        # Channels list name the same channel, so it (and Ctrl+Return) solves that one.
-        self.btn_solve = editor.btn_solve
-        self.btn_solve.clicked.connect(self._solve)
         self.ch_list = ChannelList(lambda: self.setup.si_channels, editor,
                                    self._new_channels, self._describe_channel, noun="channel")
         self.ch_list.buttons.itemAt(0).widget().setToolTip(
@@ -681,8 +669,10 @@ class SIPanel(QWidget):
         b_bus.clicked.connect(self._add_bus)
         self.ch_list.buttons.insertWidget(1, b_bus)
         self.tabs.addTab(self.ch_list, "Channels")
-        self.tabs.addTab(self._build_results(), "Results")
         self.tabs.addTab(self._build_settings(), "Settings")
+        # Last, once the channels and settings are set up: Solve and the results.
+        self._build_results()
+        self._add_solve_tab()
         self.tabs.currentChanged.connect(lambda _i: self.overlay_changed.emit())
         self.tabs.currentChanged.connect(lambda _i: self.focus_changed.emit())
         self.ch_list.selected.connect(lambda *_a: self.focus_changed.emit())
@@ -739,10 +729,33 @@ class SIPanel(QWidget):
         v.addWidget(self.txt_scan, 1)
         return w
 
-    def _build_results(self) -> QWidget:
-        w = QWidget()
-        v = QVBoxLayout(w)
+    def _build_results(self):
+        """The Solve tab's page: what stops the solve, Solve with the report, and the
+        results of the channel picked above the tabs."""
+        v = self._solve_page()
         v.setContentsMargins(2, 2, 2, 2)
+        self.lbl_errors = QLabel()
+        self.lbl_errors.setWordWrap(True)
+        self.lbl_errors.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
+        self.lbl_errors.setStyleSheet("color: #ff9060;")
+        v.addWidget(self.lbl_errors)
+        # The picker above the tabs and the Channels list name the same channel, so Solve
+        # (and Ctrl+Return) solves that one, or the ticked ones.
+        self.btn_solve = QPushButton("Solve")
+        self.btn_solve.setStyleSheet(SOLVE_BUTTON_STYLE)
+        self.btn_solve.setToolTip("Extract the ticked channels (else the one picked) and work "
+                                  "out their S-parameters, TDR, eye, waveforms and checks. "
+                                  "Problems that stop the solve are listed above.")
+        self.btn_solve.clicked.connect(self._solve)
+        self.report_option = ReportOption("Signal Integrity", self._report, self._report_fmt)
+        self.btn_report = QPushButton("Open report")
+        self.btn_report.setVisible(False)
+        self.btn_report.clicked.connect(self._open_report)
+        row = QHBoxLayout()
+        row.addWidget(self.btn_solve, 1)
+        row.addWidget(self.report_option)
+        row.addWidget(self.btn_report)
+        v.addLayout(row)
         self.lbl_status = QLabel("Not solved")
         self.lbl_status.setWordWrap(True)
         v.addWidget(self.lbl_status)
@@ -756,12 +769,6 @@ class SIPanel(QWidget):
         self.txt_notes = QTextBrowser()
         v.addWidget(self.txt_notes, 1)
         row = QHBoxLayout()
-        self.report_option = ReportOption("Signal Integrity", self._report, self._report_fmt)
-        row.addWidget(self.report_option)
-        self.btn_report = QPushButton("Open report")
-        self.btn_report.setVisible(False)
-        self.btn_report.clicked.connect(self._open_report)
-        row.addWidget(self.btn_report)
         self.btn_reports = QPushButton("Report several…")
         self.btn_reports.setToolTip("One report of the solved channels you tick, with a "
                                     "picker at its top to show one channel or all")
@@ -793,7 +800,6 @@ class SIPanel(QWidget):
         row.addStretch(1)
         v.addLayout(row)
         self._show_buttons()
-        return w
 
     def _build_settings(self) -> QWidget:
         w = QWidget()
@@ -1021,7 +1027,10 @@ class SIPanel(QWidget):
         if [self.cmb_channel.itemData(i) for i in range(self.cmb_channel.count())] != \
                 [c.name for c in self.setup.si_channels]:
             self._fill_channels()
-        self.lbl_errors.setText("\n".join(f"• {e}" for e in self._errors()))
+        errors = self._errors()
+        self.lbl_errors.setText("\n".join(f"• {e}" for e in errors))
+        self.flag_solve_tab(errors)
+        self.notice("")
         if not self._busy:
             self.btn_solve.setText(self._solve_label())
             self.btn_solve.setEnabled(not self._errors())
@@ -1085,7 +1094,7 @@ class SIPanel(QWidget):
         signal = self._signal_nets()
         ticked = [n for n in signal if n in set(self._nets)]
         if not ticked:
-            self.lbl_errors.setText("• Tick the nets to add in Board's Nets list, then Add")
+            self.notice("• Tick the nets to add in Board's Nets list, then Add")
             return []
         manual = manual_of(self.setup.si)
         pairs = pair_map(signal, manual)
@@ -1099,7 +1108,7 @@ class SIPanel(QWidget):
             seen |= {net, partner}
             out.append(self._unique(new_channel(net, partner), [c.name for c in out]))
         if not out:
-            self.lbl_errors.setText("• Every net ticked in Board has a channel already")
+            self.notice("• Every net ticked in Board has a channel already")
         return out
 
     def _unique(self, ch: Channel, more: Sequence[str] = ()) -> Channel:
@@ -1274,12 +1283,12 @@ class SIPanel(QWidget):
             self.results_changed.emit()
             if name != (self.cmb_channel.currentData() or ""):
                 return
-        self.tabs.setCurrentIndex(self.tabs.indexOf(self.tbl_checks.parentWidget()))
+        self.show_solve_tab()
         self.txt_notes.setHtml(f'<span style="color:#ff7070"><b>Cannot solve:</b><br>'
                                f'{html.escape(message).replace(chr(10), "<br>")}</span>')
 
     def show_result(self, result, front: bool = True):
-        """A solved channel; ``front`` shows the Results tab if it is the one picked."""
+        """A solved channel; ``front`` shows the Solve tab if it is the one picked."""
         self._results[result.channel.name] = result
         self._failed.pop(result.channel.name, None)
         self.ch_list.set_status(result.channel.name, result.status)
@@ -1287,7 +1296,7 @@ class SIPanel(QWidget):
         if result.channel.name == (self.cmb_channel.currentData() or ""):
             self._display(result)
             if front:
-                self.tabs.setCurrentIndex(self.tabs.indexOf(self.tbl_checks.parentWidget()))
+                self.show_solve_tab()
         self._show_buttons()
 
     def _show_channel_result(self):
@@ -1393,10 +1402,10 @@ class SIPanel(QWidget):
 
     # ------------------------------------------------------------------ the 3D view
     def overlay(self):
-        """The impedance overlay for the 3D view: the shown result's on the Results tab,
+        """The impedance overlay for the 3D view: the shown result's on the Solve tab,
         else the Quick Scan's (the selected net's, or every net's)."""
         from kipi_si.si.viz import channel_overlay, scan_overlay
-        on_results = self.tabs.currentWidget() is self.tbl_checks.parentWidget()
+        on_results = self.tabs.currentWidget() is self.solve_page
         if self.result is not None and (on_results or self.scan_result is None) \
                 and self.setup.si.result_3d:
             return channel_overlay(self.snapshot, self.result)
@@ -1409,7 +1418,7 @@ class SIPanel(QWidget):
         tab = self.tabs.currentWidget()
         if tab is self.ch_list:
             return self.ch_list.current()
-        if tab is self.tbl_checks.parentWidget() and self.result is not None:
+        if tab is self.solve_page and self.result is not None:
             return self.result.channel
         return None
 

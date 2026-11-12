@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 
 import numpy as np
 
-from qtpy.QtCore import QEvent, QFileSystemWatcher, QSettings, Qt, QTimer
+from qtpy.QtCore import QEvent, QFileSystemWatcher, QSettings, QSize, Qt, QTimer
 from qtpy.QtGui import (QAction, QColor, QIcon, QKeySequence, QPainter, QPalette, QPixmap,
                         QShortcut, QTextCursor)
 from qtpy.QtOpenGLWidgets import QOpenGLWidget
@@ -22,7 +22,7 @@ from qtpy.QtWidgets import (
     QFileDialog, QFormLayout,
     QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMenu,
     QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QRadioButton, QSlider,
-    QScrollArea, QSplitter, QStackedWidget, QStyle, QTabWidget, QTextBrowser, QToolBar,
+    QScrollArea, QSizePolicy, QStackedWidget, QStyle, QTabWidget, QTextBrowser, QToolBar,
     QToolButton,
     QVBoxLayout, QWidget,
 )
@@ -32,7 +32,7 @@ from kipi_si.core.model.board import BoardSnapshot
 from kipi_si.core.model.nets import classify_nets, sorted_nets
 from kipi_si.dc.gui.pi_panel import PIPanel
 from kipi_si.gui import multi_tick, theme
-from kipi_si.gui.height_grip import HeightGrip
+from kipi_si.gui.height_grip import add_grips
 from kipi_si.gui.docks import make_detachable
 from kipi_si.gui.heartbeat import Heartbeat, busy_cursor
 from kipi_si.gui.stackup_window import StackupWindow
@@ -50,7 +50,6 @@ _KIND_COLOR = {"power": "#a0a0a0", "ground": "#70a0e0", "signal": "#a0a0a0"}
 _NET_SECTIONS = (("pairs", "Differential pairs"), ("single", "Single-ended"),
                  ("planes", "Ground and power"))
 _SECTION = Qt.UserRole + 3              # a row's section; a header has no net (UserRole)
-MAX_AUTO_NETS = 4
 # A save can touch the board file several times (KiCad writes a new file and renames
 # it); the window waits this long for the file to settle before offering to reload.
 FILE_SETTLE_MS = 800
@@ -61,20 +60,21 @@ MODES = (("dc", "DC", "PI setup"), ("ac", "AC", "AC setup"),
 MODE_GROUPS = (("Power Integrity", ("dc", "ac", "noise")), ("Signal Integrity", ("si",)))
 # The mode buttons as one bar of segments per group, the chosen one highlighted.
 MODE_SWITCH_STYLE = """
-QLabel#mode_group { font-weight: bold; }
+QLabel#mode_group { font-size: 8pt; font-weight: bold; padding-left: 2px; }
 QRadioButton {
-    font-weight: bold; padding: 5px 16px; background: palette(button);
-    border: 1px solid palette(mid); border-left: none;
+    font-weight: bold; padding: 5px 14px; background: palette(button);
+    border: 1px solid palette(mid); border-left: none; min-width: 28px;
 }
 QRadioButton[segment="first"], QRadioButton[segment="only"] {
     border-left: 1px solid palette(mid);
-    border-top-left-radius: 5px; border-bottom-left-radius: 5px;
+    border-top-left-radius: 6px; border-bottom-left-radius: 6px;
 }
 QRadioButton[segment="last"], QRadioButton[segment="only"] {
-    border-top-right-radius: 5px; border-bottom-right-radius: 5px;
+    border-top-right-radius: 6px; border-bottom-right-radius: 6px;
 }
 QRadioButton:hover:!checked { background: palette(midlight); }
-QRadioButton:checked { background: palette(highlight); color: palette(highlighted-text); }
+QRadioButton:checked { background: palette(highlight); color: palette(highlighted-text);
+                       border-color: palette(highlight); }
 QRadioButton:disabled { color: palette(mid); }
 QRadioButton::indicator { width: 0px; height: 0px; margin: 0px; border: none; image: none; }
 """
@@ -212,6 +212,7 @@ class MainWindow(QMainWindow):
         part models (None: KiPI-SI's own colors, no models); ``host`` how KiPI-SI was started
         (default :func:`kipi_si.host.current`), which picks the toolbar."""
         super().__init__()
+        theme.adopt(self)
         self.host = host or current_host()
         self._set_title("Power Integrity")
         self.resize(*PREFERRED_SIZE)
@@ -432,7 +433,8 @@ class MainWindow(QMainWindow):
         si.results_saved.connect(
             lambda path: self.log(f"Saved Signal Integrity results to {path}"))
         si.open_results_requested.connect(self.open_results)
-        for panel in (ac, noise, si):
+        for key, panel in (("ac", ac), ("noise", noise), ("si", si)):
+            add_grips(panel, key)
             self._wire_panel(panel)
             self.setup_stack.addWidget(panel)
             if self.snapshot is not None and self.solve_panel.setup is not None:
@@ -506,19 +508,31 @@ class MainWindow(QMainWindow):
 
     # ================================================================== UI
     def _build_toolbar(self):
+        """The toolbar, left to right: the analysis mode; the board's files (Open, Reload,
+        Save snapshot, Open results); the 3D view (Top, Bottom, Iso, Screenshot); the
+        Stackup; then, at the far right, Help, About and the theme as icons."""
+        from kipi_si.gui import icons
         tb = QToolBar("Main", self)
         tb.setMovable(False)
+        tb.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        tb.setIconSize(QSize(18, 18))
         self.addToolBar(tb)
         # The analysis mode first, where it is seen: Power Integrity (DC, AC, Coupled
         # Noise) and Signal Integrity, each a group of buttons.
         tb.addWidget(self._build_mode_switch(tb))
         tb.addSeparator()
 
-        def act(text, slot, tip="", keys="", view=False):
+        def act(text, slot, tip="", keys="", view=False, icon="", icon_only=False):
             a = QAction(text, self)
             a.setToolTip(with_keys(tip or text, keys))
             a.triggered.connect(slot)
             tb.addAction(a)
+            if icon:
+                icons.attach(a, icon)
+            if icon_only:
+                button = tb.widgetForAction(a)
+                if isinstance(button, QToolButton):
+                    button.setToolButtonStyle(Qt.ToolButtonIconOnly)
             if keys:
                 a.setShortcut(keys)
             if view:                    # only while the 3D view (or the toolbar) has focus
@@ -535,7 +549,7 @@ class MainWindow(QMainWindow):
             self.act_open = act("Open…", self.open_board, "Open a board file: " +
                                 ", ".join(f.name for f in registry.FORMATS) +
                                 "; the arrow lists the boards opened lately",
-                                KEYS["open"])
+                                KEYS["open"], icon="open")
             self.recent_menu = QMenu(self)
             self.recent_menu.aboutToShow.connect(self._fill_recent_menu)
             self.act_open.setMenu(self.recent_menu)
@@ -543,48 +557,66 @@ class MainWindow(QMainWindow):
             if isinstance(button, QToolButton):
                 button.setPopupMode(QToolButton.MenuButtonPopup)
         self.act_reload = act("Reload", self.reload_board, "Re-read the board",
-                              KEYS["reload"])
+                              KEYS["reload"], icon="reload")
         self.chk_refill = QCheckBox("Refill zones", self)
         # A toolbar widget is shown and hidden through the action holding it.
         self._act_refill = tb.addWidget(self.chk_refill)
-        tb.addSeparator()
         if self.host is Host.PLUGIN:
             act("Open snapshot…", self.open_snapshot,
                 "Load a saved board snapshot (.json / .json.gz), without KiCad running",
-                KEYS["open"])
+                KEYS["open"], icon="open")
         self.act_save = act("Save snapshot…", self.save_snapshot,
-                            "Save the extracted board for offline use", KEYS["save"])
+                            "Save the extracted board for offline use", KEYS["save"],
+                            icon="save")
+        self.act_open_results = act("Open results…", self.open_results, keys=KEYS["results"],
+                                    icon="results")
+        self._set_open_results_tip()
         tb.addSeparator()
+        # The camera: icons only, each named in its tooltip.
         act("Top", lambda: self._show_3d(self.viewer.view_top),
-            "Look down on the top of the board", VIEW_KEYS["top"], view=True)
+            "Look down on the top of the board", VIEW_KEYS["top"], view=True, icon="top",
+            icon_only=True)
         act("Bottom", lambda: self._show_3d(self.viewer.view_bottom),
-            "Look up at the bottom of the board", VIEW_KEYS["bottom"], view=True)
+            "Look up at the bottom of the board", VIEW_KEYS["bottom"], view=True,
+            icon="bottom", icon_only=True)
         act("Iso", lambda: self._show_3d(self.viewer.view_iso), "Isometric view of the board",
-            VIEW_KEYS["iso"], view=True)
+            VIEW_KEYS["iso"], view=True, icon="iso", icon_only=True)
         act("Screenshot…", self.save_screenshot,
             "Save the 3D view, or the impedance plot if it is showing, as a PNG",
-            KEYS["screenshot"])
+            KEYS["screenshot"], icon="camera", icon_only=True)
         tb.addSeparator()
-        self.act_open_results = act("Open results…", self.open_results, keys=KEYS["results"])
-        self._set_open_results_tip()
         self.act_stackup = act("Stackup", self.show_stackup,
                                "The board's layers: thicknesses, εr and copper resistivity, "
                                "for every analysis. Unlock to try another stackup.",
-                               KEYS["stackup"])
+                               KEYS["stackup"], icon="layers")
         # The Power tree is a tab beside the 3D view; no toolbar button, just its key.
         self.act_power_tree = QAction("Power tree", self)
         self.act_power_tree.setShortcut(KEYS["power_tree"])
         self.act_power_tree.triggered.connect(self.show_power_tree)
         self.addAction(self.act_power_tree)
-        tb.addSeparator()
+        # Help, About and the theme at the far right, out of the way of the work.
+        spacer = QWidget(tb)
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        tb.addWidget(spacer)
         self.act_help = act("Help", self.show_help, "Open the KiPI-SI user guide in your browser",
-                            KEYS["help"])
-        self.act_about = act("About", self.show_about, "Version, author and project links")
-        self.act_dark = act("Dark mode", lambda on: theme.choose(theme.DARK if on else
-                                                                 theme.LIGHT),
-                            "Dark or light windows and panels (kept for the next start)")
+                            KEYS["help"], icon="help", icon_only=True)
+        self.act_about = act("About", self.show_about, "Version, author and project links",
+                             icon="info", icon_only=True)
+        self.act_dark = act("Dark mode", self._choose_theme,
+                            "Dark or light windows and panels (kept for the next start)",
+                            icon_only=True)
         self.act_dark.setCheckable(True)
         self.act_dark.setChecked(theme.saved() == theme.DARK)
+        self._theme_icon()
+
+    def _choose_theme(self, dark: bool):
+        theme.choose(theme.DARK if dark else theme.LIGHT)
+        self._theme_icon()
+
+    def _theme_icon(self):
+        """A moon while dark, a sun while light."""
+        from kipi_si.gui import icons
+        icons.attach(self.act_dark, "moon" if self.act_dark.isChecked() else "sun")
 
     def _build_mode_switch(self, parent) -> QWidget:
         """The mode buttons, grouped under Power Integrity and Signal Integrity and drawn
@@ -815,14 +847,8 @@ class MainWindow(QMainWindow):
         _rows(self.net_list, 8)
         self.net_list.itemClicked.connect(self._net_header_clicked)
         # The grip under it makes it as tall as wanted: the panel then scrolls.
-        self.net_grip = HeightGrip(self.net_list, g_nets)
-        saved = QSettings("KiPI-SI", "KiPI-SI").value("view/net_list_height", 0)
-        try:
-            self.net_grip.set_height(int(saved or 0))
-        except (TypeError, ValueError):
-            pass
-        self.net_grip.height_changed.connect(
-            lambda h: QSettings("KiPI-SI", "KiPI-SI").setValue("view/net_list_height", h))
+        from kipi_si.gui.height_grip import grip
+        self.net_grip = grip(self.net_list, "net_list_height", g_nets, default=300)
         folded = QSettings("KiPI-SI", "KiPI-SI").value("view/nets_folded", "")
         self._nets_folded = set(str(folded or "").split(",")) - {""}
         row = QHBoxLayout()
@@ -837,7 +863,7 @@ class MainWindow(QMainWindow):
         row.addWidget(btn_none, 1)
         ln.addWidget(self.net_filter)
         ln.addWidget(self.chk_power_only)
-        ln.addWidget(self.net_list, 1)
+        ln.addWidget(self.net_list)
         ln.addWidget(self.net_grip)
         ln.addLayout(row)
 
@@ -986,18 +1012,21 @@ class MainWindow(QMainWindow):
         self.btn_select = QPushButton("Select", g_info)
         self.btn_select.setEnabled(False)
         self.btn_select.clicked.connect(self._select_in_source)
-        li.addWidget(self.info, 1)
+        li.addWidget(self.info)
         li.addWidget(self.btn_select)
 
-        split = QSplitter(Qt.Vertical, panel)
-        # Dragging a divider resizes its neighbours instead of snapping one shut, and the
-        # net list takes the height to spare first.
-        split.setChildrenCollapsible(False)
-        for w, stretch in ((g_nets, 3), (g_layers, 1), (g_view, 0), (g_info, 1)):
-            split.addWidget(w)
-            split.setStretchFactor(split.count() - 1, stretch)
-        split.setSizes([360, 170, 110, 220])
-        lay.addWidget(split)
+        # Every section is sized by the grip under it, as the net list is: dragged down
+        # past the dock's height, the panel scrolls.
+        from kipi_si.gui import height_grip
+        ll.insertWidget(ll.indexOf(self.layer_list) + 1,
+                        height_grip.grip(self.layer_list, "layer_list_height", g_layers))
+        li.insertWidget(li.indexOf(self.info) + 1,
+                        height_grip.grip(self.info, "info_height", g_info))
+        for w in (g_nets, g_layers, g_view):
+            lay.addWidget(w)
+        lay.addWidget(height_grip.grip(g_view, "display_height", panel))
+        lay.addWidget(g_info)
+        lay.addStretch(1)
 
         dock = QDockWidget("Board", self)
         dock.setObjectName("board_dock")
@@ -1031,6 +1060,7 @@ class MainWindow(QMainWindow):
         self._shown_group = ""
         self._setup_path = None
         self._saved = None              # the setup as its file has it
+        add_grips(self.solve_panel, "dc")
         self._wire_panel(self.solve_panel)
         # One setup dock: the setup file's bar, then the panel of the current analysis mode.
         # The bar stays outside the scrolling, so Import and Save are always in view.
@@ -1423,7 +1453,7 @@ class MainWindow(QMainWindow):
         self._apply_setup_stackup(setup)
         self._populate_layers()
         self._populate_nets(keep if keep is not None else self._setup_ticks(setup), setup)
-        # The setup as loaded, with the nets ticked by default on a new board: what Save
+        # The setup as loaded, with its nets ticked (none on a new board): what Save
         # would write now, so only later edits count as not saved.
         self._store_ticks(setup)
         self._saved = copy.deepcopy(setup)
@@ -1483,21 +1513,11 @@ class MainWindow(QMainWindow):
     def _setup_ticks(self, setup):
         return getattr(setup, self._ticks_attr())
 
-    def _si_default_nets(self, setup, kinds) -> set:
-        """SI's nets before any are chosen: the channels' nets (their pairs' legs and
-        aggressors), or else every differential pair; and the main ground, for the planes."""
-        from kipi_si.si.pairs import manual_of, pair_map
-        auto = {n for c in getattr(setup, "si_channels", [])
-                for n in (c.net, c.partner, *c.aggressors) if n}
-        if not auto:
-            auto = set(pair_map([n for n, k in kinds.items() if k == "signal"],
-                                manual_of(setup.si)))
-        return auto
-
     def _populate_nets(self, chosen: Optional[List[str]], setup):
-        """Fill the net list, ticking ``chosen``; None means the user has never chosen
-        (a new setup), so tick the main power and ground planes instead (in SI mode: the
-        channels' nets or the pairs, and the main ground)."""
+        """Fill the net list, ticking ``chosen``. None means the user has never chosen: a
+        new setup starts with nothing ticked, as the user picks the nets to analyse. A setup
+        saved before the ticks were kept has them back from what it defines: the nets its
+        VRMs, loads and links are on (in SI mode: its channels' nets)."""
         snap = self.snapshot
         kinds = classify_nets(snap)
         family = self._net_family()
@@ -1511,19 +1531,10 @@ class MainWindow(QMainWindow):
                 self.log(f"Nets in the setup that are not on the board: {', '.join(gone)}",
                          logging.WARNING)
         elif family == "si":
-            zone_nets = {z.net for z in snap.zones}
-            by_pads = sorted(zone_nets, key=lambda n: -pad_count.get(n, 0))
-            auto = (self._si_default_nets(setup, kinds)
-                    | set([n for n in by_pads if kinds.get(n) == "ground"][:1]))
+            auto = {n for c in getattr(setup, "si_channels", [])
+                    for n in (c.net, c.partner, *c.aggressors) if n}
         else:
-            # Start with the main plane nets: a few power nets plus the main ground.
-            zone_nets = {z.net for z in snap.zones}
-            by_pads = sorted(zone_nets, key=lambda n: -pad_count.get(n, 0))
-            auto = set([n for n in by_pads if kinds.get(n) == "power"][:MAX_AUTO_NETS - 1] +
-                       [n for n in by_pads if kinds.get(n) == "ground"][:1])
-            # A setup saved before nets were stored: its VRMs, loads and links are on
-            # nets the user had ticked.
-            auto |= setup.pin_nets()
+            auto = setup.pin_nets()
 
         self.net_list.blockSignals(True)
         self.net_list.clear()

@@ -332,7 +332,7 @@ def test_picking_a_part_in_the_setup_marks_it_and_goes_there(app, no_3d, monkeyp
     w.chk_snap.setChecked(False)                              # marked, but the view stays
     lst.lst.itemClicked.emit(lst.lst.item(0))
     assert marked[-1] == ("load", "U2") and len(focused) == 1
-    w.solve_panel.tabs.setCurrentIndex(3)                     # the Solve tab: none
+    w.solve_panel.show_solve_tab()                            # the Solve tab: none
     assert marked[-1] is None
     w.close()
 

@@ -55,11 +55,6 @@ def test_the_side_docks_scroll_rather_than_set_the_window_height(window):
     assert window.minimumSizeHint().height() <= 600
 
 
-def _board_split(window):
-    from qtpy.QtWidgets import QDockWidget, QSplitter
-    return window.findChild(QDockWidget, "board_dock").widget().widget().findChild(QSplitter)
-
-
 def test_the_board_dock_runs_the_full_height(window):
     # Under a full-width log it had no height to spare, so its sections could not be
     # resized: every one sat at its minimum.
@@ -67,11 +62,42 @@ def test_the_board_dock_runs_the_full_height(window):
     assert window.corner(Qt.BottomLeftCorner) == Qt.LeftDockWidgetArea
 
 
-def test_board_sections_resize_without_snapping_shut(window):
-    split = _board_split(window)
-    assert not split.childrenCollapsible()
-    stretch = [split.widget(i).sizePolicy().verticalStretch() for i in range(split.count())]
-    assert stretch[0] == max(stretch)                    # the net list grows first
+def test_every_board_section_has_one_grip_and_no_divider(window):
+    # One way to resize, as the net list has: a grip under each section, no splitter.
+    from qtpy.QtWidgets import QDockWidget, QSplitter
+    from kipi_si.gui.height_grip import HeightGrip
+    panel = window.findChild(QDockWidget, "board_dock").widget().widget()
+    assert panel.findChild(QSplitter) is None
+    views = [g.view for g in panel.findChildren(HeightGrip)]
+    assert {window.net_list, window.layer_list, window.info} <= set(views)
+    assert len(views) == len(set(views)) == 4                # and the Display section
+
+
+def test_every_setup_list_and_table_has_a_grip(window):
+    from qtpy.QtWidgets import QAbstractItemView, QComboBox, QHeaderView, QSplitter, \
+        QTextEdit
+    assert window.ac_panel is not None                    # builds the other modes' panels
+    for mode, panel in window._panels().items():
+        assert panel.findChild(QSplitter) is None, mode
+        for v in panel.findChildren(QAbstractItemView) + panel.findChildren(QTextEdit):
+            if isinstance(v, QHeaderView) or isinstance(v.parentWidget().parentWidget(),
+                                                        QComboBox):
+                continue
+            tab_widget = v.parentWidget().parentWidget()        # a tab page's own view
+            assert (getattr(v, "_height_grip", None) is not None
+                    or getattr(tab_widget, "_height_grip", None) is not None), \
+                (mode, type(v).__name__, v.toolTip()[:40])
+
+
+def test_a_grip_shrinks_its_box_too(window):
+    grip = window.layer_list._height_grip
+    grip.set_height(grip.floor + 200)
+    assert window.layer_list.height() == grip.floor + 200 or \
+        window.layer_list.maximumHeight() == grip.floor + 200
+    grip.set_height(grip.floor + 10)
+    assert window.layer_list.maximumHeight() == grip.floor + 10
+    grip.set_height(0)
+    assert window.layer_list.maximumHeight() == grip.default
 
 
 def test_board_lists_stay_tall_enough_to_drag_their_scroll_bars(window):
@@ -88,8 +114,10 @@ def test_the_net_list_grows_past_the_dock_and_the_panel_scrolls(window):
     grip = window.net_grip
     grip.set_height(3000)                          # far taller than any dock
     QApplication.processEvents()
-    assert window.net_list.minimumHeight() == 3000
+    assert window.net_list.height() == 3000
     assert area.widget().height() > area.viewport().height()
     assert area.verticalScrollBar().maximum() > 0  # the panel scrolls
-    grip.set_height(0)                             # never below its own minimum
-    assert window.net_list.minimumHeight() == grip.floor
+    grip.set_height(1)                             # never below its own minimum
+    assert window.net_list.maximumHeight() == grip.floor
+    grip.set_height(0)                             # back to its usual height
+    assert window.net_list.maximumHeight() == grip.default

@@ -9,17 +9,21 @@ from typing import Optional
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QComboBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from kipi_si.ac.gui.plot import COLORS
 from kipi_si.dc.pi import piplots
+from kipi_si.gui import plot_theme
+from kipi_si.gui.plot_theme import FollowsTheme, ink
 from kipi_si.si.siplots import Ink
 
 EMPTY = "Solve the power tree in DC mode to see its plots here."
 VIEWS = (("loads", "Loads against their tolerance"), ("budget", "Drop budget per load"))
-BG = "#1e1e1e"
-INK = Ink(COLORS, "#ddd", "#888")
 
 
-class PIPlot(QWidget):
+def _ink() -> Ink:
+    t = ink()
+    return Ink(plot_theme.SERIES, t.title, t.faint)
+
+
+class PIPlot(FollowsTheme, QWidget):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
@@ -27,7 +31,8 @@ class PIPlot(QWidget):
         self.tree = None
         self.setup = None
         self.figure = Figure(figsize=(6, 3), tight_layout=True)
-        self.figure.patch.set_facecolor(BG)
+        self.figure.patch.set_facecolor(ink().bg)
+        self._drawn_in = ink()
         self.canvas = FigureCanvasQTAgg(self.figure)
         self.canvas.setFocusPolicy(Qt.ClickFocus)
         self.cmb_view = QComboBox(self)
@@ -59,20 +64,16 @@ class PIPlot(QWidget):
     # ------------------------------------------------------------------ helpers
     def _style(self, ax=None):
         for a in ([ax] if ax is not None else self.figure.axes):
-            a.set_facecolor(BG)
-            for s in a.spines.values():
-                s.set_color("#888")
-            a.tick_params(colors="#ccc", which="both")
-            a.xaxis.label.set_color("#ccc")
-            a.yaxis.label.set_color("#ccc")
-            a.title.set_color("#ddd")
-            a.grid(True, color="#444", lw=0.5)
+            plot_theme.style_axes(a, grid=True)
 
     def _legend(self, ax, **kw):
-        if ax.get_legend_handles_labels()[0]:
-            leg = ax.legend(fontsize=8, facecolor="#2a2a2a", edgecolor="#555", **kw)
-            for t in leg.get_texts():
-                t.set_color("#ddd")
+        plot_theme.legend(ax, **kw)
+
+    def retheme(self):
+        if self.tree is None:
+            self.clear()
+        else:
+            self._draw()
 
     def clear(self):
         self.tree = None
@@ -111,7 +112,7 @@ class PIPlot(QWidget):
         self._style(ax)
         ax.set_xticks([])
         ax.set_yticks([])
-        ax.text(0.5, 0.5, message, ha="center", va="center", color="#999", fontsize=10,
+        ax.text(0.5, 0.5, message, ha="center", va="center", color=ink().muted, fontsize=10,
                 transform=ax.transAxes, wrap=True)
         return ""
 
@@ -119,7 +120,7 @@ class PIPlot(QWidget):
         rows = piplots.load_margins(tree)
         if not rows:
             return self._empty("No load has a solved voltage.")
-        piplots.draw_loads(self.figure, rows, INK, self._style)
+        piplots.draw_loads(self.figure, rows, _ink(), self._style)
         fails = [r.name for r in rows if r.status == "FAIL"]
         unjudged = sum(r.status is None for r in rows)
         out = (f"<b>{len(rows) - len(fails) - unjudged} of {len(rows)} loads pass</b>"
@@ -134,7 +135,7 @@ class PIPlot(QWidget):
         rows = piplots.drop_budget(tree, self.setup or getattr(tree, "solved_setup", None))
         if not rows:
             return self._empty("No load has a solved voltage.")
-        piplots.draw_budget(self.figure, rows, INK, self._style)
+        piplots.draw_budget(self.figure, rows, _ink(), self._style)
         self._legend(self.figure.axes[0], loc="lower right")
         return ("Each load's drop from its VRM's set voltage, by where it is lost: the VRM "
                 "itself (load line; below zero, a remote-sense boost), the series parts on "

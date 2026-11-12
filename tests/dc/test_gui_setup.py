@@ -120,10 +120,10 @@ def test_add_puts_a_vrm_on_the_net_selected_in_the_nets_list(app):
     assert [v.output.net for v in setup.vrms] == ["+3V3", "VSNS"]
     panel.picked_nets = ["GND"]                      # selected but not ticked: nothing
     panel.vrm_list._add()
-    assert len(setup.vrms) == 2 and "GND is selected but not ticked" in panel.lbl_errors.text()
+    assert len(setup.vrms) == 2 and "GND is selected but not ticked" in panel.lbl_notice.text()
     panel.picked_nets = ["VSNS"]                     # selected, already has a VRM: nothing
     panel.vrm_list._add()
-    assert len(setup.vrms) == 2 and "VSNS already has a VRM" in panel.lbl_errors.text()
+    assert len(setup.vrms) == 2 and "VSNS already has a VRM" in panel.lbl_notice.text()
 
 
 def test_add_with_nothing_selected_does_not_repeat_a_rail(app):
@@ -132,15 +132,15 @@ def test_add_with_nothing_selected_does_not_repeat_a_rail(app):
     panel = PIPanel()
     panel.set_board(_board_with_bridges(), setup)
     panel.vrm_list._add()                            # nothing ticked
-    assert not setup.vrms and "No net is ticked" in panel.lbl_errors.text()
+    assert not setup.vrms and "No net is ticked" in panel.lbl_notice.text()
     panel.set_nets(["GND"])
     panel.vrm_list._add()                            # only a ground ticked
-    assert not setup.vrms and "Only ground nets" in panel.lbl_errors.text()
+    assert not setup.vrms and "Only ground nets" in panel.lbl_notice.text()
     panel.set_nets(["+3V3", "VSNS", "GND"])
     for _ in range(4):                               # each ticked rail once, no ground
         panel.vrm_list._add()
     assert [v.output.net for v in setup.vrms] == ["+3V3", "VSNS"]
-    assert "Every ticked rail already has a VRM" in panel.lbl_errors.text()
+    assert "Every ticked rail already has a VRM" in panel.lbl_notice.text()
     panel.close()
 
 
@@ -159,11 +159,11 @@ def test_add_load_moves_on_to_the_next_part_then_rail(app):
         panel.load_list._add()
     got = [(l.supply.ref, l.supply.net) for l in setup.loads]
     assert got == want and len(set(got)) == len(got)
-    assert "Every ticked rail already has a load" in panel.lbl_errors.text()
+    assert "Every ticked rail already has a load" in panel.lbl_notice.text()
     panel.picked_nets = ["VSNS"]
     panel.load_list._add()
     assert len(setup.loads) == len(want)
-    assert "Every part on VSNS already has a load" in panel.lbl_errors.text()
+    assert "Every part on VSNS already has a load" in panel.lbl_notice.text()
     panel.close()
 
 
@@ -178,11 +178,11 @@ def test_add_series_link_does_not_repeat_one(app):
     ends = [frozenset(((k.side_a.ref, k.side_a.net), (k.side_b.ref, k.side_b.net)))
             for k in setup.links]
     assert len(ends) == len(set(ends)) and len(ends) <= 2
-    assert "Every ticked rail already has a series link" in panel.lbl_errors.text()
+    assert "Every ticked rail already has a series link" in panel.lbl_notice.text()
     panel.picked_nets = ["+3V3"]
     panel.link_list._add()
     assert len(setup.links) == len(ends)
-    assert "is already there" in panel.lbl_errors.text()
+    assert "is already there" in panel.lbl_notice.text()
     panel.close()
 
 

@@ -38,12 +38,13 @@ def test_dialog_shows_the_icon(app):
                for lb in d.findChildren(QLabel))
 
 
-def test_toolbar_has_stackup_help_and_about_after_open_results(app, no_3d):
+def test_toolbar_ends_with_stackup_then_help_about_and_theme(app, no_3d):
     from qtpy.QtWidgets import QToolBar
     from kipi_si.gui.main_window import MainWindow
     w = MainWindow()
     names = [a.text() for a in w.findChild(QToolBar).actions() if a.text()]
-    assert names[-5:] == ["Open results…", "Stackup", "Help", "About", "Dark mode"]
+    assert names[-4:] == ["Stackup", "Help", "About", "Dark mode"]
+    assert names.index("Open results…") < names.index("Top")    # files, then the camera
     assert "Power tree" not in names                 # a tab beside the 3D view, no button
     w.act_power_tree.trigger()                       # Ctrl+T brings the tab (#58) up
     assert w.views.currentWidget() is w.power_tree

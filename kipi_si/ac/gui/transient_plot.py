@@ -12,6 +12,8 @@ from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from kipi_si.ac.gui.plot import COLORS, _eng
+from kipi_si.gui import plot_theme
+from kipi_si.gui.plot_theme import FollowsTheme, ink
 from kipi_si.ac.transient import bandwidth_limited, transients
 from kipi_si.gui.tooltip_art import art_tip
 
@@ -36,13 +38,14 @@ def time_scale(t_end: float):
     return 1e9, "ns"
 
 
-class TransientPlot(QWidget):
+class TransientPlot(FollowsTheme, QWidget):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
         from matplotlib.figure import Figure
         self.figure = Figure(figsize=(6, 3), tight_layout=True)
-        self.figure.patch.set_facecolor("#1e1e1e")
+        self.figure.patch.set_facecolor(ink().bg)
+        self._drawn_in = ink()
         self.canvas = FigureCanvasQTAgg(self.figure)
         self.canvas.setFocusPolicy(Qt.ClickFocus)
         self.ax_i, self.ax_v = self.figure.subplots(
@@ -96,13 +99,14 @@ class TransientPlot(QWidget):
 
     def _style(self):
         for ax in (self.ax_i, self.ax_v):
-            ax.set_facecolor("#1e1e1e")
-            for s in ax.spines.values():
-                s.set_color("#888")
-            ax.tick_params(colors="#ccc", which="both")
-            ax.xaxis.label.set_color("#ccc")
-            ax.yaxis.label.set_color("#ccc")
-            ax.title.set_color("#ddd")
+            plot_theme.style_axes(ax)
+
+    def retheme(self):
+        if self.result is None:
+            self._wipe()
+            self.canvas.draw_idle()
+        else:
+            self._draw()
 
     def clear(self):
         self.result = None
@@ -164,18 +168,16 @@ class TransientPlot(QWidget):
                 for y in (allowed, -allowed):
                     self.ax_v.axhline(y * 1e3, color=color, lw=1.0, ls="--", alpha=0.8)
         if not at_load:
-            self.ax_v.axhline(0, color="#666", lw=0.8)
+            self.ax_v.axhline(0, color=ink().zero, lw=0.8)
         self.ax_i.set_ylabel("Load step (A)")
         self.ax_v.set_ylabel("Voltage at the load (V)" if at_load else "Rail deviation (mV)")
         self.ax_v.set_xlabel(f"Time ({unit})")
         self.ax_v.set_xlim(0, t_end * k)
         for ax in (self.ax_i, self.ax_v):
-            ax.grid(True, color="#444", lw=0.6)
+            ax.grid(True, color=ink().grid, lw=0.6)
         bw = ", 20 MHz bandwidth limit" if self.chk_bw.isChecked() else ""
         self.ax_i.set_title(f"{result.rail}: estimated transient response{bw}", fontsize=10)
-        leg = self.ax_v.legend(loc="best", fontsize=8, facecolor="#2a2a2a", edgecolor="#555")
-        for t in leg.get_texts():
-            t.set_color("#ddd")
+        plot_theme.legend(self.ax_v, loc="best")
         self.lbl.setText((NOTE_AT_LOAD if at_load else NOTE) + self._notes())
         self.canvas.draw_idle()
 

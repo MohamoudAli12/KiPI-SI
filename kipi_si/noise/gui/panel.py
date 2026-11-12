@@ -32,6 +32,7 @@ from kipi_si.core.model.parts import (
     is_capacitor_ref, is_inductor_ref, parse_capacitance, parse_inductance, part_value,
 )
 from kipi_si.dc.gui.pi_panel import (
+    SolveTab,
     NONE, ItemList, PartSelection, _Editor, _get_optional, _optional_spin, _set_optional,
     _spin, _unique, make_searchable, tip,
 )
@@ -795,7 +796,7 @@ def describe_aggressor(setup: PISetup):
 # Panel
 # ---------------------------------------------------------------------------
 
-class NoisePanel(QWidget, PartSelection):
+class NoisePanel(QWidget, PartSelection, SolveTab):
     solve_requested = Signal(object, str)          # PISetup, aggressor name
     result_selected = Signal(object)               # NoiseResult shown in the plot; None clears
     victim_selected = Signal(str)                  # the victim picked in the results table
@@ -804,6 +805,9 @@ class NoisePanel(QWidget, PartSelection):
     results_saved = Signal(str)
     report_requested = Signal(object, str)         # the shown NoiseResult, "html" or "pdf"
     part_selected = Signal(str, str, bool)         # see ACPanel.part_selected
+
+    solve_tab_tip = ("Pick the aggressor and victims and solve, once the aggressors, victims, "
+                     "capacitors and settings are set up, and see the results")
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -850,7 +854,10 @@ class NoisePanel(QWidget, PartSelection):
         for il in self._lists():
             il.changed.connect(self._on_changed)
         self._watch_part_lists()
-        lay.addWidget(self.tabs, 3)
+        lay.addWidget(self.tabs, 1)
+        lay.addWidget(self._notice_label())
+        # Last, once the problem is set up: Solve and the results.
+        lay = self._solve_page()
 
         self.lbl_errors = QLabel(self)
         self.lbl_errors.setWordWrap(True)
@@ -1061,6 +1068,7 @@ class NoisePanel(QWidget, PartSelection):
         lr.addWidget(self.txt_notes)
         lr.addLayout(row)
         lay.addWidget(g_res, 1)
+        self._add_solve_tab()
         self.setEnabled(False)
 
     def _lists(self):
@@ -1376,6 +1384,8 @@ class NoisePanel(QWidget, PartSelection):
             errors = validate_noise(self.setup, self.snapshot, agg)
         self.lbl_errors.setText("\n".join(f"• {e}" for e in errors))
         self.btn_solve.setEnabled(not errors)
+        self.flag_solve_tab(errors)
+        self.notice("")
 
     def _solve(self):
         self.solve_requested.emit(self.setup, self.cmb_agg.currentData() or "")
@@ -1388,8 +1398,8 @@ class NoisePanel(QWidget, PartSelection):
     def _new_aggressor(self) -> Optional[Aggressor]:
         vrms = smps_vrms(self.setup)
         if not vrms:
-            self.lbl_errors.setText("• Add a VRM of type Switcher first: Auto-fill power tree… "
-                                    "finds them on the board, or add one in DC or AC mode")
+            self.notice("• Add a VRM of type Switcher first: Auto-fill power tree… "
+                        "finds them on the board, or add one in DC or AC mode")
             return None
         taken = {a.vrm for a in self.setup.aggressors}
         vrm = next((v for v in vrms if v.name not in taken), vrms[0])
@@ -1412,7 +1422,7 @@ class NoisePanel(QWidget, PartSelection):
         net = next((n for n in sorted_nets(self.snapshot)
                     if kinds.get(n) == "signal" and n not in taken and n not in sw), None)
         if net is None:
-            self.lbl_errors.setText("• No signal net is left to add")
+            self.notice("• No signal net is left to add")
             return None
         drv, rcv = guess_ends(self.snapshot, net)
         return Victim(net, driver=drv, receiver=rcv)
@@ -1450,6 +1460,7 @@ class NoisePanel(QWidget, PartSelection):
         self._set_victim("")
 
     def show_error(self, message: str):
+        self.show_solve_tab()
         self.txt_notes.setText(f'<span style="color:#ff7070"><b>Cannot solve:</b><br>'
                                f'{html.escape(message).replace(chr(10), "<br>")}</span>')
 
@@ -1464,6 +1475,7 @@ class NoisePanel(QWidget, PartSelection):
     def show_result(self, result):
         """A finished solve (or its waveforms, as they are ready): kept for its aggressor and
         shown if that aggressor is still selected."""
+        self.show_solve_tab()
         self._results[result.aggressor] = result
         self.btn_save.setEnabled(True)
         if result.aggressor == (self.cmb_agg.currentData() or ""):

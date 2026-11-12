@@ -12,6 +12,8 @@ from qtpy.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QVBoxLayou
 
 from kipi_si.ac.board_map import ACMap, nets_text
 from kipi_si.ac.gui.plot import COLORS
+from kipi_si.gui import plot_theme
+from kipi_si.gui.plot_theme import FollowsTheme, ink
 
 EMPTY = "Solve a rail in AC mode to see its mesh, capacitors and probes here."
 HINT = "Hover a part for its model."
@@ -21,13 +23,14 @@ ALL_LAYERS = -1
 HOVER_PX = 8                       # how near the pointer must be to a part
 
 
-class BoardMap(QWidget):
+class BoardMap(FollowsTheme, QWidget):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
         from matplotlib.figure import Figure
         self.figure = Figure(figsize=(6, 4), tight_layout=True)
-        self.figure.patch.set_facecolor("#1e1e1e")
+        self.figure.patch.set_facecolor(ink().bg)
+        self._drawn_in = ink()
         self.canvas = FigureCanvasQTAgg(self.figure)
         self.ax = self.figure.add_subplot(111)
         self.lbl = QLabel(EMPTY, self)
@@ -69,14 +72,13 @@ class BoardMap(QWidget):
         self.canvas.draw_idle()
 
     def _style(self):
-        ax = self.ax
-        ax.set_facecolor("#1e1e1e")
-        for s in ax.spines.values():
-            s.set_color("#888")
-        ax.tick_params(colors="#ccc", which="both")
-        ax.xaxis.label.set_color("#ccc")
-        ax.yaxis.label.set_color("#ccc")
-        ax.title.set_color("#ddd")
+        plot_theme.style_axes(self.ax)
+
+    def retheme(self):
+        if self.board_map is None:
+            self.clear()
+        else:
+            self._redraw()
 
     # ------------------------------------------------------------------ data
     def clear(self):
@@ -149,20 +151,20 @@ class BoardMap(QWidget):
                 self._mesh_pcs.append(pc)
             self._style_edges()
         for r in m.outline:
-            ax.plot(r[:, 0], r[:, 1], color="#aaa", lw=1.0, zorder=3)
+            ax.plot(r[:, 0], r[:, 1], color=ink().muted, lw=1.0, zorder=3)
         self._parts = []
         for k, (name, parts) in enumerate(m.models.items()):
             self._scatter(parts, f"{name} ({len(parts)})", marker="o", s=36,
                           color=COLORS[k % len(COLORS)], edgecolors="#111")
         if m.missing:
             self._scatter(m.missing, f"no model, left out ({len(m.missing)})", marker="x",
-                          s=60, color="#f0f0f0", linewidths=1.6)
+                          s=60, color=ink().marker, linewidths=1.6)
         if m.probes:
             self._scatter(m.probes, "probes", marker="*", s=180, color="#ff4040",
                           edgecolors="#600")
             for p in m.probes:
                 ax.annotate(p.ref, (p.x, p.y), xytext=(0, 9), textcoords="offset points",
-                            ha="center", color="#ffb0b0", fontsize=8, zorder=6)
+                            ha="center", color=ink().probe_text, fontsize=8, zorder=6)
         ax.set_aspect("equal", adjustable="box")
         self._fit()
         ax.set_xlabel("x (mm)")
@@ -174,10 +176,7 @@ class BoardMap(QWidget):
         handles, _ = ax.get_legend_handles_labels()
         if handles:
             # Below the board, as in the report: at its side, long labels squeezed the map.
-            leg = ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=3,
-                            fontsize=8, facecolor="#2a2a2a", edgecolor="#555")
-            for t in leg.get_texts():
-                t.set_color("#ddd")
+            plot_theme.legend(ax, loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=3)
         self.lbl.setText(HINT)
         self.canvas.draw_idle()
 
@@ -236,8 +235,8 @@ class BoardMap(QWidget):
         if self._annot is None:
             self._annot = self.ax.annotate(
                 "", (0, 0), xytext=(10, 10), textcoords="offset points", fontsize=8,
-                color="#eee", zorder=10, animated=True,      # drawn by _blit_annot
-                bbox=dict(boxstyle="round", fc="#2a2a2a", ec="#777"))
+                color=ink().title, zorder=10, animated=True,  # drawn by _blit_annot
+                bbox=dict(boxstyle="round", fc=ink().panel, ec=ink().edge))
             self._annot.set_visible(False)
         if text is None:
             if self._annot.get_visible():

@@ -12,9 +12,11 @@ from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from kipi_si.ac.board_map import nets_text
+from kipi_si.gui import plot_theme
+from kipi_si.gui.plot_theme import FollowsTheme, ink
 
-COLORS = ("#4fa3ff", "#ffa040", "#60d060", "#ff6080", "#c080ff", "#40d0d0", "#e0e060")
-CURSOR_COLOR = "#e8e8e8"
+# The curves' colours: the shown theme's (one list, changed in place on a switch).
+COLORS = plot_theme.SERIES
 EMPTY = "Solve a rail in AC mode to see its impedance here."
 HINT = ("Click a curve to place the cursor. Drag to move it along the curve, ←/→ to step "
         "(Shift: ×10), ↑/↓ to change curve, Esc or right-click to remove it.")
@@ -53,7 +55,7 @@ def _eng(x: float, unit: str, digits: int = 4) -> str:
     return f"{x / 10 ** e:.{digits}g} {prefix}{unit}"
 
 
-class ImpedancePlot(QWidget):
+class ImpedancePlot(FollowsTheme, QWidget):
     # HTML describing the cursor point, for the Info pane; "" when the cursor is removed.
     cursor_moved = Signal(str)
 
@@ -62,7 +64,8 @@ class ImpedancePlot(QWidget):
         from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
         from matplotlib.figure import Figure
         self.figure = Figure(figsize=(6, 3), tight_layout=True)
-        self.figure.patch.set_facecolor("#1e1e1e")
+        self.figure.patch.set_facecolor(ink().bg)
+        self._drawn_in = ink()
         self.canvas = FigureCanvasQTAgg(self.figure)
         self.canvas.setFocusPolicy(Qt.ClickFocus)     # for the cursor's arrow keys
         self.ax = self.figure.add_subplot(111)
@@ -93,14 +96,17 @@ class ImpedancePlot(QWidget):
         self.canvas.draw_idle()
 
     def _style(self):
-        ax = self.ax
-        ax.set_facecolor("#1e1e1e")
-        for s in ax.spines.values():
-            s.set_color("#888")
-        ax.tick_params(colors="#ccc", which="both")
-        ax.xaxis.label.set_color("#ccc")
-        ax.yaxis.label.set_color("#ccc")
-        ax.title.set_color("#ddd")
+        plot_theme.style_axes(self.ax)
+
+    def retheme(self):
+        """Draw again in the shown theme, the cursor where it was."""
+        if self.result is None:
+            self.clear()
+            return
+        cursor = self.cursor
+        self.set_result(self.result)
+        if cursor is not None:
+            self.set_cursor(*cursor)
 
     def clear(self):
         self.result = None
@@ -127,21 +133,19 @@ class ImpedancePlot(QWidget):
                           label=f"{c.name} target")
         bw = getattr(result, "bandwidth_hz", None)
         if bw and f[0] < bw < f[-1]:
-            ax.axvline(bw, color="#888", lw=1.0, ls=":",
+            ax.axvline(bw, color=ink().faint, lw=1.0, ls=":",
                        label=f"VRM bandwidth {_eng_hz(bw)}")
         ax.set_xscale("log")
         ax.set_xlim(f[0], f[-1])
         ax.set_xlabel("Frequency")
         ax.set_ylabel("|Z|")
         ax.xaxis.set_major_formatter(FuncFormatter(_eng_hz))
-        ax.grid(True, which="major", color="#555", lw=0.6)
-        ax.grid(True, which="minor", color="#333", lw=0.4)
+        ax.grid(True, which="major", color=ink().grid_major, lw=0.6)
+        ax.grid(True, which="minor", color=ink().grid_minor, lw=0.4)
         ax.set_title(f"{result.rail}: {nets_text(result.rail_nets)} against {result.ground}",
                      fontsize=10)
         self._set_yscale(draw=False)
-        leg = ax.legend(loc="best", fontsize=8, facecolor="#2a2a2a", edgecolor="#555")
-        for t in leg.get_texts():
-            t.set_color("#ddd")
+        plot_theme.legend(ax, loc="best")
         self.lbl.setText(HINT)
         self.canvas.draw_idle()
 
@@ -243,7 +247,7 @@ class ImpedancePlot(QWidget):
         x, y = float(f[k]), float(self.result.probes[probe].mag[k])
         color = COLORS[probe % len(COLORS)]
         if self._cursor_artists is None:
-            kw = dict(color=CURSOR_COLOR, lw=0.9, ls=":", label="_cursor")
+            kw = dict(color=ink().cursor, lw=0.9, ls=":", label="_cursor")
             self._cursor_artists = (
                 self.ax.axvline(x, **kw), self.ax.axhline(y, **kw),
                 self.ax.plot([x], [y], "o", ms=7, mfc="none", mew=1.6, label="_cursor")[0])

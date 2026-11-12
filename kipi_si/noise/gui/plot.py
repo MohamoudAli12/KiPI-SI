@@ -13,6 +13,8 @@ from qtpy.QtWidgets import (QCheckBox, QComboBox, QHBoxLayout, QLabel, QScrollAr
                             QWidget)
 
 from kipi_si.ac.gui.plot import COLORS, _eng, _eng_hz
+from kipi_si.gui import plot_theme
+from kipi_si.gui.plot_theme import FollowsTheme, ink
 from kipi_si.gui.tooltip_art import art_tip
 from kipi_si.noise.waveforms import bandwidth_limited
 
@@ -55,13 +57,14 @@ class _CurveScroll(QScrollArea):
         return QSize(self.maximumWidth(), super().sizeHint().height())
 
 
-class NoisePlot(QWidget):
+class NoisePlot(FollowsTheme, QWidget):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
         from matplotlib.figure import Figure
         self.figure = Figure(figsize=(6, 3), tight_layout=True)
-        self.figure.patch.set_facecolor("#1e1e1e")
+        self.figure.patch.set_facecolor(ink().bg)
+        self._drawn_in = ink()
         self.canvas = FigureCanvasQTAgg(self.figure)
         self.ax = self.figure.add_subplot(111)
         self.axes = [self.ax]
@@ -138,13 +141,15 @@ class NoisePlot(QWidget):
 
     def _style(self):
         for ax in self.axes:
-            ax.set_facecolor("#1e1e1e")
-            for s in ax.spines.values():
-                s.set_color("#888")
-            ax.tick_params(colors="#ccc", which="both")
-            ax.xaxis.label.set_color("#ccc")
-            ax.yaxis.label.set_color("#ccc")
-            ax.title.set_color("#ddd")
+            plot_theme.style_axes(ax)
+
+    def retheme(self):
+        """Draw again in the shown theme, the curve list's colour swatches too."""
+        self._ticks_for = (None, [])
+        if self.result is None:
+            self.clear()
+        else:
+            self._draw()
 
     def _layout(self, n: int):
         """``n`` axes stacked, sharing the time axis; cleared and styled."""
@@ -291,7 +296,7 @@ class NoisePlot(QWidget):
             ax.set_xlabel("Frequency")
             ax.set_ylabel(f"Amplitude ({unit} peak)")
             ax.xaxis.set_major_formatter(FuncFormatter(_eng_hz))
-            ax.grid(True, which="major", color="#555", lw=0.6)
+            ax.grid(True, which="major", color=ink().grid_major, lw=0.6)
         else:
             periods = max(1, int(self.periods))
             t = wf.time(periods)
@@ -311,7 +316,7 @@ class NoisePlot(QWidget):
                 ax.set_ylim(-1.3 * v.peak_v, 1.3 * v.peak_v)
             ax.set_xlabel("Time (µs)")
             ax.set_ylabel(unit)
-            ax.grid(True, color="#444", lw=0.5)
+            ax.grid(True, color=ink().grid, lw=0.5)
         op = self.result.operating
         v = self._victim() if self.cmb_view.currentData() in ("victim", "states") else None
         if v is not None:
@@ -452,7 +457,7 @@ class NoisePlot(QWidget):
                     label=label)
             self._curves.append((label, t, st.level_v + noise, "V", ax))
             out_name, in_name = names.get(st.name, ("level", "threshold"))
-            _level(ax, st.level_v, f"{out_name} {st.level_v:.3g} V", "#999", ":", lw=0.8)
+            _level(ax, st.level_v, f"{out_name} {st.level_v:.3g} V", ink().muted, ":", lw=0.8)
             peak = max(float(np.max(np.abs(noise))), 1e-15)
             # As in the noise view: the threshold is drawn where it fits beside the noise.
             if st.margin_v <= 4 * peak:
@@ -464,7 +469,7 @@ class NoisePlot(QWidget):
             ax.ticklabel_format(axis="y", useOffset=False)
             ax.set_ylabel("V")
             ax.set_xlim(0, t[-1] * 1e6)
-            ax.grid(True, color="#444", lw=0.5)
+            ax.grid(True, color=ink().grid, lw=0.5)
             ax.set_title(f"{v.name} held {st.name} (driver {st.driver_ohm:.4g} Ω): "
                          f"{st.excursion_v * 1e3:.4g} mV toward {in_name}, "
                          f"{st.margin_v * 1e3:.4g} mV away",

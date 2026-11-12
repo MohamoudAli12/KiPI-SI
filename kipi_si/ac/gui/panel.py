@@ -33,6 +33,7 @@ from kipi_si.ac.package import open_removed_dies, sync_die_probes
 from kipi_si.core.model.board import BoardSnapshot
 from kipi_si.core.model.nets import classify_nets, sorted_nets
 from kipi_si.dc.gui.pi_panel import (
+    SolveTab,
     OPTIONAL, REQUIRED, ItemList, LinkEditor, PartSelection, PIPanel, VrmEditor, _Editor,
     _spin, _unique, make_searchable, parts_on_net, tip,
 )
@@ -672,7 +673,7 @@ class ProbeEditor(_Editor):
 # Panel
 # ---------------------------------------------------------------------------
 
-class ACPanel(QWidget, PartSelection):
+class ACPanel(QWidget, PartSelection, SolveTab):
     solve_requested = Signal(object, str, str)     # PISetup, VRM name, ground net
     result_selected = Signal(object)               # ACResult shown in the plot; None clears it
     setup_changed = Signal()                       # any edit to the setup
@@ -682,6 +683,10 @@ class ACPanel(QWidget, PartSelection):
     # "link", "cap", "probe"), name, and whether the user picked it; ("", "", False) for
     # none (#96).
     part_selected = Signal(str, str, bool)
+
+    solve_tab_tip = ("Pick the rail and its ground and solve, once the VRMs, series links, "
+                     "capacitors, probes, packages, sweep and mesh are set up, and see the "
+                     "results")
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -756,7 +761,10 @@ class ACPanel(QWidget, PartSelection):
         for il in self._lists():
             il.changed.connect(self._on_changed)
         self._watch_part_lists()
-        lay.addWidget(self.tabs, 3)
+        lay.addWidget(self.tabs, 1)
+        lay.addWidget(self._notice_label())
+        # Last, once the problem is set up: Solve and the results.
+        lay = self._solve_page()
 
         self.lbl_errors = QLabel(self)
         self.lbl_errors.setWordWrap(True)
@@ -850,6 +858,7 @@ class ACPanel(QWidget, PartSelection):
         lr.addWidget(self.txt_notes)
         lr.addLayout(row)
         lay.addWidget(g_res, 1)
+        self._add_solve_tab()
         self.setEnabled(False)
 
     def _lists(self):
@@ -1169,6 +1178,8 @@ class ACPanel(QWidget, PartSelection):
         errors = validate_ac(self.setup, self.cmb_rail.currentData() or "", self.ground())
         self.lbl_errors.setText("\n".join(f"• {e}" for e in errors))
         self.btn_solve.setEnabled(not errors)
+        self.flag_solve_tab(errors)
+        self.notice("")
 
     def _solve(self):
         self.solve_requested.emit(self.setup, self.cmb_rail.currentData() or "",
@@ -1375,6 +1386,7 @@ class ACPanel(QWidget, PartSelection):
         self.report_option.set_available(False)
 
     def show_error(self, message: str):
+        self.show_solve_tab()
         self.txt_notes.setText(f'<span style="color:#ff7070"><b>Cannot solve:</b><br>'
                                f'{html.escape(message).replace(chr(10), "<br>")}</span>')
 
@@ -1389,6 +1401,7 @@ class ACPanel(QWidget, PartSelection):
 
     def show_result(self, result):
         """A finished solve: kept for its rail, and shown if that rail is still selected."""
+        self.show_solve_tab()
         self._results[result.rail] = result
         self.btn_save.setEnabled(True)
         if result.rail == (self.cmb_rail.currentData() or ""):

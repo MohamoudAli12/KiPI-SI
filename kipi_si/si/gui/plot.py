@@ -10,6 +10,8 @@ import numpy as np
 from qtpy.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from kipi_si.ac.gui.plot import COLORS, _eng_hz
+from kipi_si.gui import plot_theme
+from kipi_si.gui.plot_theme import FollowsTheme, ink
 from kipi_si.si.siplots import Ink, draw_compare
 
 EMPTY = "Solve a channel in Signal Integrity mode to see its plots here."
@@ -17,10 +19,9 @@ EMPTY = "Solve a channel in Signal Integrity mode to see its plots here."
 VIEWS = (("eye", "Eye diagram"), ("tdr", "Impedance (TDR)"), ("sparams", "S-parameters"),
          ("waves", "Waveforms at the dies"), ("pulse", "Pulse response"),
          ("compare", "Solved channels compared"))
-BG = "#1e1e1e"
 
 
-class SIPlot(QWidget):
+class SIPlot(FollowsTheme, QWidget):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
@@ -29,7 +30,8 @@ class SIPlot(QWidget):
         #: The solved channels' results, in the setup's order, for the comparison.
         self.results_source: Callable[[], List[object]] = lambda: []
         self.figure = Figure(figsize=(6, 3), tight_layout=True)
-        self.figure.patch.set_facecolor(BG)
+        self.figure.patch.set_facecolor(ink().bg)
+        self._drawn_in = ink()
         self.canvas = FigureCanvasQTAgg(self.figure)
         self.ax = self.figure.add_subplot(111)
         self.cmb_view = QComboBox(self)
@@ -64,20 +66,16 @@ class SIPlot(QWidget):
     # ------------------------------------------------------------------ helpers
     def _style(self, ax=None):
         for a in ([ax] if ax is not None else self.figure.axes):
-            a.set_facecolor(BG)
-            for s in a.spines.values():
-                s.set_color("#888")
-            a.tick_params(colors="#ccc", which="both")
-            a.xaxis.label.set_color("#ccc")
-            a.yaxis.label.set_color("#ccc")
-            a.title.set_color("#ddd")
-            a.grid(True, color="#444", lw=0.5)
+            plot_theme.style_axes(a, grid=True)
 
     def _legend(self, ax):
-        if ax.get_legend_handles_labels()[0]:
-            leg = ax.legend(loc="best", fontsize=8, facecolor="#2a2a2a", edgecolor="#555")
-            for t in leg.get_texts():
-                t.set_color("#ddd")
+        plot_theme.legend(ax, loc="best")
+
+    def retheme(self):
+        if self.result is None:
+            self.clear()
+        else:
+            self._draw()
 
     def clear(self):
         self.result = None
@@ -126,14 +124,14 @@ class SIPlot(QWidget):
         self.canvas.draw_idle()
 
     def _draw_eye(self, r) -> str:
-        from kipi_si.si.eyeplot import DARK, draw_eye
+        from kipi_si.si.eyeplot import DARK, LIGHT, draw_eye
         e = (r.eye_wave if self.chk_wave.isChecked() else
              (r.eye if self.chk_eq.isChecked() else r.eye_raw))
         if e is None:
             self.ax.set_title("No eye: the channel's pulse response could not be built")
             return ""
         ch = r.channel
-        draw_eye(self.figure, e, (ch.value("eye_h_v"), ch.value("eye_w_ui")), DARK)
+        draw_eye(self.figure, e, (ch.value("eye_h_v"), ch.value("eye_w_ui")), DARK if ink().dark else LIGHT)
         self._styled = True
         eq = e.eq.describe() if e.eq is not None else "none"
         out = f"eye {e.height_v * 1e3:.1f} mV × {e.width_ui:.2f} UI"
@@ -153,7 +151,7 @@ class SIPlot(QWidget):
         ax.plot(t, r.tdr_z, color=COLORS[0], lw=1.4,
                 label="Zdiff (Sdd11)" if r.channel.partner else "Z (S11)")
         target = r.channel.proto().z_target_ohm
-        ax.axhline(target, color="#888", ls="--", lw=1, label=f"Target {target:g} Ω")
+        ax.axhline(target, color=ink().faint, ls="--", lw=1, label=f"Target {target:g} Ω")
         tol = target * r.z_tol_pct / 100
         ax.axhspan(target - tol, target + tol, color="#60d060", alpha=0.08)
         ax.set_xlabel("Time (ps)")
@@ -174,7 +172,7 @@ class SIPlot(QWidget):
             self.ax.set_title("Solve channels to compare them here")
             return ""
         self.figure.clear()
-        draw_compare(self.figure, results, Ink(COLORS, "#ccc", "#888"), self._style)
+        draw_compare(self.figure, results, Ink(COLORS, ink().fg, ink().faint), self._style)
         self._styled = True
         passed = sum(x.status == "PASS" for x in results)
         return (f"{len(results)} solved channels, {passed} passing; each bar coloured by "
@@ -195,8 +193,8 @@ class SIPlot(QWidget):
             ax.plot(f, nxt, color=col, lw=1, label=f"NEXT from {a}")
             ax.plot(f, fxt, color=col, lw=1, ls="--", label=f"FEXT from {a}")
         ny = r.nyquist_hz
-        ax.axvline(ny, color="#888", ls=":", lw=1)
-        ax.text(ny, 0, " Nyquist", color="#aaa", fontsize=8, va="top")
+        ax.axvline(ny, color=ink().faint, ls=":", lw=1)
+        ax.text(ny, 0, " Nyquist", color=ink().muted, fontsize=8, va="top")
         ch = r.channel
         if ch.value("il_max_db") is not None:
             ax.plot([ny], [ch.value("il_max_db")], marker="v", color=COLORS[0], ls="none")

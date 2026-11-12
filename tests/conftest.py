@@ -141,3 +141,33 @@ def own_settings(tmp_path_factory):
     for fmt in (QSettings.NativeFormat, QSettings.IniFormat):
         QSettings.setPath(fmt, QSettings.UserScope, folder)
     yield
+
+
+@pytest.fixture(autouse=True)
+def windows_deleted():
+    """The windows a test opens are deleted when it ends.
+
+    Closing a window only hides it, and Python cannot free it: its widgets' signals are
+    connected to its own methods, a loop through Qt that the garbage collector does not
+    see. Left alone, every test's windows live to the end of the run (some 110 000 widgets
+    by the middle of tests/gui, several GB), and a theme switch then restyles them all
+    for minutes. Windows that were there before the test (a module's fixture) are kept.
+    """
+    import sys
+    widgets = sys.modules.get("qtpy.QtWidgets")
+    app = widgets.QApplication.instance() if widgets else None
+    before = app.topLevelWidgets() if app else []       # kept, so their ids stay theirs
+    kept = {id(w) for w in before}
+    yield
+    widgets = sys.modules.get("qtpy.QtWidgets")
+    app = widgets.QApplication.instance() if widgets else None
+    if app is None:
+        return
+    from qtpy.QtCore import QCoreApplication, QEvent
+    theme = sys.modules.get("kipi_si.gui.theme")
+    for w in app.topLevelWidgets():
+        if id(w) not in kept and w.parent() is None:
+            if theme is not None:
+                theme._windows.discard(w)       # or the next switch would style a deleted one
+            w.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)

@@ -1,14 +1,45 @@
 # Copyright (c) 2026 Tomachie LLC.
-"""The setup file's bar above the setup pages: which setup is open, Import, Auto-fill
-power tree, Auto-fill rail and Save. Every mode shares one setup file, so Save is in each;
-Import and Auto-fill fill the power tree, so only the Power Integrity modes (DC, AC, Noise)
-show them."""
+"""The setup file's bar above the setup pages: which setup is open and whether it is
+saved, then Import, Auto-fill (the power tree or one rail) and Save. Every mode shares one
+setup file, so Save is in each; Import and Auto-fill fill the power tree, so only the Power
+Integrity modes (DC, AC, Noise) show them."""
 
-from qtpy.QtCore import Signal
-from qtpy.QtWidgets import QHBoxLayout, QLabel, QPushButton, QWidget
+from pathlib import Path
+
+from qtpy.QtCore import Qt, Signal
+from qtpy.QtGui import QPainter
+from qtpy.QtWidgets import QHBoxLayout, QLabel, QMenu, QPushButton, QVBoxLayout, QWidget
 
 SAVE_TIP = "Save the setup next to the board (every analysis shares one file)"
-UNSAVED_STYLE = "QPushButton { border: 2px solid #ff8c00; border-radius: 3px; padding: 4px 12px; }"
+UNSAVED_STYLE = ("QPushButton { border: 2px solid #ff8c00; border-radius: 5px; "
+                 "padding: 3px 11px; }")
+
+
+class _ElidedLabel(QLabel):
+    """A one-line label that shortens its text in the middle to fit, keeping the file
+    name's end in view; ``text()`` is still the whole text, and the tooltip shows it.
+    ``shown`` replaces the text drawn (the file name without its folder)."""
+
+    shown = ""
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setPen(self.palette().color(self.foregroundRole()))
+        r = self.contentsRect()
+        p.drawText(r, int(Qt.AlignVCenter | Qt.AlignLeft),
+                   self.fontMetrics().elidedText(self.shown or self.text(), Qt.ElideMiddle, r.width()))
+
+    def minimumSizeHint(self):
+        hint = super().minimumSizeHint()
+        hint.setWidth(60)
+        return hint
+
+
+def _short(text: str) -> str:
+    """The label's text with the setup's folder left out: "Setup: a/b/c.yml" -> "c.yml"."""
+    if text.startswith("Setup: "):
+        return Path(text[len("Setup: "):]).name
+    return text
 
 
 class SetupFileBar(QWidget):
@@ -19,12 +50,20 @@ class SetupFileBar(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        row = QHBoxLayout(self)
-        row.setContentsMargins(6, 6, 12, 2)         # clear of the dock edge
-        self.lbl_file = QLabel("No board", self)
-        self.lbl_file.setStyleSheet("color: #999;")
-        self.lbl_file.setWordWrap(True)
+        from kipi_si.gui import icons
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(8, 8, 12, 4)       # clear of the dock edge
+        outer.setSpacing(6)
+        row = QHBoxLayout()
+        row.setSpacing(6)
+        self.lbl_icon = QLabel(self)
+        self.lbl_icon.setPixmap(icons.icon("file").pixmap(16, 16))
+        self.lbl_file = _ElidedLabel("No board", self)
+        self.lbl_file.setStyleSheet("font-weight: bold;")
+        self.lbl_state = QLabel(self)
+        self.lbl_state.setStyleSheet("color: #ff8c00;")
         self.btn_import = QPushButton("Import…", self)
+        icons.attach(self.btn_import, "import")
         # Rich text, so Qt wraps it to a readable width.
         self.btn_import.setToolTip(
             "<p>Import a Tomachie .pdn.json file, which contains the board's power rails, "
@@ -33,45 +72,60 @@ class SetupFileBar(QWidget):
             "<p>Settings, thermal and the AC setup are kept; the log lists anything that "
             "could not be placed on the board.</p>")
         self.btn_import.clicked.connect(self.import_requested.emit)
-        self.btn_autofill = QPushButton("Auto-fill rail…", self)
+        # Auto-fill: one button, its menu the whole power tree or a single rail.
+        self.btn_autofill = QPushButton("Auto-fill", self)
+        icons.attach(self.btn_autofill, "wand")
         self.btn_autofill.setToolTip(
-            "<p>Fill one rail's power tree from the board: its source, the beads and small "
-            "resistors into its branches, and every load on it.</p>"
-            "<p>Currents, resistances and ratings come from each part's PI_I, PI_R, "
-            "PI_IMAX and PI_PMAX fields, else from pi_parts.yml (by part number). Parts with "
-            "no data are listed, and can be added to pi_parts.yml to fill in.</p>")
-        self.btn_autofill.clicked.connect(self.autofill_requested.emit)
-        self.btn_tree = QPushButton("Auto-fill power tree…", self)
-        self.btn_tree.setToolTip(
-            "<p>Find every regulator on the board (switchers by their inductors, LDOs between "
+            "<p>Fill the setup from the board and its parts' fields.</p>"
+            "<p><b>Power tree</b>: find every regulator on the board, the source each input "
+            "rail comes in from, and fill every rail's loads, series parts and capacitors.</p>"
+            "<p><b>One rail</b>: fill a single rail's source, branches and loads.</p>")
+        menu = QMenu(self.btn_autofill)
+        self.act_tree = menu.addAction("Whole power tree…", self.tree_requested.emit)
+        self.act_tree.setToolTip(
+            "Find every regulator on the board (switchers by their inductors, LDOs between "
             "two rails), the source each input rail comes in from, and the transistors that "
             "switch one rail on to another, then fill every rail's loads, series parts and "
-            "capacitors under them.</p>"
-            "<p>A preview lists what was found, for you to check, change and give voltages "
-            "first. PI_VRM, PI_V and PI_FSW fields, or pi_parts.yml, settle any part it "
-            "can't tell.</p>")
-        self.btn_tree.clicked.connect(self.tree_requested.emit)
+            "capacitors under them. A preview lists what was found, for you to check, "
+            "change and give voltages first. PI_VRM, PI_V and PI_FSW fields, or "
+            "pi_parts.yml, settle any part it can't tell.")
+        self.act_rail = menu.addAction("One rail…", self.autofill_requested.emit)
+        self.act_rail.setToolTip(
+            "Fill one rail's power tree from the board: its source, the beads and small "
+            "resistors into its branches, and every load on it. Currents, resistances and "
+            "ratings come from each part's PI_I, PI_R, PI_IMAX and PI_PMAX fields, else from "
+            "pi_parts.yml (by part number).")
+        menu.setToolTipsVisible(True)
+        self.btn_autofill.setMenu(menu)
         self.btn_save = QPushButton("Save", self)
+        icons.attach(self.btn_save, "save")
         self.btn_save.setToolTip(SAVE_TIP)
         self.btn_save.clicked.connect(self.save_requested.emit)
+        row.addWidget(self.lbl_icon)
         row.addWidget(self.lbl_file, 1)
+        row.addWidget(self.lbl_state)
+        row.addSpacing(6)
         row.addWidget(self.btn_import)
-        row.addWidget(self.btn_tree)
         row.addWidget(self.btn_autofill)
         row.addWidget(self.btn_save)
+        outer.addLayout(row)
 
     def set_mode(self, mode: str):
         """Show the power-tree buttons in the Power Integrity modes only (not SI)."""
         pi = mode != "si"
         self.btn_import.setVisible(pi)
         self.btn_autofill.setVisible(pi)
-        self.btn_tree.setVisible(pi)
 
     def set_label(self, text: str):
         self.lbl_file.setText(text)
+        self.lbl_file.shown = _short(text)
+        self.lbl_file.setToolTip(text)
+        self.lbl_file.update()
 
     def set_unsaved(self, unsaved: bool):
-        """Outline Save while the setup has changes not saved."""
+        """Outline Save, and say so beside the file name, while the setup has changes not
+        saved."""
         self.btn_save.setStyleSheet(UNSAVED_STYLE if unsaved else "")
+        self.lbl_state.setText("● unsaved" if unsaved else "")
         self.btn_save.setToolTip(f"{SAVE_TIP}. There are changes not saved yet." if unsaved
                                  else SAVE_TIP)

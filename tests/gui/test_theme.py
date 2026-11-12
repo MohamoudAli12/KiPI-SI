@@ -28,10 +28,15 @@ class _Store:
 @pytest.fixture
 def app():
     app = QApplication.instance() or QApplication([])
-    before = QPalette(app.palette())
+    # Earlier tests may have left the shared app dark. Start from the palette Qt began
+    # with (kept by theme.apply) and let this test take it afresh, then put both back.
+    before, kept = QPalette(app.palette()), theme._startup
+    if kept is not None:
+        app.setPalette(kept)
+        theme._startup = None
     yield app
     app.setPalette(before)
-    theme._startup = None
+    theme._startup = kept
 
 
 @pytest.fixture
