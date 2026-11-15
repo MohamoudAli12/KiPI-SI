@@ -10,6 +10,14 @@ import pytest
 # draws spin boxes and combo boxes far wider, so sizes measured there are not the app's.
 os.environ["QT_STYLE_OVERRIDE"] = "Fusion"
 
+# On Windows, Qt's offscreen platform (CI) reads fonts from QT_QPA_FONTDIR alone, not from
+# the system; with none found every glyph is a box as wide as the font is tall, text is
+# nearly twice its width, and the window's measured minimum is 1470 px on a 1366 px
+# screen. The system's fonts give it text sized as the app's.
+if os.name == "nt":
+    os.environ.setdefault("QT_QPA_FONTDIR",
+                          os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts"))
+
 
 @pytest.fixture(autouse=True)
 def no_kicad_settings(monkeypatch):
