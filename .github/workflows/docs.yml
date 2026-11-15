@@ -1,0 +1,78 @@
+name: Docs
+
+# Builds the Sphinx docs (docs_sphinx/) and publishes them to GitHub Pages. Every push and
+# pull request that touches the docs builds them, so a broken page shows before it is merged;
+# only main is deployed. Pages must be set to deploy from "GitHub Actions" (Settings > Pages).
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "docs_sphinx/**"
+      - "docs/images/**"           # the screenshots conf.py copies in
+      - "resources/**"             # logo and favicon
+      - "kipi_si/__init__.py"      # the version in the title
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    paths:
+      - "docs_sphinx/**"
+      - "docs/images/**"
+      - "resources/**"
+      - "kipi_si/__init__.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One run per branch at a time. A newer push cancels an older build, except on main, where
+# a deployment half done is left to finish.
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build:
+    name: Build (Sphinx)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.11"
+          enable-cache: true
+
+      # Only the docs group, at uv.lock's versions: conf.py imports nothing from kipi_si.
+      # -W: a warning (broken reference, missing image, ...) fails the build.
+      - name: Build HTML
+        run: >-
+          uv run --locked --only-group docs
+          sphinx-build -b html -W --keep-going docs_sphinx/source docs_sphinx/build/html
+
+      - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs_sphinx/build/html
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
