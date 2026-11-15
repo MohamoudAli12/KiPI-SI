@@ -1,4 +1,4 @@
-"""The user guide ships with the plugin and the toolbar's Help opens it."""
+"""The toolbar's Help opens the published user guide; reports open as local files."""
 
 import os
 from pathlib import Path
@@ -29,35 +29,18 @@ def no_dialogs(monkeypatch):
     monkeypatch.setattr(kipi_si_help.QMessageBox, "information", fail)
 
 
-def test_guide_ships_with_the_plugin():
-    path = kipi_si_help.help_path()
-    assert path is not None
-    text = path.read_text(encoding="utf-8")
-    assert "<title>" in text and "KiPI-SI" in text
-
-
-def test_guide_images_exist():
-    import re
-    path = kipi_si_help.help_path()
-    for src in re.findall(r'<img[^>]+src="([^"]+)"', path.read_text(encoding="utf-8")):
-        assert (path.parent / src).is_file(), src
-
-
-def test_guide_links_resolve():
-    """Every in-page link points at an element id."""
-    import re
-    text = kipi_si_help.help_path().read_text(encoding="utf-8")
-    ids = set(re.findall(r'\sid="([^"]+)"', text))
-    targets = set(re.findall(r'href="#([^"]+)"', text))
-    assert targets and targets <= ids, sorted(targets - ids)
+def test_guide_is_the_published_site():
+    assert kipi_si_help.ONLINE.startswith("https://") and kipi_si_help.ONLINE.endswith("/")
+    assert kipi_si_help.solver_guide_url().startswith(kipi_si_help.ONLINE)
+    assert "theory" in kipi_si_help.solver_guide_url()
 
 
 def test_open_help_uses_the_desktop_browser(app, monkeypatch):
     opened = []
     monkeypatch.setattr(browser.QDesktopServices, "openUrl",
-                        lambda url: opened.append(url.toLocalFile()) or True)
+                        lambda url: opened.append(url.toString()) or True)
     assert kipi_si_help.open_help()
-    assert opened and opened[0].endswith("help.html")
+    assert opened == [kipi_si_help.ONLINE]
 
 
 def test_open_help_falls_back_to_webbrowser(app, monkeypatch):
@@ -66,7 +49,7 @@ def test_open_help_falls_back_to_webbrowser(app, monkeypatch):
     monkeypatch.setattr(browser.QDesktopServices, "openUrl", lambda url: False)
     monkeypatch.setattr(webbrowser, "open", lambda uri: opened.append(uri) or True)
     assert kipi_si_help.open_help()
-    assert opened and opened[0].startswith("file:")
+    assert opened == [kipi_si_help.ONLINE]
 
 
 def test_open_help_says_where_the_guide_is_when_no_browser_opens(app, monkeypatch):
@@ -77,7 +60,7 @@ def test_open_help_says_where_the_guide_is_when_no_browser_opens(app, monkeypatc
     monkeypatch.setattr(kipi_si_help.QMessageBox, "information",
                         lambda parent, title, text: shown.append(text))
     assert not kipi_si_help.open_help()
-    assert shown and "help.html" in shown[0]
+    assert shown and kipi_si_help.ONLINE in shown[0]
 
 
 def test_linux_opens_with_xdg_open_in_kipis_own_environment(app, monkeypatch, tmp_path):
@@ -102,6 +85,19 @@ def test_linux_opens_with_xdg_open_in_kipis_own_environment(app, monkeypatch, tm
     assert kw["start_new_session"]
 
 
+def test_linux_opens_a_url_with_xdg_open_too(app, monkeypatch):
+    import subprocess
+    monkeypatch.setattr(browser, "_xdg_open", _xdg_open)
+    runs = []
+    monkeypatch.setattr(browser.sys, "platform", "linux")
+    monkeypatch.setattr(browser.shutil, "which", lambda name: "/usr/bin/" + name)
+    monkeypatch.setattr(subprocess, "Popen", lambda args, **kw: runs.append(args))
+    monkeypatch.setattr(browser.QDesktopServices, "openUrl",
+                        lambda url: pytest.fail("Qt's openUrl used on Linux"))
+    assert kipi_si_help.open_help()
+    assert runs == [["/usr/bin/xdg-open", kipi_si_help.ONLINE]]
+
+
 def test_without_xdg_open_linux_falls_back_to_qt(app, monkeypatch, tmp_path):
     opened = []
     monkeypatch.setattr(browser, "_xdg_open", _xdg_open)
@@ -112,15 +108,6 @@ def test_without_xdg_open_linux_falls_back_to_qt(app, monkeypatch, tmp_path):
     assert browser.open_in_browser(tmp_path / "r.html")
     # Qt gives the local file with forward slashes, on Windows too.
     assert [Path(p) for p in opened] == [(tmp_path / "r.html").resolve()]
-
-
-def test_open_help_without_the_guide_points_online(app, monkeypatch):
-    shown = []
-    monkeypatch.setattr(kipi_si_help, "help_path", lambda: None)
-    monkeypatch.setattr(kipi_si_help.QMessageBox, "information",
-                        lambda parent, title, text: shown.append(text))
-    assert not kipi_si_help.open_help()
-    assert shown and kipi_si_help.ONLINE in shown[0]
 
 
 def test_every_control_has_a_tooltip(app, no_3d):
@@ -162,26 +149,3 @@ def test_a_new_report_opens_in_the_browser(app, no_3d, opened_in_browser, tmp_pa
     w._open_new_report(report)
     assert [Path(p) for p in opened_in_browser] == [report]
     w.close()
-
-
-def test_solver_guide_page_ships_and_its_links_resolve():
-    """#92: the page on what PI analysis is and how the solvers work."""
-    import re
-    path = kipi_si_help.help_path().parent / "solver-guide.html"
-    text = path.read_text(encoding="utf-8")
-    ids = set(re.findall(r'\sid="([^"]+)"', text))
-    targets = set(re.findall(r'href="#([^"]+)"', text))
-    assert targets and targets <= ids, sorted(targets - ids)
-    for topic in ("tolerance", "PDN impedance", "DC bias", "aging", "0.393%", "PARDISO",
-                  "Triangle"):
-        assert topic in text, topic
-    # The guide and the page point at each other.
-    assert 'href="help.html"' in text
-    assert 'href="solver-guide.html"' in kipi_si_help.help_path().read_text(encoding="utf-8")
-
-
-def test_solver_guide_opens_the_installed_copy_or_else_online(monkeypatch):
-    assert kipi_si_help.solver_guide_url().startswith("file:")
-    assert kipi_si_help.solver_guide_url().endswith("solver-guide.html")
-    monkeypatch.setattr(kipi_si_help, "_DOCS", Path("no/such/folder"))
-    assert kipi_si_help.solver_guide_url() == kipi_si_help.SOLVER_GUIDE_ONLINE

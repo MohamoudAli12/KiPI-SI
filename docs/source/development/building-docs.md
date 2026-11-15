@@ -2,7 +2,9 @@
 
 The documentation is a [Sphinx](https://www.sphinx-doc.org) site written in Markdown
 ([MyST](https://myst-parser.readthedocs.io)) with the
-[PyData theme](https://pydata-sphinx-theme.readthedocs.io). Its source is in `docs_sphinx/`.
+[PyData theme](https://pydata-sphinx-theme.readthedocs.io). Its source is in `docs/source/`,
+and every push to `main` publishes it to <https://mohamoudali12.github.io/KiPI-SI/>
+(`.github/workflows/docs.yml`), which is what KiPI-SI's **Help** button opens.
 
 ## Build
 
@@ -10,10 +12,10 @@ From the repository root:
 
 ```sh
 uv sync --group docs                                  # Sphinx, MyST, the theme and extensions
-uv run sphinx-build -b html docs_sphinx/source docs_sphinx/build/html
+uv run sphinx-build -b html docs/source docs/build/html
 ```
 
-Then open `docs_sphinx/build/html/index.html`. Or, from `docs_sphinx/`:
+Then open `docs/build/html/index.html`. Or, from `docs/`:
 
 ```sh
 uv run make html          # same build
@@ -36,6 +38,7 @@ turn warnings, such as a broken cross-reference, into errors.
 | `source/theory/` | The Solver Guide: PI background and how the solvers work |
 | `source/reference/` | Files, troubleshooting, glossary, changelog, research notes |
 | `source/development/` | Development, codebase layout, these build notes, license |
+| `source/images/` | The screenshots, shared with the README |
 | `source/_static/custom.css` | Theme tweaks (tables, SVG diagrams, equations) |
 
 Each folder has an `index.md` whose `toctree` lists its pages in order; a new page must be
@@ -43,18 +46,15 @@ added there to appear in the navigation.
 
 ## Shared files
 
-Some content is not copied into `docs_sphinx/` but read from the rest of the repository, so
-there is one copy to maintain:
+Some content is read from the rest of the repository, so there is one copy to maintain:
 
-- **Screenshots**: `docs/images/` is copied to `source/images/` on every build (that copy is
-  git-ignored). Refer to an image as `/images/<name>.png`.
+- **Screenshots**: `source/images/`, which the README also shows. Refer to an image as
+  `/images/<name>.png`.
 - **Changelog** and **research notes**: included from `docs/CHANGELOG.md` and
   `docs/research.md`.
 - **Version**: read from `kipi_si/__init__.py`.
 
-The offline `docs/help.html` (opened by KiPI-SI's **Help** button) and `docs/solver-guide.html`
-are still separate files. When you change a feature, update both the HTML guide and the
-matching page here.
+When you change a feature, update the matching page here.
 
 ## Writing tips
 

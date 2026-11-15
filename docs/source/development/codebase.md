@@ -14,7 +14,6 @@
 | `kipi_si/noise/` | Coupled Noise analysis: waveforms, hot loop parasitics, coupling extraction, victim solves, report and panel |
 | `kipi_si/si/` | Signal Integrity: 2D cross-section field solver, via models, channel circuit, S-parameters, IBIS, transient, eyes and equalisers, Quick Scan, report and panel |
 | `kipi_si/gui/` | PySide6 application shell shared by every mode: main window, mode switch, 3D viewer, worker threads, About and Help |
-| `docs/help.html` | The user guide opened by **Help**; a single offline HTML file |
-| `docs/solver-guide.html` | The Solver Guide: PI background and how the solvers work |
 | `kipi_si/compat.py` | Opens results files saved by earlier versions, from before modules moved |
+| `docs/` | This documentation (Sphinx, in `source/`), the changelog, research notes and screenshots; **Help** opens the published site |
 | `examples/` | Example boards as snapshots with their PI setups, and the scripts that generate them |

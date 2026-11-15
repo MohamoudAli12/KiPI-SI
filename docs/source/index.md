@@ -110,7 +110,7 @@ Quick Scan of every signal net; S-parameters, TDR, eyes, COM and waveforms for a
 
 ## Getting help
 
-- Every control in KiPI-SI has a tooltip; press {kbd}`F1` in the app for the offline guide.
+- Every control in KiPI-SI has a tooltip; press {kbd}`F1` in the app to open this guide.
 - Something not working? See {doc}`reference/troubleshooting`.
 - Unfamiliar term? See the {doc}`reference/glossary`.
 - Found a bug or have a board to share? Open an

@@ -28,7 +28,7 @@ ODB++ and HyperLynx board files without KiCad installed.
 engineering estimate and sanity-check anything surprising. KiPI-SI is a fork of
 [KiPI](https://github.com/drewsum/KiPI) by Drew Maatman, extended with signal integrity.
 
-![Current density with flow arrows through the +12V input path and the U201 eFuse, with the Series links table](docs/images/current_density.png)
+![Current density with flow arrows through the +12V input path and the U201 eFuse, with the Series links table](docs/source/images/current_density.png)
 
 ## Contents
 
@@ -173,7 +173,7 @@ an environment of KiPI-SI's own, outside the KiPI-SI folder (`KIPI_SI_HOME` puts
 | macOS | `~/Library/Application Support/KiPI-SI` |
 | Linux | `~/.local/share/kipi_si` |
 
-![The launcher's setup window on a first start: every package with its size, and the optional PARDISO solver](docs/images/launcher_setup.png)
+![The launcher's setup window on a first start: every package with its size, and the optional PARDISO solver](docs/source/images/launcher_setup.png)
 
 On Windows the first start leaves a **KiPI-SI** shortcut next to the launcher. On Linux and
 macOS, `python3 kipi_si_launcher.py --create-shortcut` adds KiPI-SI to the applications menu
@@ -189,7 +189,7 @@ Standalone KiPI-SI opens these board files with **Open…** and re-reads them wi
 | KiPI-SI snapshot | `.kipi_si.json.gz` | A board saved by KiPI-SI; opens anywhere without the design files |
 
 A board's setup is shared across formats when the files sit next to each other with the same
-name (`Board.kicad_pcb`, `Board.zip`, `Board.hyp`). The [user guide](docs/help.html) lists
+name (`Board.kicad_pcb`, `Board.zip`, `Board.hyp`). The [user guide](https://mohamoudali12.github.io/KiPI-SI/reference/files.html) lists
 what each format does and does not carry. Reading CCE files is on the way
 ([#143](https://github.com/MohamoudAli12/KiPI-SI/issues/143)); if you have a board in another
 format you would like supported, please open an
@@ -223,7 +223,7 @@ KiPI-SI falls back to SciPy and says so in the log.
 
 ## A tour of the window
 
-![PI Models marking the parts of the analysis, snapped to the selected +3.3V switcher](docs/images/pi_models.png)
+![PI Models marking the parts of the analysis, snapped to the selected +3.3V switcher](docs/source/images/pi_models.png)
 
 The window has the same shape in every mode.
 
@@ -253,11 +253,11 @@ Two toolbar windows help you understand the board before solving:
 
 | Power tree | Stackup |
 |---|---|
-| ![The power tree of the multiphase buck example](docs/images/power_tree.png) | ![The Stackup window](docs/images/stackup.png) |
+| ![The power tree of the multiphase buck example](docs/source/images/power_tree.png) | ![The Stackup window](docs/source/images/stackup.png) |
 | A block diagram of the modelled power network, left to right in the direction power flows. Saves as PNG. | Every copper and dielectric layer with thickness, material, εr, thermal conductivity and resistivity, drawn to scale. Untick **Lock to imported values** to try other thicknesses and materials: every analysis uses the edited stackup. |
 
-Every control has a tooltip, and the [user guide](docs/help.html#keys) lists every keyboard
-shortcut.
+Every control has a tooltip, and the [user guide](https://mohamoudali12.github.io/KiPI-SI/interface/keyboard-shortcuts.html)
+lists every keyboard shortcut.
 
 ## The four analysis modes
 
@@ -296,7 +296,7 @@ build it by hand:
 
 | Loads | Mesh and via plating | Thermal |
 |---|---|---|
-| ![Load editor](docs/images/setup_loads.png) | ![The Mesh tab](docs/images/setup_mesh.png) | ![Thermal settings](docs/images/setup_thermal.png) |
+| ![Load editor](docs/source/images/setup_loads.png) | ![The Mesh tab](docs/source/images/setup_mesh.png) | ![Thermal settings](docs/source/images/setup_thermal.png) |
 
 **Solve** with **Solve all**. Every rail is meshed and solved, downstream loads first.
 Progress streams into the log.
@@ -305,11 +305,11 @@ Progress streams into the log.
 density** (tick **Arrows** to see the flow), **Power density**, **Via current** or
 **Temperature**. Click any point to probe it, and narrow the **Color scale** to look closer.
 
-![Voltage drop along the +12V input plane, from the input connector to the two loads, with the Loads results table](docs/images/voltage.png)
+![Voltage drop along the +12V input plane, from the input connector to the two loads, with the Loads results table](docs/source/images/voltage.png)
 
 | Via current | Temperature |
 |---|---|
-| ![Via current, with the Vias table ranked by current](docs/images/via_current.png) | ![Board temperature from the electro-thermal solve](docs/images/temperature.png) |
+| ![Via current, with the Vias table ranked by current](docs/source/images/via_current.png) | ![Board temperature from the electro-thermal solve](docs/source/images/temperature.png) |
 
 The result tabs give **Loads** (effective voltage, drop and PASS/FAIL), **VRMs** (input
 current, conversion loss, regulation), **Series links** (I²R losses), **Vias** ranked by
@@ -322,7 +322,7 @@ and a user-notes box. Or choose **PDF**. **Export ▾** writes CSV or ParaView f
 
 | Summary tables | Interactive 3D per net group |
 |---|---|
-| ![Report summary tables](docs/images/report_tables.png) | ![Report 3D voltage view](docs/images/report_3d.png) |
+| ![Report summary tables](docs/source/images/report_tables.png) | ![Report 3D voltage view](docs/source/images/report_3d.png) |
 
 ### 2. AC: PDN impedance
 
@@ -346,7 +346,7 @@ Switch to **AC**. VRMs and series links are shared with DC mode. The **AC setup*
 
 | Capacitor models | Target calculator |
 |---|---|
-| ![Capacitors tab](docs/images/ac_capacitors.png) | ![Target impedance calculator](docs/images/ac_target_calc.png) |
+| ![Capacitors tab](docs/source/images/ac_capacitors.png) | ![Target impedance calculator](docs/source/images/ac_target_calc.png) |
 
 Pick the **Rail** and **Ground** and click **Solve rail**. The rail's copper and its ground
 are field-solved, so plane resistance, spreading inductance, plane capacitance, cavity
@@ -359,9 +359,9 @@ cursor to read values (linear or log axis). The **Board map** shows the mesh, pr
 capacitors, and the **Transient** tab estimates each probe's undershoot and overshoot for its
 load step. **Report**, **Export CSV…** and **Save results…** work as in DC mode.
 
-![The impedance plot of the example's 0.9 V core rail against its custom target, with the cursor on the anti-resonance](docs/images/ac_impedance.png)
+![The impedance plot of the example's 0.9 V core rail against its custom target, with the cursor on the anti-resonance](docs/source/images/ac_impedance.png)
 
-![The Board map of the core rail's solve: the VCORE and GND mesh, the probe and the capacitors by model](docs/images/ac_board_map.png)
+![The Board map of the core rail's solve: the VCORE and GND mesh, the probe and the capacitors by model](docs/source/images/ac_board_map.png)
 
 ### 3. Coupled Noise: switcher noise on signal nets
 
@@ -388,7 +388,7 @@ signal net near the aggressor.
 The **Waveforms** tab plots the switch node with its ringing, the inductor and capacitor
 currents and the rail ripple, in time or as a spectrum.
 
-![The Waveforms tab: the buck's switch node over two periods, ringing on each hard rising edge](docs/images/noise_waveforms.png)
+![The Waveforms tab: the buck's switch node over two periods, ringing on each hard rising edge](docs/source/images/noise_waveforms.png)
 
 The **Results** table lists each victim's peak noise at its receiver, its margin, the
 dominant mechanism and PASS or FAIL. **Victim noise** plots the noise as a whole or by
@@ -397,7 +397,7 @@ levels against its thresholds.
 
 | Victim noise by mechanism | Held high and low |
 |---|---|
-| ![Victim noise for SIG_SW with its capacitive and inductive parts](docs/images/noise_victim.png) | ![SIG_SW held high and low](docs/images/noise_states.png) |
+| ![Victim noise for SIG_SW with its capacitive and inductive parts](docs/source/images/noise_victim.png) | ![SIG_SW held high and low](docs/source/images/noise_states.png) |
 
 **Coupling in 3D** colours the victim's traces by their share of the peak noise, so the
 pieces to move stand out. **Hot loops in 3D** draws the capacitor loops' current, and
@@ -405,7 +405,7 @@ pieces to move stand out. **Hot loops in 3D** draws the capacitor loops' current
 radiated estimate against CISPR 32 class B. Victims crossing a split in their reference plane
 are flagged.
 
-![Coupling in 3D for SIG_LOOP: the victim colored by its share of the peak, beside the capacitor loops](docs/images/noise_coupling_3d.png)
+![Coupling in 3D for SIG_LOOP: the victim colored by its share of the peak, beside the capacitor loops](docs/source/images/noise_coupling_3d.png)
 
 Each mechanism points to a different fix: capacitive noise comes from the switch node's
 dV/dt, inductive noise from the hot loop's dI/dt, and common noise from the switching
@@ -463,9 +463,9 @@ every channel side by side.
 
 | A good channel | A bad channel |
 |---|---|
-| ![An open eye](docs/images/si_eye_good.png) | ![A closed eye](docs/images/si_eye_closed.png) |
-| ![TDR of a well matched trace](docs/images/si_tdr_good.png) | ![TDR showing an impedance discontinuity](docs/images/si_tdr_bad.png) |
-| ![Low crosstalk](docs/images/si_xtalk_good.png) | ![High crosstalk](docs/images/si_xtalk_bad.png) |
+| ![An open eye](docs/source/images/si_eye_good.png) | ![A closed eye](docs/source/images/si_eye_closed.png) |
+| ![TDR of a well matched trace](docs/source/images/si_tdr_good.png) | ![TDR showing an impedance discontinuity](docs/source/images/si_tdr_bad.png) |
+| ![Low crosstalk](docs/source/images/si_xtalk_good.png) | ![High crosstalk](docs/source/images/si_xtalk_bad.png) |
 
 **Export Touchstone…** writes the channel's `.s2p` or `.s4p`, and **Export SPICE…** a passive
 rational model of it as a SPICE subcircuit for any circuit simulator. **Report** writes one
@@ -479,7 +479,7 @@ and check in plain terms, with a good and a bad channel side by side.
 ## Use cases and recipes
 
 Short recipes for the things people most often open KiPI-SI for. The
-[user guide](docs/help.html) has the long form of each.
+[user guide](https://mohamoudali12.github.io/KiPI-SI/workflows.html) has the long form of each.
 
 <details>
 <summary><b>A first IR-drop check of one rail</b></summary>
@@ -680,9 +680,8 @@ The full documentation is online at **<https://mohamoudali12.github.io/KiPI-SI/>
 
 | Where | What |
 |---|---|
-| **Help** button or **F1** in KiPI-SI ([`docs/help.html`](docs/help.html)) | The user guide: every button, workflow and result, offline, in one HTML file. Open it in a browser. |
-| [`docs/solver-guide.html`](docs/solver-guide.html) | The Solver Guide: what power integrity is, why it matters, and how the mesh and the DC, thermal, AC and noise solvers work. |
-| [Documentation site](https://mohamoudali12.github.io/KiPI-SI/) | The same material online (getting started, interface, each mode, workflows, theory, reference), built from [`docs_sphinx/`](docs_sphinx/README.md) and published on every push to main. |
+| **Help** button or **F1** in KiPI-SI, or [the documentation site](https://mohamoudali12.github.io/KiPI-SI/) | The user guide: getting started, every panel and button, each analysis mode, workflows and a reference. Built from [`docs/`](docs/README.md) and published on every push to main. |
+| [Theory](https://mohamoudali12.github.io/KiPI-SI/theory/index.html) | The Solver Guide: what power integrity is, why it matters, and how the mesh and the DC, thermal, AC, noise and SI solvers work. Linked from **About** too. |
 | [`docs/CHANGELOG.md`](docs/CHANGELOG.md) | What changed in each version. |
 | [`docs/research.md`](docs/research.md) | Background notes and references for the methods. |
 | Tooltips | Every control in KiPI-SI explains itself on hover. |
@@ -753,8 +752,7 @@ Releases are versioned with `uv run bump-my-version bump patch|minor|major`.
 | `kipi_si/si/` | Signal Integrity: 2D cross-section field solver, via models, channel circuit, S-parameters, IBIS, transient, eyes and equalisers, Quick Scan, report and panel |
 | `kipi_si/gui/` | PySide6 application shell shared by every mode: main window, mode switch, 3D viewer, worker threads, About and Help |
 | `kipi_si/compat.py` | Opens results files saved by earlier versions |
-| `docs/` | The user guide, Solver Guide, changelog, research notes and screenshots |
-| `docs_sphinx/` | The Sphinx documentation site |
+| `docs/` | The documentation: the Sphinx site in `source/` (with the screenshots), the changelog and research notes |
 | `examples/` | Example boards with their setups, and the scripts that generate them |
 | `tests/` | The test suite, with fakes for each KiCad version |
 

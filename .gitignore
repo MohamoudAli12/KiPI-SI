@@ -15,6 +15,5 @@ KiPI-SI.lnk
 kipi_si_reports/
 *-backups/
 
-# Sphinx docs: build output and the images copied in from docs/images
-docs_sphinx/build/
-docs_sphinx/source/images/
+# Sphinx docs: build output
+docs/build/

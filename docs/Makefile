@@ -2,7 +2,7 @@
 #
 #   make html        build into build/html
 #   make livehtml    rebuild and reload the browser on every save (needs sphinx-autobuild)
-#   make clean       remove the build and the copied images
+#   make clean       remove the build
 
 SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
@@ -16,10 +16,9 @@ help:
 
 clean:
 	rm -rf $(BUILDDIR)/*
-	rm -rf $(SOURCEDIR)/images
 
 livehtml:
-	sphinx-autobuild "$(SOURCEDIR)" "$(BUILDDIR)/html" --ignore "*/images/*" $(SPHINXOPTS) $(O)
+	sphinx-autobuild "$(SOURCEDIR)" "$(BUILDDIR)/html" $(SPHINXOPTS) $(O)
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).

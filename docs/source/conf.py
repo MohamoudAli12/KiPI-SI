@@ -4,10 +4,9 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 import re
-import shutil
 from pathlib import Path
 
-DOCS_DIR = Path(__file__).parent.resolve()  # docs_sphinx/source
+DOCS_DIR = Path(__file__).parent.resolve()  # docs/source
 REPO = DOCS_DIR.parent.parent  # repository root
 
 
@@ -24,20 +23,6 @@ copyright = "%Y, Drew Maatman (KiPI) and the KiPI-SI contributors"
 author = "KiPI-SI contributors"
 release = _version()
 version = release
-
-
-# -- Shared assets -----------------------------------------------------------
-# The screenshots live in docs/images, next to the offline help.html that KiPI-SI's
-# Help button opens. They are copied into the Sphinx source tree on every build
-# (git-ignored), so there is one copy to keep up to date.
-
-
-def _copy_assets(app):
-    shutil.copytree(REPO / "docs" / "images", DOCS_DIR / "images", dirs_exist_ok=True)
-
-
-def setup(app):
-    app.connect("builder-inited", _copy_assets)
 
 
 # -- General configuration ---------------------------------------------------
@@ -97,7 +82,7 @@ html_context = {
     "github_user": "MohamoudAli12",
     "github_repo": "KiPI-SI",
     "github_version": "main",
-    "doc_path": "docs_sphinx/source",
+    "doc_path": "docs/source",
 }
 # Pages that are short enough not to need the right-hand "On this page" bar.
 html_sidebars = {

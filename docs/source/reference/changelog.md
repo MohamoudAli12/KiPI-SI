@@ -1,4 +1,4 @@
-```{include} ../../../docs/CHANGELOG.md
+```{include} ../../CHANGELOG.md
 :relative-docs: ../
 :relative-images:
 ```

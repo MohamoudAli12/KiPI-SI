@@ -14,7 +14,7 @@ set BUILDDIR=build
 if errorlevel 9009 (
 	echo.
 	echo.The 'sphinx-build' command was not found. Run "uv sync --group docs" from the
-	echo.repository root, then "uv run make.bat html" from docs_sphinx.
+	echo.repository root, then "uv run make.bat html" from docs.
 	exit /b 1
 )
 

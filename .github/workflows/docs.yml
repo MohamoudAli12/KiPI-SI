@@ -1,6 +1,6 @@
 name: Docs
 
-# Builds the Sphinx docs (docs_sphinx/) and publishes them to GitHub Pages. Every push and
+# Builds the Sphinx docs (docs/) and publishes them to GitHub Pages. Every push and
 # pull request that touches the docs builds them, so a broken page shows before it is merged;
 # only main is deployed. Pages must be set to deploy from "GitHub Actions" (Settings > Pages).
 
@@ -8,8 +8,7 @@ on:
   push:
     branches: ["**"]
     paths:
-      - "docs_sphinx/**"
-      - "docs/images/**"           # the screenshots conf.py copies in
+      - "docs/**"
       - "resources/**"             # logo and favicon
       - "kipi_si/__init__.py"      # the version in the title
       - "pyproject.toml"
@@ -17,8 +16,7 @@ on:
       - ".github/workflows/docs.yml"
   pull_request:
     paths:
-      - "docs_sphinx/**"
-      - "docs/images/**"
+      - "docs/**"
       - "resources/**"
       - "kipi_si/__init__.py"
       - "pyproject.toml"
@@ -53,13 +51,13 @@ jobs:
       - name: Build HTML
         run: >-
           uv run --locked --only-group docs
-          sphinx-build -b html -W --keep-going docs_sphinx/source docs_sphinx/build/html
+          sphinx-build -b html -W --keep-going docs/source docs/build/html
 
       - name: Upload Pages artifact
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v4
         with:
-          path: docs_sphinx/build/html
+          path: docs/build/html
 
   deploy:
     name: Deploy to GitHub Pages

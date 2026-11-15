@@ -7,6 +7,13 @@ milestones rather than versions that were ever set.
 ## 0.9.3 (in development)
 
 ### Changed
+- **One documentation.** The Sphinx docs are now `docs/` (from `docs_sphinx/`), with the
+  screenshots in `docs/source/images/`, and are published to
+  <https://mohamoudali12.github.io/KiPI-SI/> on every push to `main`
+  (`.github/workflows/docs.yml`). The offline `docs/help.html` and `docs/solver-guide.html`
+  are gone: **Help** (F1) opens the site, and the About box's **Solver Guide** link its
+  Theory section. The changelog and research notes stay at `docs/CHANGELOG.md` and
+  `docs/research.md`.
 - **Renamed to KiPI-SI.** This fork of [KiPI](https://github.com/drewsum/KiPI) is now
   KiPI-SI throughout: the app and plugin name, the Python package (`kipi_si`), the file
   extensions (`.kipi_si-setup.yml`, `.kipi_si.json.gz`, `.kipi_si-*-results`), the

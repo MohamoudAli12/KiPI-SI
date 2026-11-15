@@ -194,5 +194,5 @@ def test_dialog_links_the_solver_guide(app):
     from qtpy.QtWidgets import QLabel
     d = about.AboutDialog()
     text = " ".join(lb.text() for lb in d.findChildren(QLabel))
-    assert "Solver Guide" in text and "solver-guide.html" in text
+    assert "Solver Guide" in text and about.solver_guide_url() in text
     d.close()

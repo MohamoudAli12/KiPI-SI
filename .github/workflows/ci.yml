@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     branches: ["**"]   # every branch, whatever it is named (e.g. v0.6.5)
-    paths-ignore: ["**.md"]   # README and changelog edits change no code (docs/*.html is tested)
+    paths-ignore: ["**.md"]   # README, changelog and docs edits change no code (docs.yml builds the docs)
   pull_request:
   workflow_dispatch:
 
