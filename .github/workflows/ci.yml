@@ -101,9 +101,10 @@ jobs:
       - name: Import GUI modules
         run: python -c "import kipi_si.gui.main_window, kipi_si.gui.viewer3d, kipi_si.dc.gui.pi_panel, kipi_si_entry"
 
-      # One collapsible log group per test folder (core, dc, ac, gui, ...), found rather
-      # than listed so a new folder is never skipped. Every folder runs even after one
-      # fails, and the step fails if any did. tests/accuracy runs last, in its own job.
+      # One collapsible log group per test folder (core, dc, ac, gui, ...) and one for the
+      # test files directly in tests/, found rather than listed so a new folder is never
+      # skipped. Every folder runs even after one fails, and the step fails if any did.
+      # tests/accuracy runs last, in its own job.
       - name: Run tests
         shell: bash
         run: |
@@ -115,6 +116,14 @@ jobs:
             python -m pytest -v "$dir" || failed="$failed $name"
             echo "::endgroup::"
           done
+          # Test files directly in tests/, outside any folder.
+          shopt -s nullglob
+          top=(tests/test_*.py)
+          if [ ${#top[@]} -gt 0 ]; then
+            echo "::group::tests (top level)"
+            python -m pytest -v "${top[@]}" || failed="$failed top-level"
+            echo "::endgroup::"
+          fi
           if [ -n "$failed" ]; then
             echo "::error title=Tests failed::in tests/{${failed# }}"
             exit 1

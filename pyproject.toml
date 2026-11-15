@@ -90,7 +90,7 @@ required-version = ">=0.9"
 Homepage = "https://github.com/MohamoudAli12/KiPI-SI"
 Repository = "https://github.com/MohamoudAli12/KiPI-SI"
 Issues = "https://github.com/MohamoudAli12/KiPI-SI/issues"
-Documentation = "https://github.com/MohamoudAli12/KiPI-SI/blob/main/docs/research.md"
+Documentation = "https://mohamoudali12.github.io/KiPI-SI/"
 
 [project.scripts]
 # Standalone app: `kipi_si [board file]` (see kipi_si/__main__.py).
