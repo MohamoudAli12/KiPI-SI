@@ -444,3 +444,45 @@ def test_the_builds_dnp_parts_are_not_followed():
     assert not_fitted(snap, SISettings(variant="gone"), ch) == ["C9"]
     r1.dnp = True
     assert not_fitted(snap, SISettings(), ch) == ["C9", "R1"]
+
+
+def test_a_pad_reached_through_a_via_in_it():
+    """A trace that comes up to a pad through a via drilled in the pad (as under a BGA on
+    an HDI board) reaches the pad: the Pi.MX8's DRAM pads, whose escapes run inside."""
+    import dataclasses
+    from helpers.si_boards import B, F, IDS, IN1, IN2, example
+    from kipi_si.core.model.board import Poly, Track, Via, Zone
+    snap = make_board()
+    tracks = [t for t in snap.tracks if t.net != "CLK_R"] + [
+        Track("CLK_R", F, 0.36, (22.0, 5.0), (50.0, 5.0)),
+        Track("CLK_R", B, 0.36, (50.0, 5.0), (55.0, 5.0))]
+    vias = snap.vias + [Via("v1", "CLK_R", (50.0, 5.0), 0.2, 0.35, IDS),
+                        Via("vip", "CLK_R", (55.0, 5.0), 0.2, 0.35, IDS)]   # in U2.1
+    holes = [example.circle(30.0, 14.6, 0.45), example.circle(31.0, 15.75, 0.45),
+             example.circle(50.0, 5.0, 0.4), example.circle(55.0, 5.0, 0.4)]
+    zones = [Zone(f"zg{k}", "GND", "", 0, {lid: [Poly(example.rect(0, 0, 60, 30), holes)]})
+             for k, lid in ((1, IN1), (2, IN2))]
+    b = SIBoard(dataclasses.replace(snap, tracks=tracks, vias=vias, zones=zones))
+    ch = build_channel(b, [["CLK"], ["CLK_R"]], BuildOptions())
+    assert ("pad", "u2") in ch.circuit.nodes and "u2" in ch.pads
+    c = ch.circuit
+    c.add_port("u1", ("pad", "u1"))
+    c.add_port("u2", ("pad", "u2"))
+    s = c.solve_s(np.array([1e6]))
+    assert abs(s[0, 1, 0]) == pytest.approx(100 / 133, rel=0.02)     # joined end to end
+
+
+def test_a_neighbour_the_cut_only_grazes_is_not_named():
+    """A neighbour whose only piece in the cut is a point (a corner it touches) or lies
+    inside the trace's own width gets no conductor, so it is not reported as found: the
+    Quick Scan would look up its crosstalk ('DRAM_B_CKE0' is not in list)."""
+    from kipi_si.si.board import Piece
+    from helpers.si_boards import F, IN1
+    b = SIBoard(make_board())
+    pieces = [Piece(IN1, -1.5, 1.5, "GND"), Piece(F, -0.18, 0.18, "CLK"), Piece(F, -0.35, -0.35, "TOUCH"),
+              Piece(F, -0.1, 0.1, "UNDER"), Piece(F, 0.5, 0.7, "NEAR")]
+    conds, _, found = b.section((10.0, 5.0), (0.0, 1.0), F, 0.36, "CLK", 2.0,
+                                {"TOUCH": (F, -0.35), "UNDER": (F, 0.0), "NEAR": (F, 0.6)},
+                                pieces)
+    assert found == ["NEAR"]
+    assert set(found) <= {c.name for c in conds}

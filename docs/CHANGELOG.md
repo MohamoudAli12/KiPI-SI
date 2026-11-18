@@ -292,6 +292,13 @@ milestones rather than versions that were ever set.
   first time one is shown.
 
 ### Fixed
+- **SI: pads reached through a via drilled in them.** A trace that came up to a pad through
+  a via in the pad (as under a BGA on an HDI board) did not count as reaching it, so a
+  channel ending there stopped with "is not reached by any trace". The pad is now joined
+  to the via.
+- **Quick Scan stopped with "'<net>' is not in list".** A neighbouring net that the cut
+  only touched at a corner was counted as found, but given no conductor. It is now left
+  out of that cut.
 - **Auto-fill rail: wrong sources, switchers as sources, regulators counted twice.** The
   Driven by list put any IC on two rails first, so a level translator could become a rail's
   source; real regulators now come first and translators last. Picking a switcher made it a

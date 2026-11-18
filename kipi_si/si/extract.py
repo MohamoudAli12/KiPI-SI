@@ -590,8 +590,9 @@ def build_channel(board: SIBoard, groups: Sequence[Sequence[str]], opts: BuildOp
     for c in cuts:
         if c is not None:
             _add_section(ch, board, nodes, c, opts, pairs)
-    _add_vias(ch, board, [next(v for v in nodes.vias if v.id == vid) for vid in nodes.used_vias],
-              opts)
+    used = [next(v for v in nodes.vias if v.id == vid) for vid in nodes.used_vias]
+    _add_vias(ch, board, used, opts)
+    _join_vias_in_pads(ckt, nodes, used)
     for ref, kind, value, pair in series_parts(snap, nets, opts.not_fitted):
         a, b = pair.split("|")
         pads = [p for p in snap.pads if p.footprint == ref and p.net]
@@ -616,6 +617,21 @@ def build_channel(board: SIBoard, groups: Sequence[Sequence[str]], opts: BuildOp
         ch.series.append(ref)
     ch.pads = {pid: ("pad", pid) for pid in nodes.used_pads}
     return ch
+
+
+def _join_vias_in_pads(ckt: Circuit, nodes: _Nodes, vias: Sequence[Via]) -> None:
+    """Join each pad to a via of its net drilled in it (via in pad, as HDI boards put
+    under BGA balls): a trace ending there is keyed to the via, and the pad would
+    otherwise be reached by nothing."""
+    for via in vias:
+        for pad in nodes.pads:
+            if pad.net != via.net:
+                continue
+            layer = next((l for l in pad.shapes if l in via.layers
+                          and nodes._pad_contains(pad, l, via.position)), None)
+            if layer is not None:
+                ckt.add_r(("pad", pad.id), ("via", via.id, layer), 1e-4, "via in pad")
+                nodes.used_pads[pad.id] = pad
 
 
 @dataclass

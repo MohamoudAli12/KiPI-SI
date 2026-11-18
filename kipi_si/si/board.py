@@ -241,7 +241,8 @@ class SIBoard:
                                 self.etch_mm)]
         chosen: Dict[str, Piece] = {}
         for pnet, (play, px) in (partners or {}).items():
-            cands = [p for p in pieces if p.net == pnet]
+            # A piece the cut only grazes (a corner it touches) is no conductor.
+            cands = [p for p in pieces if p.net == pnet and p.x1 - p.x0 >= 1e-4]
             if not cands:
                 continue
             best = min(cands, key=lambda p: (p.layer != play, abs(0.5 * (p.x0 + p.x1) - px)))
@@ -264,7 +265,10 @@ class SIBoard:
                 conds.append(Conductor.rect(x0, x1, pl.z_bottom_mm, pl.z_top_mm))
         margin = max(2.0, window)
         box = (-window, window, self.z_range[0] - margin, self.z_range[1] + margin)
-        return conds, box, list(chosen)
+        # Only the nets given a conductor: a chosen piece inside the trace's own width on
+        # its layer was left out above.
+        named = {c.name for c in conds}
+        return conds, box, [n for n in chosen if n in named]
 
     def window_for(self, pieces: Sequence[Piece], layer: int, width_mm: float,
                    window: float) -> float:
