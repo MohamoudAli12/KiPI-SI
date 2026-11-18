@@ -91,12 +91,22 @@ class Progress:
 def perform(summary: Summary, pardiso: bool, data: Path, requirements: Path,
             on_line: Callable[[str], None], on_fraction: Callable[[Optional[float]], None],
             register: Callable[[Installer], None], fresh: bool = False,
-            uv: Union[None, str, Sequence[str]] = "auto") -> State:
+            uv: Union[None, str, Sequence[str]] = "auto",
+            altium: Optional[bool] = None) -> State:
     """Make (or update) the environment and install everything; record it when done.
-    ``fresh`` starts from an empty environment. Raises Canceled or InstallError."""
+    ``fresh`` starts from an empty environment. ``altium`` adds or removes Altium board
+    support; None keeps it as it was. Raises Canceled or InstallError."""
     env = summary.env
     uv = find_uv() if uv == "auto" else uv
     previous = load(env)
+    if altium is None:
+        altium = bool(previous and previous.altium)
+    if altium and summary.python.version[:2] < deps.ALTIUM_MIN_PYTHON:
+        raise InstallError(
+            "Altium board support needs Python "
+            f"{'.'.join(map(str, deps.ALTIUM_MIN_PYTHON))} or newer; KiPI-SI's environment "
+            f"has Python {summary.python.version_text}. Run the launcher with --repair "
+            "and a newer Python to rebuild it.")
     progress = Progress(len(summary.plan.chosen(pardiso)))
 
     def line(text: str):
@@ -117,12 +127,16 @@ def perform(summary: Summary, pardiso: bool, data: Path, requirements: Path,
                      f"{summary.python.version_text}, {inst.tool})")
                 inst.create_env()
             line("Installing KiPI-SI's packages")
-            inst.install(requirements, [deps.PARDISO] if pardiso else [])
+            inst.install(requirements, ([deps.PARDISO] if pardiso else [])
+                         + ([deps.ALTIUM] if altium else []))
             if not pardiso and previous is not None and previous.pardiso:
                 line("Removing PARDISO")
                 inst.uninstall([p.name for p in summary.plan.pardiso] or PARDISO_PACKAGES)
+            if not altium and previous is not None and previous.altium:
+                line("Removing Altium board support")
+                inst.uninstall(["altium-monkey"])
             result = State(requirements_hash=deps.requirements_hash(requirements),
-                           pardiso=pardiso, python=summary.python.version_text,
+                           pardiso=pardiso, altium=altium, python=summary.python.version_text,
                            kipi_si_version=__version__, installed=time.strftime("%Y-%m-%dT%H:%M:%S"),
                            tool=inst.tool)
             save(env, result)

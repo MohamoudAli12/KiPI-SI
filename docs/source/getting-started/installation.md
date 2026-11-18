@@ -8,7 +8,8 @@ KiPI-SI runs two ways, from the same folder:
 * **Standalone**: KiPI-SI started on its own, with its launcher, opens board files and needs
   no KiCad. The folder can be **anywhere**; the launcher installs the dependencies on the
   first start. It opens KiCad 7 to 10 board files (`.kicad_pcb`), ODB++ jobs, HyperLynx
-  files (`.hyp`) and KiPI-SI snapshots (`.kipi_si.json.gz`). Reading CCE files is on the way
+  files (`.hyp`), Altium Designer boards (`.PcbDoc`, `.PrjPcb`; an optional add-on, see
+  below) and KiPI-SI snapshots (`.kipi_si.json.gz`). Reading CCE files is on the way
   ([#143](https://github.com/MohamoudAli12/KiPI-SI/issues/143)).
 
 ## As a KiCad plugin
@@ -100,6 +101,7 @@ To change the setup later, use **About → Manage dependencies…** in KiPI-SI, 
 ```sh
 python kipi_si_launcher.py --setup              # the setup window again (add or remove PARDISO)
 python kipi_si_launcher.py --add-pardiso        # or --remove-pardiso, without questions
+python kipi_si_launcher.py --add-altium         # or --remove-altium: open Altium boards
 python kipi_si_launcher.py --repair             # reinstall everything from scratch
 python kipi_si_launcher.py --reset              # delete KiPI-SI's environment
 python kipi_si_launcher.py --create-shortcut    # add KiPI-SI to the Start menu / app menu / ~/Applications
@@ -107,6 +109,26 @@ python kipi_si_launcher.py --create-shortcut    # add KiPI-SI to the Start menu 
 
 If setup fails, the launcher says why; everything the installer printed is in the `logs`
 folder next to the environment.
+
+## Optional: Altium Designer boards
+
+Standalone KiPI-SI opens Altium boards with the optional
+[`altium-monkey`](https://pypi.org/project/altium-monkey/) package, which reads `.PcbDoc`
+files directly: no Altium, no export. It needs **Python 3.12 or newer** and is not installed
+by default. Add it with the launcher:
+
+```sh
+python kipi_si_launcher.py --add-altium
+```
+
+or, opening a `.PcbDoc` without it, answer **Yes** when KiPI-SI offers to install it (KiPI-SI
+closes, the launcher installs it, and KiPI-SI opens again). A later setup keeps it;
+`--remove-altium` takes it out. In a development checkout, `uv sync` installs it (it is the
+`altium` extra: `pip install "kipi_si[altium]"`).
+
+altium-monkey is licensed under the AGPL-3.0, which is compatible with KiPI-SI's GPL-3.0; it
+brings about eight packages with it (Pillow, HarfBuzz and FreeType bindings, lxml and
+wn-geometer, which turns the embedded STEP models into triangles for the 3D view).
 
 ## Optional: faster solves on large boards (Windows and Linux, x86-64)
 

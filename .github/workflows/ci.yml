@@ -85,6 +85,12 @@ jobs:
       - name: Install dependencies
         run: uv pip install -r requirements.txt --group test
 
+      # The optional Altium reader (the "altium" extra) runs on Python 3.12 and newer; its
+      # tests skip elsewhere.
+      - name: Install the Altium reader
+        if: matrix.python >= '3.12'
+        run: uv pip install "altium-monkey>=2026.9.22"
+
       - name: Pin kicad-python
         if: matrix.kipy
         run: uv pip install "kicad-python==${{ matrix.kipy }}"

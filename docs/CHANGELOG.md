@@ -35,6 +35,17 @@ milestones rather than versions that were ever set.
   with the name, coloured to read on light and dark pages alike (the README shows it).
 
 ### Added
+- **Altium Designer boards.** Standalone **Open…** reads an Altium `.PcbDoc` directly, or a
+  `.PrjPcb` (asking which board when the project has several), with the optional
+  [altium-monkey](https://pypi.org/project/altium-monkey/) package (AGPL-3.0, Python 3.12+;
+  the `altium` extra, added by `kipi_si_launcher.py --add-altium`, or offered when a board
+  needs it). It reads the full layer stack (materials, loss tangents, masks, overlays),
+  parts with their parameters and values, pads per layer (rounded, octagonal, custom,
+  slotted, removed unused lands), blind and buried vias, tracks, arcs, fills, regions and
+  the polygon pours as last poured, internal planes, the outline with its cutouts, and the
+  overlays as silkscreen. The STEP models embedded in the board are shown in the 3D view
+  (`BoardSource.part_models`). Checked on the open-source Pi.MX8 boards (a 10-layer HDI
+  board with 2278 blind, buried and through vias).
 - **Auto-fill power tree.** A new button on the setup bar finds every regulator on the
   board and fills every rail at once. Switchers are found by their inductor between a switch
   node and a rail (buck or boost by their feedback divider, several inductors as phases),

@@ -102,6 +102,10 @@ def _open(path):
         print(f"No such file: {path}", file=sys.stderr)
         return None
     try:
+        boards = registry.boards_in(path)
+        if len(boards) > 1:
+            print(f"{Path(path).name} has {len(boards)} boards; opening {boards[0].name} "
+                  f"(open the .PcbDoc itself for another)", file=sys.stderr)
         return registry.open_board(path)
     except ValueError as e:
         print(e, file=sys.stderr)

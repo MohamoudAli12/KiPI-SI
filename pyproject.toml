@@ -57,6 +57,9 @@ dependencies = [
 # The plugin also gets PARDISO where Intel MKL is published; the launcher asks first.
 kicad = ["kicad-python>=0.7.1",
          'pypardiso>=0.4.6; (sys_platform == "win32" or sys_platform == "linux") and (platform_machine == "AMD64" or platform_machine == "x86_64")']
+# Opening Altium boards (.PcbDoc, .PrjPcb): altium-monkey (AGPL-3.0), Python 3.12 or newer.
+# The launcher adds it with --add-altium; kipi_si/launcher/deps.py names the same version.
+altium = ['altium-monkey>=2026.9.22; python_version >= "3.12"']
 
 [dependency-groups]
 # `uv sync` installs the dev group: the plugin's environment (the kicad extra brings
@@ -68,6 +71,7 @@ test = [
 ]
 dev = [
     "kipi_si[kicad]",
+    "kipi_si[altium]",           # the Altium reader's tests (skipped below Python 3.12)
     "prek>=0.5.10",              # git hooks (prek.toml): `uv run prek install` once per clone
     "bump-my-version>=1.8.1",    # `uv run bump-my-version bump patch|minor|major`
     { include-group = "lint" },

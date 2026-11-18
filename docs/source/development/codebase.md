@@ -8,7 +8,7 @@
 | `kipi_si/launcher/` | The launcher itself, standard library only: environment, Python discovery, package list, installer and setup screens |
 | `kipi_si/host.py` | Plugin or standalone: how KiPI-SI was started |
 | `kipi_si/core/` | Shared by every analysis: board model, copper geometry, meshing, sparse solvers, 3D meshes, progress reporting |
-| `kipi_si/sources/` | Where boards come from: the running KiCad (IPC), `.kicad_pcb` files, ODB++, HyperLynx and snapshots |
+| `kipi_si/sources/` | Where boards come from: the running KiCad (IPC), `.kicad_pcb` files, ODB++, HyperLynx, Altium (optional) and snapshots |
 | `kipi_si/dc/` | DC analysis: conduction FEM, power-tree setup and solve, thermal, reports, results views and panel |
 | `kipi_si/ac/` | AC analysis: PDN impedance over frequency, field solver and sweep, targets, transient, report and panel |
 | `kipi_si/noise/` | Coupled Noise analysis: waveforms, hot loop parasitics, coupling extraction, victim solves, report and panel |

@@ -1302,6 +1302,8 @@ class MainWindow(QMainWindow):
         self.btn_select.setToolTip("Select the picked pad or via in "
                                    f"{src.description if src else 'the editor'}")
         self.btn_select.setVisible(src is not None and src.caps.select_items)
+        self.chk_models.setVisible(self._tool.offers_part_models
+                                   or bool(getattr(src, "has_part_models", False)))
         self._watch(src.files() if src is not None else [])
 
     # --- the board's files -----------------------------------------------------------
@@ -1367,9 +1369,15 @@ class MainWindow(QMainWindow):
         if not self._keep_or_drop_changes():
             return
         try:
-            source = registry.open_board(path)
+            boards = registry.boards_in(path)
+            board = None
+            if len(boards) > 1:
+                board = self._pick_board(path, boards)
+                if board is None:
+                    return
+            source = registry.open_board(path, board)
         except ValueError as e:
-            QMessageBox.warning(self, "KiPI-SI", str(e))
+            self._cannot_open(e)
             return
 
         def done(snap):
@@ -1380,6 +1388,36 @@ class MainWindow(QMainWindow):
             recent.add(path)
 
         self._run(lambda progress: source.load(progress), done, "Opening board")
+
+    def _pick_board(self, path, boards: List[Path]) -> Optional[Path]:
+        """Ask which of the boards of the project ``path`` to open; None if canceled."""
+        from qtpy.QtWidgets import QInputDialog
+        names = [str(b.relative_to(Path(path).parent)) if b.is_relative_to(Path(path).parent)
+                 else str(b) for b in boards]
+        name, ok = QInputDialog.getItem(self, "Open board",
+                                        f"{Path(path).name} has {len(boards)} boards. "
+                                        "Open which one?", names, 0, False)
+        return boards[names.index(name)] if ok and name in names else None
+
+    def _cannot_open(self, error: Exception):
+        """Say why a board cannot be opened; when it needs an optional reader (Altium's)
+        and the launcher started KiPI-SI, offer to install it."""
+        from kipi_si.gui.about import launcher_command
+        from kipi_si.sources.base import ReaderMissing
+        flag = error.launcher_flag if isinstance(error, ReaderMissing) else ""
+        cmd = launcher_command() if flag else None
+        if cmd is None:
+            QMessageBox.warning(self, "KiPI-SI", str(error))
+            return
+        cmd = [a if a != "--setup" else flag for a in cmd]
+        answer = QMessageBox.question(
+            self, "KiPI-SI", f"{error}\n\nInstall it now? KiPI-SI closes, the launcher "
+            "installs it, and KiPI-SI opens again.",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+        if answer == QMessageBox.Yes and self._keep_or_drop_changes():
+            import subprocess
+            subprocess.Popen(cmd, close_fds=True)
+            self.close()
 
     def reload_board(self):
         """Read the board from the source again (Load from KiCad)."""
@@ -1990,7 +2028,12 @@ class MainWindow(QMainWindow):
         """The board's :class:`~kipi_si.sources.base.ModelProvider`, or False (and why, said
         once per board) if it has none."""
         if self._model_source is None:
-            provider, why = self._tool.part_models(self.snapshot)
+            # The board file's own models (an Altium board embeds them), for a board read
+            # from its source rather than a snapshot file; else the design tool's.
+            own_models = getattr(self._source, "part_models", None)
+            own = own_models(self.snapshot) if own_models and not self.snapshot.file else None
+            provider, why = (own, "") if own is not None else \
+                self._tool.part_models(self.snapshot)
             if provider is None and why:
                 self.log(why, logging.WARNING)
             self._model_source = provider or False

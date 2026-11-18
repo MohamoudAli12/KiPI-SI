@@ -40,6 +40,15 @@ More than one KiCad project manager or standalone PCB editor is open, and KiPI-S
 - **A part is missing or off its place:** a part with no pads on any net is not in the file, and a part is drawn in the middle of its pads because the file does not say where it sits.
 - **"pad stacks are used but not in the file":** those pads are read with no copper. Export the file again from the design tool.
 
+(ts-altium)=
+## An Altium board does not open, or looks wrong
+
+- **"needs the optional altium-monkey package":** run `python kipi_si_launcher.py --add-altium`, or answer **Yes** when KiPI-SI offers to install it.
+- **"needs Python 3.12 or newer":** KiPI-SI's environment was made with an older Python. Install Python 3.12 or 3.13 and run `python kipi_si_launcher.py --repair`.
+- **Copper is missing from a polygon:** KiPI-SI uses the pours as Altium last poured them. Repour all polygons in Altium and save.
+- **A project opens the wrong board:** open the `.PcbDoc` itself, or pick the board in the list KiPI-SI shows for a project with several.
+- **A part has no 3D model:** only models embedded in the `.PcbDoc` are shown; linked models are not. Embed them in Altium, or use **Guess models** with KiCad installed.
+
 ## Clicking the KiPI-SI button does not open a new window
 
 KiPI-SI is already open, perhaps minimized or behind KiCad; the button brings it to the front. If it is not open and still does not start, check the session log for a stale lock and delete `kipi_si-<user>.lock` (`kipi_si-standalone-<user>.lock` for standalone KiPI-SI) from the temporary folder.

@@ -65,3 +65,11 @@ def test_the_package_version_is_the_codes():
     """uv_build takes the version from pyproject.toml, the app from kipi_si.__version__."""
     from kipi_si import __version__
     assert _pyproject()["version"] == __version__
+
+
+def test_the_launcher_adds_the_altium_extra():
+    """--add-altium installs what pyproject.toml's "altium" extra names."""
+    from kipi_si.launcher import deps
+    (extra,) = _pyproject()["optional-dependencies"]["altium"]
+    assert extra.split(";")[0].replace(" ", "") == deps.ALTIUM.replace(" ", "")
+    assert "altium-monkey" not in " ".join(_pyproject()["dependencies"])

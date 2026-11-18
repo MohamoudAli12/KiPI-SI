@@ -23,6 +23,10 @@ from typing import Dict, List, Optional, Sequence
 from kipi_si.launcher.system import child_kwargs
 
 PARDISO = "pypardiso"
+#: Altium board support, added on request (``--add-altium``); kept equal to pyproject.toml's
+#: "altium" extra by tests/core/test_requirements.py.
+ALTIUM = "altium-monkey>=2026.9.22"
+ALTIUM_MIN_PYTHON = (3, 12)
 MANIFEST = Path(__file__).with_name("deps_manifest.json")
 # Installed size over download size, for the "on disk" estimate: wheels are compressed.
 # Measured: KiPI-SI 0.8.0's Windows environment is 810 MB from 254 MB of downloads.

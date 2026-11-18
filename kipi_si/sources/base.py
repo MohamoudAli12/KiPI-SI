@@ -25,6 +25,12 @@ from kipi_si.core.progress import NULL, ProgressReporter
 from kipi_si.core.viz.layer_colors import DEFAULT_COPPER, RGB
 
 
+class ReaderMissing(ValueError):
+    """A board cannot be opened because the optional package that reads its format is not
+    installed. ``launcher_flag`` is what the launcher adds it with ("--add-altium")."""
+    launcher_flag: str = ""
+
+
 @dataclass(frozen=True)
 class Capabilities:
     """What a source can do besides reading the board once."""
@@ -37,6 +43,7 @@ class BoardSource(ABC):
     name: str = ""                # short, for buttons: "Load from <name>"
     description: str = ""         # for tooltips: "Re-read the board from <description>"
     caps: Capabilities = Capabilities()
+    has_part_models: bool = False # the file carries its parts' 3D models (part_models)
 
     @abstractmethod
     def load(self, progress: ProgressReporter = NULL,
@@ -55,6 +62,11 @@ class BoardSource(ABC):
     def select(self, kind: str, item_id: str) -> None:
         """Select the ``kind`` ("pad" or "via") with ``item_id`` in the editor."""
         raise NotImplementedError(f"{self.name or 'This source'} cannot select items")
+
+    def part_models(self, snap: BoardSnapshot) -> Optional["ModelProvider"]:
+        """The parts' 3D models the board file itself carries (an Altium board embeds
+        them), or None to take them from the installed design tool."""
+        return None
 
 
 class ModelProvider(ABC):

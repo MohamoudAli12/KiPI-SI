@@ -22,7 +22,7 @@ result is drawn on a rotatable 3D model of the board, checked PASS/FAIL against 
 and written to a report you can send to anyone.
 
 It runs as a **KiCad 9 / 10 plugin** (one toolbar button) or **standalone**, opening KiCad,
-ODB++ and HyperLynx board files without KiCad installed.
+ODB++, HyperLynx and Altium Designer board files without KiCad installed.
 
 **Status: 0.9.3 (alpha, in development)** ([changelog](docs/CHANGELOG.md)). Treat results as an
 engineering estimate and sanity-check anything surprising. KiPI-SI is a fork of
@@ -89,7 +89,8 @@ from hand-entered estimates.
    python kipi_si_launcher.py                 # Windows: double-click kipi_si_launcher.pyw
    ```
 
-3. **Open…** a `.kicad_pcb`, an ODB++ job, a `.hyp` file or a KiPI-SI snapshot.
+3. **Open…** a `.kicad_pcb`, an ODB++ job, a `.hyp` file, an Altium `.PcbDoc` or `.PrjPcb`
+   (after `python kipi_si_launcher.py --add-altium`) or a KiPI-SI snapshot.
 
 ### Try it in two minutes, with no board of your own
 
@@ -186,6 +187,7 @@ Standalone KiPI-SI opens these board files with **Open…** and re-reads them wi
 | KiCad 7 to 10 | `.kicad_pcb` | Uses the zone fills saved in the file: **fill zones (B) and save** in KiCad first |
 | ODB++ | `.zip`, `.tgz`, `.tar.gz`, or an unpacked job folder | Exported from Altium, Allegro, PADS, Eagle and others |
 | HyperLynx | `.hyp` | Exported from most layout tools |
+| Altium Designer | `.PcbDoc`, `.PrjPcb` | Optional: `python kipi_si_launcher.py --add-altium` (Python 3.12+). Uses the polygon pours as last poured; shows the embedded 3D models |
 | KiPI-SI snapshot | `.kipi_si.json.gz` | A board saved by KiPI-SI; opens anywhere without the design files |
 
 A board's setup is shared across formats when the files sit next to each other with the same
@@ -745,7 +747,7 @@ Releases are versioned with `uv run bump-my-version bump patch|minor|major`.
 | `kipi_si/launcher/` | The launcher itself, standard library only: environment, Python discovery, package list, installer and setup screens |
 | `kipi_si/host.py` | Plugin or standalone: how KiPI-SI was started |
 | `kipi_si/core/` | Shared by every analysis: board model, copper geometry, meshing, sparse solvers, 3D meshes, progress reporting |
-| `kipi_si/sources/` | Where boards come from: the running KiCad (IPC), `.kicad_pcb` files, ODB++, HyperLynx and snapshots |
+| `kipi_si/sources/` | Where boards come from: the running KiCad (IPC), `.kicad_pcb` files, ODB++, HyperLynx, Altium and snapshots |
 | `kipi_si/dc/` | DC analysis: conduction FEM, power-tree setup, auto-fill and solve, thermal, reports, results views and panel |
 | `kipi_si/ac/` | AC analysis: PDN impedance over frequency, field solver and sweep, targets, transient, report and panel |
 | `kipi_si/noise/` | Coupled Noise: waveforms, hot-loop parasitics, coupling extraction, victim solves, fields, report and panel |

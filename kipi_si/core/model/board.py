@@ -22,6 +22,7 @@ FORMAT_NAMES: Dict[str, str] = {
     "kicad-pcb": "KiCad board file",
     "odbpp": "ODB++",
     "hyp": "HyperLynx",
+    "altium": "Altium Designer",
 }
 
 

@@ -13,6 +13,11 @@ in the OSI sense. Its author's terms allow free use and redistribution, but it *
 sold or included in commercial products without a license from its author**. Using KiPI-SI for
 your own design work is fine. The meshing code is isolated in `kipi_si/core/mesh/` for this reason.
 
+**Note on the Altium reader.** Altium boards are read with the optional
+[`altium-monkey`](https://pypi.org/project/altium-monkey/) package, licensed under the
+AGPL-3.0. It is not installed unless asked for (`kipi_si_launcher.py --add-altium`); the
+AGPL-3.0 and KiPI-SI's GPL-3.0 may be combined (section 13 of each).
+
 The other dependencies are under permissive licenses, apart from PySide6 (LGPL-3.0). All of
 them are compatible with the GPL.
 

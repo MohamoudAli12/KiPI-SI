@@ -5,6 +5,7 @@
     python kipi_si_launcher.py --repair      # reinstall everything from scratch
     python kipi_si_launcher.py --reset       # delete KiPI-SI's environment; set up on next start
     python kipi_si_launcher.py --add-pardiso | --remove-pardiso
+    python kipi_si_launcher.py --add-altium | --remove-altium   # open Altium boards (Python 3.12+)
     python kipi_si_launcher.py --create-shortcut   # add KiPI-SI to the Start menu / app menu / Applications
 
 ``kipi_si_launcher.pyw`` does the same with no console window (double-click it).
@@ -64,6 +65,10 @@ def parse(argv: Optional[List[str]]) -> argparse.Namespace:
     what.add_argument("--reset", action="store_true", help="delete KiPI-SI's environment")
     what.add_argument("--add-pardiso", action="store_true", help="install PARDISO")
     what.add_argument("--remove-pardiso", action="store_true", help="remove PARDISO")
+    what.add_argument("--add-altium", action="store_true",
+                      help="add Altium board support (altium-monkey; Python 3.12 or newer)")
+    what.add_argument("--remove-altium", action="store_true",
+                      help="remove Altium board support")
     what.add_argument("--create-shortcut", action="store_true",
                       help="add KiPI-SI to the Start menu (Windows), applications menu "
                            "(Linux) or Applications folder (macOS)")
@@ -166,6 +171,7 @@ def main(argv: Optional[List[str]] = None, windowed: bool = False) -> int:
     want_pardiso = previous.pardiso if previous else pardiso_ok
     reason = needs_setup(env, deps.requirements_hash(req))
     fresh, ask = False, True
+    want_altium = None                  # keep Altium support as it is
     try:
         if args.reset:
             remove_env(env, data)
@@ -182,6 +188,10 @@ def main(argv: Optional[List[str]] = None, windowed: bool = False) -> int:
                 return 2
             want_pardiso, ask = args.add_pardiso, False
             reason = reason or ("adding PARDISO" if want_pardiso else "removing PARDISO")
+        elif args.add_altium or args.remove_altium:
+            want_altium, ask = args.add_altium, False
+            reason = reason or ("adding Altium board support" if want_altium
+                                else "removing Altium board support")
     except InstallError as e:
         ui.error(str(e))
         return 2
@@ -213,7 +223,8 @@ def main(argv: Optional[List[str]] = None, windowed: bool = False) -> int:
             def line(text):
                 log.write(text)
                 on_line(text)
-            return perform(summary, choice, data, req, line, on_fraction, register, fresh)
+            return perform(summary, choice, data, req, line, on_fraction, register, fresh,
+                           altium=want_altium)
 
         try:
             ui.install(task)

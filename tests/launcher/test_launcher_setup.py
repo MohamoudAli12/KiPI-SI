@@ -1,6 +1,7 @@
 """The launcher's setup and start: installing into KiPI-SI's environment, the console screen,
 and what the launcher does on each start."""
 
+import dataclasses
 import os
 import sys
 import threading
@@ -150,6 +151,30 @@ def test_dropping_pardiso_uninstalls_it(tmp_path, fake_installer):
     assert not st.pardiso
 
 
+def _perform_altium(tmp_path, altium, version=(3, 12, 1)):
+    data = tmp_path / "KiPI-SI"
+    data.mkdir(exist_ok=True)
+    s = _summary(data / "venv")
+    s.python = dataclasses.replace(s.python, version=version)
+    return setup_env.perform(s, False, data, paths.requirements_file(), lambda line: None,
+                             lambda f: None, lambda inst: None, False, None, altium=altium)
+
+
+def test_altium_support_is_added_kept_and_removed(tmp_path, fake_installer):
+    st = _perform_altium(tmp_path, True)
+    assert st.altium and fake_installer.made[-1].calls[-1] == ("install", (deps.ALTIUM,))
+    st = _perform_altium(tmp_path, None)                 # a later setup keeps it
+    assert st.altium and fake_installer.made[-1].calls[-1] == ("install", (deps.ALTIUM,))
+    st = _perform_altium(tmp_path, False)
+    assert not st.altium
+    assert fake_installer.made[-1].calls[-1] == ("uninstall", ("altium-monkey",))
+
+
+def test_altium_support_needs_python_3_12(tmp_path, fake_installer):
+    with pytest.raises(InstallError, match="Python 3.12 or newer"):
+        _perform_altium(tmp_path, True, version=(3, 11, 9))
+
+
 def test_when_uv_fails_pip_starts_again(tmp_path, fake_installer):
     fake_installer.fail_with_uv = True
     st, _ = _perform(tmp_path, pardiso=False, uv="uv.exe")
@@ -253,8 +278,10 @@ def started(tmp_path, monkeypatch):
     monkeypatch.setattr(launcher.deps, "make_plan",
                         lambda python, req, offer: _summary(tmp_path).plan)
 
-    def perform(summary, choice, data, req, on_line, on_fraction, register, fresh):
+    def perform(summary, choice, data, req, on_line, on_fraction, register, fresh,
+                altium=None):
         got["performed"].append((choice, fresh))
+        got.setdefault("altium", []).append(altium)
         env = summary.env
         py = paths.env_python(env)
         py.parent.mkdir(parents=True, exist_ok=True)
@@ -300,6 +327,16 @@ def test_pardiso_can_be_added_and_removed_without_questions(started):
     assert started["performed"][-1] == (False, False)
 
 
+def test_altium_support_can_be_added_and_removed_without_questions(started):
+    launcher.main([])
+    started["answers"] = []
+    assert launcher.main(["--add-altium", "--no-launch"]) == 0
+    assert started["altium"][-1] is True
+    assert launcher.main(["--remove-altium", "--no-launch"]) == 0
+    assert started["altium"][-1] is False
+    assert started["altium"][0] is None                  # a plain setup leaves it be
+
+
 def test_pardiso_is_refused_where_mkl_is_not(started, monkeypatch):
     monkeypatch.setattr(launcher.system, "pardiso_supported", lambda: (False, "no MKL"))
     assert launcher.main(["--add-pardiso"]) == 2
@@ -324,7 +361,7 @@ def test_no_python_to_use(started, monkeypatch):
 
 
 def test_a_failed_setup_points_at_the_log(started, monkeypatch):
-    def fail(*a):
+    def fail(*a, **k):
         raise InstallError("pip failed (exit 1): no space left on device")
     monkeypatch.setattr(launcher, "perform", fail)
     assert launcher.main([]) == 1

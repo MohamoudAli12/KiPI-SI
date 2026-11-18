@@ -16,7 +16,7 @@
 * - **Open snapshot…** plugin
   - Opens a board saved with **Save snapshot…**. KiCad does not need to be running.
 * - **Open…** standalone
-  - Opens a board file: a KiCad board (`.kicad_pcb`), an ODB++ job (`.zip`, `.tgz`, or its `matrix/matrix` file), a HyperLynx file (`.hyp`) or a KiPI-SI snapshot (`.kipi_si.json.gz`). Its saved setup comes with it, as with **Load from KiCad**. The arrow beside it lists the boards opened lately.
+  - Opens a board file: a KiCad board (`.kicad_pcb`), an ODB++ job (`.zip`, `.tgz`, or its `matrix/matrix` file), a HyperLynx file (`.hyp`), an Altium board (`.PcbDoc`, or a `.PrjPcb`, which asks which of its boards when it has several) or a KiPI-SI snapshot (`.kipi_si.json.gz`). Its saved setup comes with it, as with **Load from KiCad**. The arrow beside it lists the boards opened lately.
 * - **Reload** standalone
   - Reads the open board file again. When the file is saved (in KiCad, say), KiPI-SI asks whether to read it again by itself. Ticked nets stay ticked.
 * - **Save snapshot…**

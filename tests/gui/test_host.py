@@ -99,8 +99,10 @@ def test_the_registry_knows_snapshots(board_file):
     with pytest.raises(ValueError, match="cannot open"):
         registry.open_board("board.brd")
     assert registry.file_filter().startswith(
-        "Boards (*.kicad_pcb *.zip *.tgz *.tar.gz matrix *.hyp *.json.gz *.json);;"
+        "Boards (*.kicad_pcb *.zip *.tgz *.tar.gz matrix *.hyp *.PcbDoc *.PrjPcb *.pcbdoc "
+        "*.prjpcb *.PCBDOC *.PRJPCB *.json.gz *.json);;"
         "KiCad board (*.kicad_pcb);;ODB++ (*.zip *.tgz *.tar.gz matrix);;HyperLynx (*.hyp);;"
+        "Altium Designer (*.PcbDoc *.PrjPcb *.pcbdoc *.prjpcb *.PCBDOC *.PRJPCB);;"
         "KiPI-SI snapshot (")
     assert src.files() == [board_file]
 

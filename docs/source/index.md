@@ -11,7 +11,7 @@ html_theme.sidebar_secondary.remove: true
 ```
 
 **KiPI-SI** is a power and signal integrity analyzer for printed circuit boards. It runs as a
-KiCad 9/10 plugin or standalone on board files (KiCad, ODB++, HyperLynx), and has four
+KiCad 9/10 plugin or standalone on board files (KiCad, ODB++, HyperLynx, Altium Designer), and has four
 analysis modes: **DC voltage drop**, **AC PDN impedance**, **Coupled Noise** from switching
 regulators, and **Signal Integrity** for nets and high-speed channels.
 

@@ -19,6 +19,7 @@ from kipi_si.launcher.paths import env_python, state_path
 class State:
     requirements_hash: str = ""    # of requirements-standalone.txt when installed
     pardiso: bool = False          # PARDISO was chosen and installed
+    altium: bool = False           # Altium board support (altium-monkey) was added
     python: str = ""               # the environment's Python version, "3.13.1"
     kipi_si_version: str = ""         # the KiPI-SI that set it up
     installed: str = ""            # when, ISO 8601
