@@ -30,9 +30,13 @@ def _resolve(root: Path, rel: str) -> Optional[Path]:
     here = root
     for part in p.parts:
         nxt = here / part
-        if not nxt.exists() and here.is_dir():
-            low = part.lower()
-            nxt = next((c for c in here.iterdir() if c.name.lower() == low), nxt)
+        if here.is_dir():
+            # Always take the name as the directory lists it: on a case-insensitive disk
+            # (macOS, Windows) ``nxt.exists()`` is true for the project's own spelling.
+            names = [c.name for c in here.iterdir()]
+            if part not in names:
+                low = part.lower()
+                nxt = next((here / n for n in names if n.lower() == low), nxt)
         here = nxt
     return here if here.is_file() else None
 

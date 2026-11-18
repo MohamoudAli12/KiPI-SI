@@ -98,9 +98,17 @@ def test_open_dialog_offers_altium():
 
 
 def test_without_the_reader_it_says_how_to_get_it(monkeypatch):
+    import kipi_si.sources.altium as altium
     monkeypatch.setitem(sys.modules, "altium_monkey", None)       # import fails
+    # Too old a Python is said first, whatever this one is ...
+    monkeypatch.setattr(altium, "MIN_PYTHON", (99, 0))
+    with pytest.raises(AltiumUnavailable, match="needs Python 99.0 or newer"):
+        require()
+    # ... and on a new enough one, how to install the reader.
+    monkeypatch.setattr(altium, "MIN_PYTHON", (3, 0))
     with pytest.raises(AltiumUnavailable, match="--add-altium"):
         require()
+    monkeypatch.setattr(altium, "MIN_PYTHON", (3, 12))
     if sys.version_info >= (3, 12):
         with pytest.raises(ValueError, match="altium-monkey"):
             registry.open_board(FEATURES)
